@@ -8,7 +8,7 @@
 [![Flutter 3.10+](https://img.shields.io/badge/Flutter-3.10+-02569B.svg?logo=flutter)](https://flutter.dev)
 
 > [!IMPORTANT]
-> ### 🚀 Graft is in Public Alpha (`0.1.0-alpha.1`) — Let's Have a Ride!
+> ### 🚀 Graft is in Public Alpha (`0.1.1-alpha.1`) — Let's Have a Ride!
 > Graft is actively evolving in its initial alpha release. It is **not yet declared production-ready**.
 > We warmly invite the Flutter developer community to take it for a spin: test it in your projects, push its slot diffing and route scoping to the limits, and help us make it even better!
 > 
@@ -28,7 +28,7 @@ Or manually add it to `dependencies`:
 
 ```yaml
 dependencies:
-  graft: ^0.1.0-alpha.1
+  graft: ^0.1.1-alpha.1
 ```
 
 Import it in your Dart code:
@@ -384,15 +384,12 @@ dart run graft:snippets
 
 ---
 
-## 🔍 Compile-Time Lint Enforcement: `graft_lint`
+## 🔍 Compile-Time Lint Enforcement: [`graft_lint`](https://pub.dev/packages/graft_lint)
 
 Catch anti-patterns directly in your IDE with the official Graft analyzer plugin:
 
-Add to `dev_dependencies`:
-```yaml
-dev_dependencies:
-  custom_lint: ^0.8.1
-  graft_lint: ^0.1.0-alpha.1
+```bash
+flutter pub add dev:custom_lint dev:graft_lint
 ```
 
 Enable in `analysis_options.yaml`:
@@ -400,11 +397,18 @@ Enable in `analysis_options.yaml`:
 analyzer:
   plugins:
     - custom_lint
+  errors:
+    # Optional severity overrides:
+    avoid_nested_graft_slot: error
 ```
 
+> **Note:** Do not add these rules under the standard `linter: rules:` block. They are automatically enabled via `custom_lint`.
+
 ### Included Rules:
-- **`avoid_nested_graft_slot`**: Warns at compile-time if a `graft.slot()` is redundantly nested inside another slot or slots engine.
-- **`require_graft_route_observer`**: Reminds you to register `GraftRouteTracker.observer` in `MaterialApp.navigatorObservers`.
+- **`avoid_nested_graft_slot`** *(Error)*: Flags compile-time errors if a `graft.slot()` is redundantly nested inside another slot or slots engine of the same Graft instance.
+- **`require_graft_route_observer`** *(Info)*: Reminds you to register `GraftRouteTracker.observer` in `MaterialApp.navigatorObservers` for automatic route scoping.
+
+See the [`packages/graft_lint` documentation](packages/graft_lint/README.md) for full configuration details and bad/good code examples.
 
 ---
 

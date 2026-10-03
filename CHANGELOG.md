@@ -5,6 +5,16 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 
 ---
 
+## 0.1.1-alpha.1
+
+### 🔍 Tooling & Linter Updates (`graft_lint`)
+- **Promoted `avoid_nested_graft_slot` to Error**: Redundant slot nesting is now flagged as a compile-time analyzer `Error` (`ErrorSeverity.ERROR`) by default to prevent anti-patterns early in IDEs and CI.
+- **Fixed Ambiguous Import**: Resolved `LintCode` collision between `analyzer` and `custom_lint_builder`.
+- **Published `graft_lint` on pub.dev**: Package is now publicly distributed via [pub.dev/packages/graft_lint](https://pub.dev/packages/graft_lint).
+- **Documentation**: Expanded setup guides, added Bad vs. Good code examples, and documented `analysis_options.yaml` configuration patterns.
+
+---
+
 ## 0.1.0-alpha.1
 
 *First public alpha release of **Graft** — high-performance, fine-grained reactive state management for Flutter.*
