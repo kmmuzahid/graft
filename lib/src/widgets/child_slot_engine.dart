@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../core/graft.dart';
@@ -87,7 +88,7 @@ class GraftMultiChildDiffEngine<S extends GraftState> extends StatefulWidget
     Widget a,
     Widget b, [
     BuildContext? context,
-    int depth = 0,
+    Set<Widget>? visited,
   ]) {
     if (identical(a, b)) return true;
     if (a.runtimeType != b.runtimeType) return false;
@@ -105,9 +106,6 @@ class GraftMultiChildDiffEngine<S extends GraftState> extends StatefulWidget
 
     // Direct object equality if overridden
     if (a == b) return true;
-
-    // Limit unwrapping depth to avoid deep or cyclical recursion
-    if (depth > 20) return false;
 
     // Text widget comparison
     if (a is Text && b is Text) {
@@ -137,21 +135,21 @@ class GraftMultiChildDiffEngine<S extends GraftState> extends StatefulWidget
     // SizedBox comparison
     if (a is SizedBox && b is SizedBox) {
       final childEqual = (a.child == null && b.child == null) ||
-          (a.child != null && b.child != null && isWidgetEquivalent(a.child!, b.child!, context, depth + 1));
+          (a.child != null && b.child != null && isWidgetEquivalent(a.child!, b.child!, context, visited));
       return childEqual && a.width == b.width && a.height == b.height;
     }
 
     // Padding comparison
     if (a is Padding && b is Padding) {
       final childEqual = (a.child == null && b.child == null) ||
-          (a.child != null && b.child != null && isWidgetEquivalent(a.child!, b.child!, context, depth + 1));
+          (a.child != null && b.child != null && isWidgetEquivalent(a.child!, b.child!, context, visited));
       return childEqual && a.padding == b.padding;
     }
 
     // Container comparison
     if (a is Container && b is Container) {
       final childEqual = (a.child == null && b.child == null) ||
-          (a.child != null && b.child != null && isWidgetEquivalent(a.child!, b.child!, context, depth + 1));
+          (a.child != null && b.child != null && isWidgetEquivalent(a.child!, b.child!, context, visited));
       if (!childEqual) return false;
 
       return a.color == b.color &&
@@ -166,14 +164,14 @@ class GraftMultiChildDiffEngine<S extends GraftState> extends StatefulWidget
     // ColoredBox comparison
     if (a is ColoredBox && b is ColoredBox) {
       final childEqual = (a.child == null && b.child == null) ||
-          (a.child != null && b.child != null && isWidgetEquivalent(a.child!, b.child!, context, depth + 1));
+          (a.child != null && b.child != null && isWidgetEquivalent(a.child!, b.child!, context, visited));
       return childEqual && a.color == b.color;
     }
 
     // Align & Center comparison
     if (a is Align && b is Align) {
       final childEqual = (a.child == null && b.child == null) ||
-          (a.child != null && b.child != null && isWidgetEquivalent(a.child!, b.child!, context, depth + 1));
+          (a.child != null && b.child != null && isWidgetEquivalent(a.child!, b.child!, context, visited));
       return childEqual &&
           a.alignment == b.alignment &&
           a.widthFactor == b.widthFactor &&
@@ -183,28 +181,28 @@ class GraftMultiChildDiffEngine<S extends GraftState> extends StatefulWidget
     // DecoratedBox comparison
     if (a is DecoratedBox && b is DecoratedBox) {
       final childEqual = (a.child == null && b.child == null) ||
-          (a.child != null && b.child != null && isWidgetEquivalent(a.child!, b.child!, context, depth + 1));
+          (a.child != null && b.child != null && isWidgetEquivalent(a.child!, b.child!, context, visited));
       return childEqual && a.decoration == b.decoration && a.position == b.position;
     }
 
     // Opacity comparison
     if (a is Opacity && b is Opacity) {
       final childEqual = (a.child == null && b.child == null) ||
-          (a.child != null && b.child != null && isWidgetEquivalent(a.child!, b.child!, context, depth + 1));
+          (a.child != null && b.child != null && isWidgetEquivalent(a.child!, b.child!, context, visited));
       return childEqual && a.opacity == b.opacity;
     }
 
     // ClipRRect comparison
     if (a is ClipRRect && b is ClipRRect) {
       final childEqual = (a.child == null && b.child == null) ||
-          (a.child != null && b.child != null && isWidgetEquivalent(a.child!, b.child!, context, depth + 1));
+          (a.child != null && b.child != null && isWidgetEquivalent(a.child!, b.child!, context, visited));
       return childEqual && a.borderRadius == b.borderRadius && a.clipBehavior == b.clipBehavior;
     }
 
     // ShaderMask comparison
     if (a is ShaderMask && b is ShaderMask) {
       final childEqual = (a.child == null && b.child == null) ||
-          (a.child != null && b.child != null && isWidgetEquivalent(a.child!, b.child!, context, depth + 1));
+          (a.child != null && b.child != null && isWidgetEquivalent(a.child!, b.child!, context, visited));
       return childEqual && a.blendMode == b.blendMode;
     }
 
@@ -212,7 +210,7 @@ class GraftMultiChildDiffEngine<S extends GraftState> extends StatefulWidget
     if (a is DefaultTextStyle && b is DefaultTextStyle) {
       return a.style == b.style &&
           a.textAlign == b.textAlign &&
-          isWidgetEquivalent(a.child, b.child, context, depth + 1);
+          isWidgetEquivalent(a.child, b.child, context, visited);
     }
 
     // Flex (Row / Column) comparison
@@ -228,7 +226,7 @@ class GraftMultiChildDiffEngine<S extends GraftState> extends StatefulWidget
         return false;
       }
       for (int i = 0; i < a.children.length; i++) {
-        if (!isWidgetEquivalent(a.children[i], b.children[i], context, depth + 1)) {
+        if (!isWidgetEquivalent(a.children[i], b.children[i], context, visited)) {
           return false;
         }
       }
@@ -237,14 +235,14 @@ class GraftMultiChildDiffEngine<S extends GraftState> extends StatefulWidget
 
     // Flexible & Expanded comparison
     if (a is Flexible && b is Flexible) {
-      final childEqual = isWidgetEquivalent(a.child, b.child, context, depth + 1);
+      final childEqual = isWidgetEquivalent(a.child, b.child, context, visited);
       return childEqual && a.flex == b.flex && a.fit == b.fit;
     }
 
     // FittedBox comparison
     if (a is FittedBox && b is FittedBox) {
       final childEqual = (a.child == null && b.child == null) ||
-          (a.child != null && b.child != null && isWidgetEquivalent(a.child!, b.child!, context, depth + 1));
+          (a.child != null && b.child != null && isWidgetEquivalent(a.child!, b.child!, context, visited));
       return childEqual &&
           a.fit == b.fit &&
           a.alignment == b.alignment &&
@@ -254,21 +252,21 @@ class GraftMultiChildDiffEngine<S extends GraftState> extends StatefulWidget
     // ConstrainedBox comparison
     if (a is ConstrainedBox && b is ConstrainedBox) {
       final childEqual = (a.child == null && b.child == null) ||
-          (a.child != null && b.child != null && isWidgetEquivalent(a.child!, b.child!, context, depth + 1));
+          (a.child != null && b.child != null && isWidgetEquivalent(a.child!, b.child!, context, visited));
       return childEqual && a.constraints == b.constraints;
     }
 
     // AspectRatio comparison
     if (a is AspectRatio && b is AspectRatio) {
       final childEqual = (a.child == null && b.child == null) ||
-          (a.child != null && b.child != null && isWidgetEquivalent(a.child!, b.child!, context, depth + 1));
+          (a.child != null && b.child != null && isWidgetEquivalent(a.child!, b.child!, context, visited));
       return childEqual && a.aspectRatio == b.aspectRatio;
     }
 
     // FractionallySizedBox comparison
     if (a is FractionallySizedBox && b is FractionallySizedBox) {
       final childEqual = (a.child == null && b.child == null) ||
-          (a.child != null && b.child != null && isWidgetEquivalent(a.child!, b.child!, context, depth + 1));
+          (a.child != null && b.child != null && isWidgetEquivalent(a.child!, b.child!, context, visited));
       return childEqual &&
           a.widthFactor == b.widthFactor &&
           a.heightFactor == b.heightFactor &&
@@ -285,7 +283,7 @@ class GraftMultiChildDiffEngine<S extends GraftState> extends StatefulWidget
         return false;
       }
       for (int i = 0; i < a.children.length; i++) {
-        if (!isWidgetEquivalent(a.children[i], b.children[i], context, depth + 1)) {
+        if (!isWidgetEquivalent(a.children[i], b.children[i], context, visited)) {
           return false;
         }
       }
@@ -294,7 +292,7 @@ class GraftMultiChildDiffEngine<S extends GraftState> extends StatefulWidget
 
     // Positioned comparison
     if (a is Positioned && b is Positioned) {
-      final childEqual = isWidgetEquivalent(a.child, b.child, context, depth + 1);
+      final childEqual = isWidgetEquivalent(a.child, b.child, context, visited);
       return childEqual &&
           a.left == b.left &&
           a.top == b.top &&
@@ -319,7 +317,7 @@ class GraftMultiChildDiffEngine<S extends GraftState> extends StatefulWidget
         return false;
       }
       for (int i = 0; i < a.children.length; i++) {
-        if (!isWidgetEquivalent(a.children[i], b.children[i], context, depth + 1)) {
+        if (!isWidgetEquivalent(a.children[i], b.children[i], context, visited)) {
           return false;
         }
       }
@@ -333,7 +331,7 @@ class GraftMultiChildDiffEngine<S extends GraftState> extends StatefulWidget
       final bothLongPressActive = (a.onLongPress != null) == (b.onLongPress != null);
       final behaviorEqual = a.behavior == b.behavior;
       final childEqual = (a.child == null && b.child == null) ||
-          (a.child != null && b.child != null && isWidgetEquivalent(a.child!, b.child!, context, depth + 1));
+          (a.child != null && b.child != null && isWidgetEquivalent(a.child!, b.child!, context, visited));
       return bothTapActive && bothDoubleTapActive && bothLongPressActive && behaviorEqual && childEqual;
     }
 
@@ -343,7 +341,7 @@ class GraftMultiChildDiffEngine<S extends GraftState> extends StatefulWidget
       final bothDoubleTapActive = (a.onDoubleTap != null) == (b.onDoubleTap != null);
       final bothLongPressActive = (a.onLongPress != null) == (b.onLongPress != null);
       final childEqual = (a.child == null && b.child == null) ||
-          (a.child != null && b.child != null && isWidgetEquivalent(a.child!, b.child!, context, depth + 1));
+          (a.child != null && b.child != null && isWidgetEquivalent(a.child!, b.child!, context, visited));
       return bothTapActive && bothDoubleTapActive && bothLongPressActive && childEqual && a.borderRadius == b.borderRadius;
     }
 
@@ -353,21 +351,21 @@ class GraftMultiChildDiffEngine<S extends GraftState> extends StatefulWidget
       final bothLongPress = (a.onLongPress != null) == (b.onLongPress != null);
       final styleEqual = a.style == b.style;
       final childEqual = (a.child == null && b.child == null) ||
-          (a.child != null && b.child != null && isWidgetEquivalent(a.child!, b.child!, context, depth + 1));
+          (a.child != null && b.child != null && isWidgetEquivalent(a.child!, b.child!, context, visited));
       return bothEnabled && bothLongPress && styleEqual && childEqual;
     }
 
     // IconButton functional comparison
     if (a is IconButton && b is IconButton) {
       final bothEnabled = (a.onPressed != null) == (b.onPressed != null);
-      final iconEqual = isWidgetEquivalent(a.icon, b.icon, context, depth + 1);
+      final iconEqual = isWidgetEquivalent(a.icon, b.icon, context, visited);
       return bothEnabled && iconEqual && a.color == b.color && a.iconSize == b.iconSize;
     }
 
     // CupertinoButton functional comparison
     if (a is CupertinoButton && b is CupertinoButton) {
       final bothEnabled = (a.onPressed != null) == (b.onPressed != null);
-      final childEqual = isWidgetEquivalent(a.child, b.child, context, depth + 1);
+      final childEqual = isWidgetEquivalent(a.child, b.child, context, visited);
       return bothEnabled && childEqual && a.color == b.color;
     }
 
@@ -376,13 +374,13 @@ class GraftMultiChildDiffEngine<S extends GraftState> extends StatefulWidget
       final bothTapActive = (a.onTap != null) == (b.onTap != null);
       final bothLongPress = (a.onLongPress != null) == (b.onLongPress != null);
       final titleEqual = (a.title == null && b.title == null) ||
-          (a.title != null && b.title != null && isWidgetEquivalent(a.title!, b.title!, context, depth + 1));
+          (a.title != null && b.title != null && isWidgetEquivalent(a.title!, b.title!, context, visited));
       final leadingEqual = (a.leading == null && b.leading == null) ||
-          (a.leading != null && b.leading != null && isWidgetEquivalent(a.leading!, b.leading!, context, depth + 1));
+          (a.leading != null && b.leading != null && isWidgetEquivalent(a.leading!, b.leading!, context, visited));
       final subtitleEqual = (a.subtitle == null && b.subtitle == null) ||
-          (a.subtitle != null && b.subtitle != null && isWidgetEquivalent(a.subtitle!, b.subtitle!, context, depth + 1));
+          (a.subtitle != null && b.subtitle != null && isWidgetEquivalent(a.subtitle!, b.subtitle!, context, visited));
       final trailingEqual = (a.trailing == null && b.trailing == null) ||
-          (a.trailing != null && b.trailing != null && isWidgetEquivalent(a.trailing!, b.trailing!, context, depth + 1));
+          (a.trailing != null && b.trailing != null && isWidgetEquivalent(a.trailing!, b.trailing!, context, visited));
       return bothTapActive && bothLongPress && titleEqual && leadingEqual && subtitleEqual && trailingEqual;
     }
 
@@ -428,16 +426,23 @@ class GraftMultiChildDiffEngine<S extends GraftState> extends StatefulWidget
           a.activeColor == b.activeColor;
     }
 
-    // Automatic unwrap for StatelessWidgets (e.g. CkText, Card, custom components)
+    // Automatic unwrap for StatelessWidgets with lazy cycle detection
     if (context != null && a is StatelessWidget && b is StatelessWidget) {
+      final seen = visited ?? HashSet<Widget>.identity();
+      if (!seen.add(a)) {
+        // Cycle detected: widget recursively builds or references itself
+        return false;
+      }
       try {
         // ignore: invalid_use_of_protected_member
         final builtA = a.build(context);
         // ignore: invalid_use_of_protected_member
         final builtB = b.build(context);
-        return isWidgetEquivalent(builtA, builtB, context, depth + 1);
+        return isWidgetEquivalent(builtA, builtB, context, seen);
       } catch (_) {
         // Fallback gracefully if custom build requires specialized element lifecycle
+      } finally {
+        seen.remove(a);
       }
     }
 
@@ -538,6 +543,7 @@ class _GraftMultiChildDiffEngineState<S extends GraftState>
 
       // 3. Changed slot -> update notifier to trigger isolated rebuild for slot i
       _slotNotifiers[i].value = newWidget;
+      Graft.observer?.onSlotRebuild(widget.graft, i, newWidget);
     }
   }
 
@@ -633,8 +639,8 @@ class _GraftMultiChildDiffEngineState<S extends GraftState>
           'Fix:\n'
           'Pass the provided "children" list directly into your layout widget:\n'
           '  graft.slots(\n'
-          '    (children) => ${current?.runtimeType ?? 'Column'}(children: children), // ✅ Pass children here!\n'
-          '    (s) => [ ... ],\n'
+          '    layout: (children) => ${current?.runtimeType ?? 'Column'}(children: children), // ✅ Pass children here!\n'
+          '    children: (s) => [ ... ],\n'
           '  )\n'
           '════════════════════════════════════════════════════════════════════════════════\n',
         );
@@ -726,6 +732,7 @@ class _GraftSingleSlotScopeState<S extends GraftState> extends State<GraftSingle
     if (GraftMultiChildDiffEngine.isWidgetEquivalent(oldWidget, newWidget, context)) return;
 
     _slotNotifier.value = newWidget;
+    Graft.observer?.onSlotRebuild(widget.graft, 0, newWidget);
   }
 
   @override
@@ -859,6 +866,7 @@ class _GraftItemSlotState<S extends GraftState, T> extends State<GraftItemSlot<S
         _hasInitialItem = true;
         _cachedWidget = nextWidget;
       });
+      Graft.observer?.onSlotRebuild(widget.graft, -1, nextWidget);
     } catch (_) {
       // Gracefully handle bounds exception if item was removed before element unmount
     }
@@ -901,8 +909,12 @@ class _GraftItemSlotState<S extends GraftState, T> extends State<GraftItemSlot<S
     if (!_hasInitialItem) {
       return const SizedBox.shrink();
     }
-    _cachedWidget ??= widget.builder(context, _item as T);
-    return _cachedWidget!;
+    try {
+      _cachedWidget ??= widget.builder(context, _item as T);
+      return _cachedWidget!;
+    } catch (_) {
+      return const SizedBox.shrink();
+    }
   }
 }
 
@@ -936,7 +948,7 @@ class GraftBuilderDiffEngine<S extends GraftState, T> extends StatefulWidget
   final Widget Function(BuildContext context, T item, int index) itemBuilder;
 
   /// Optional key provider for item slots (defaults to `ValueKey(index)`).
-  final Key Function(T item, int index)? itemKey;
+  final Key Function(T item)? itemKey;
 
   /// Creates a [GraftBuilderDiffEngine].
   const GraftBuilderDiffEngine({
@@ -1014,10 +1026,16 @@ class _GraftBuilderDiffEngineState<S extends GraftState, T>
       if (index < 0 || index >= _count) return null;
       return GraftItemSlot<S, T>(
         key: widget.itemKey != null
-            ? widget.itemKey!(widget.item(widget.graft.state, index), index)
+            ? widget.itemKey!(widget.item(widget.graft.state, index))
             : ValueKey(index),
         graft: widget.graft,
-        selector: (s) => widget.item(s, index),
+        selector: (s) {
+          final count = widget.itemCount(s);
+          if (index < 0 || index >= count) {
+            throw RangeError.index(index, count);
+          }
+          return widget.item(s, index);
+        },
         builder: (ctx, item) => widget.itemBuilder(ctx, item, index),
       );
     }
@@ -1152,9 +1170,12 @@ abstract final class GraftScopeGuard {
           '• Inside graft.slots:\n'
           '  Simply return normal widgets without wrapping them in graft.slot().\n'
           '  Example:\n'
-          '    graft.slots((children) => Column(children: children), (s) => [\n'
-          '      Text(s.name), // ✅ Return directly!\n'
-          '    ])\n'
+          '    graft.slots(\n'
+          '      layout: (children) => Column(children: children),\n'
+          '      children: (s) => [\n'
+          '        Text(s.name), // ✅ Return directly!\n'
+          '      ],\n'
+          '    )\n'
           '• Inside graft.compute:\n'
           '  Do not use graft.slot() inside compute, as compute already isolates the builder.\n'
           '════════════════════════════════════════════════════════════════════════════════\n',
@@ -1193,9 +1214,12 @@ abstract final class GraftScopeGuard {
           '• Inside graft.slots:\n'
           '  Simply return normal widgets without wrapping them in graft.slot().\n'
           '  Example:\n'
-          '    graft.slots((children) => Column(children: children), (s) => [\n'
-          '      Text(s.name), // ✅ Return directly!\n'
-          '    ])\n'
+          '    graft.slots(\n'
+          '      layout: (children) => Column(children: children),\n'
+          '      children: (s) => [\n'
+          '        Text(s.name), // ✅ Return directly!\n'
+          '      ],\n'
+          '    )\n'
           '• Inside graft.compute:\n'
           '  Do not use graft.slot() inside compute, as compute already isolates the builder.\n'
           '════════════════════════════════════════════════════════════════════════════════\n',

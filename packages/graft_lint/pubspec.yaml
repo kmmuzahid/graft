@@ -1,0 +1,14 @@
+name: graft_lint
+description: Custom lint rules and analyzer plugin for the Graft reactive state management library.
+version: 0.1.0-alpha.1
+publish_to: none
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  analyzer: '>=6.0.0 <9.0.0'
+  custom_lint_builder: ^0.8.1
+
+dev_dependencies:
+  test: ^1.24.0

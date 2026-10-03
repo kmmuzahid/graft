@@ -1,0 +1,67 @@
+<templateSet group="Graft">
+  <template name="graft-controller" value="class $NAME$State extends GraftState {&#10;  $END$&#10;}&#10;&#10;class $NAME$Graft extends Graft&lt;$NAME$State&gt; {&#10;  $NAME$Graft() : super($NAME$State());&#10;}&#10;" description="Scaffold Graft controller &amp; GraftState" toReformat="true" toShortenFQNames="true">
+    <variable name="NAME" expression="" defaultValue="Feature" alwaysStopAt="true" />
+    <context>
+      <option name="DART" value="true" />
+    </context>
+  </template>
+
+  <template name="graft-value" value="class $NAME$Graft extends ValueGraft&lt;$TYPE$&gt; {&#10;  $NAME$Graft([$TYPE$ initial = $DEFAULT$]) : super(initial);&#10;&#10;  $END$&#10;}&#10;" description="Scaffold ValueGraft" toReformat="true" toShortenFQNames="true">
+    <variable name="NAME" expression="" defaultValue="Counter" alwaysStopAt="true" />
+    <variable name="TYPE" expression="" defaultValue="int" alwaysStopAt="true" />
+    <variable name="DEFAULT" expression="" defaultValue="0" alwaysStopAt="true" />
+    <context>
+      <option name="DART" value="true" />
+    </context>
+  </template>
+
+  <template name="graft-slot" value="$GRAFT$.slot(&#10;  builder: ($STATE$) =&gt; $WIDGET$,&#10;)" description="Graft single-child slot" toReformat="true" toShortenFQNames="true">
+    <variable name="GRAFT" expression="" defaultValue="graft" alwaysStopAt="true" />
+    <variable name="STATE" expression="" defaultValue="s" alwaysStopAt="true" />
+    <variable name="WIDGET" expression="" defaultValue="Text(s.title)" alwaysStopAt="true" />
+    <context>
+      <option name="DART" value="true" />
+    </context>
+  </template>
+
+  <template name="graft-slots" value="$GRAFT$.slots(&#10;  layout: (children) =&gt; $LAYOUT$(children: children),&#10;  children: ($STATE$) =&gt; [&#10;    $END$&#10;  ],&#10;)" description="Graft multi-child slots layout" toReformat="true" toShortenFQNames="true">
+    <variable name="GRAFT" expression="" defaultValue="graft" alwaysStopAt="true" />
+    <variable name="LAYOUT" expression="" defaultValue="Column" alwaysStopAt="true" />
+    <variable name="STATE" expression="" defaultValue="s" alwaysStopAt="true" />
+    <context>
+      <option name="DART" value="true" />
+    </context>
+  </template>
+
+  <template name="graft-builder" value="$GRAFT$.builder&lt;$TYPE$&gt;(&#10;  items: $ITEMS$,&#10;  itemBuilder: (item, index) =&gt; $ITEM_WIDGET$,&#10;)" description="Graft virtualized collection builder" toReformat="true" toShortenFQNames="true">
+    <variable name="GRAFT" expression="" defaultValue="graft" alwaysStopAt="true" />
+    <variable name="TYPE" expression="" defaultValue="Item" alwaysStopAt="true" />
+    <variable name="ITEMS" expression="" defaultValue="s.items" alwaysStopAt="true" />
+    <variable name="ITEM_WIDGET" expression="" defaultValue="ListTile(title: Text(item.title))" alwaysStopAt="true" />
+    <context>
+      <option name="DART" value="true" />
+    </context>
+  </template>
+
+  <template name="graft-compute" value="$GRAFT$.compute&lt;$TYPE$&gt;(&#10;  compute: ($STATE$) =&gt; $DERIVED$,&#10;  builder: ($VAL$) =&gt; $WIDGET$,&#10;)" description="Graft pre-flight computed slot" toReformat="true" toShortenFQNames="true">
+    <variable name="GRAFT" expression="" defaultValue="graft" alwaysStopAt="true" />
+    <variable name="TYPE" expression="" defaultValue="int" alwaysStopAt="true" />
+    <variable name="STATE" expression="" defaultValue="s" alwaysStopAt="true" />
+    <variable name="DERIVED" expression="" defaultValue="s.items.length" alwaysStopAt="true" />
+    <variable name="VAL" expression="" defaultValue="val" alwaysStopAt="true" />
+    <variable name="WIDGET" expression="" defaultValue="Text('$val')" alwaysStopAt="true" />
+    <context>
+      <option name="DART" value="true" />
+    </context>
+  </template>
+
+  <template name="graft-test" value="graftTest&lt;$GRAFT$, $STATE$&gt;(&#10;  '$DESC$',&#10;  build: () =&gt; $BUILD$,&#10;  act: (graft) {&#10;    $END$&#10;  },&#10;  expect: [&#10;  ],&#10;);" description="Graft declarative unit test" toReformat="true" toShortenFQNames="true">
+    <variable name="GRAFT" expression="" defaultValue="FeatureGraft" alwaysStopAt="true" />
+    <variable name="STATE" expression="" defaultValue="FeatureState" alwaysStopAt="true" />
+    <variable name="DESC" expression="" defaultValue="emits expected state when action is triggered" alwaysStopAt="true" />
+    <variable name="BUILD" expression="" defaultValue="FeatureGraft()" alwaysStopAt="true" />
+    <context>
+      <option name="DART" value="true" />
+    </context>
+  </template>
+</templateSet>

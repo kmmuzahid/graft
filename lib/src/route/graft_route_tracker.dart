@@ -32,6 +32,13 @@ class GraftRouteTracker {
   static final Map<Route<dynamic>, Map<Type, Graft>> _routeInstances = {};
   static final Map<Graft, Route<dynamic>> _owners = {};
 
+  /// Returns the top-most active route, or null if no routes are currently tracked.
+  static Route<dynamic>? get currentRoute =>
+      _routeStack.isNotEmpty ? _routeStack.last : null;
+
+  /// Returns the active route stack (read-only snapshot).
+  static List<Route<dynamic>> get routeStack => List.unmodifiable(_routeStack);
+
   /// Called when a route is pushed onto the navigator stack.
   static void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
     if (!_routeStack.contains(route)) {

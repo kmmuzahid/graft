@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'graft_change.dart';
 import 'graft_observer.dart';
@@ -56,6 +57,8 @@ abstract class Graft<S extends GraftState> {
   late S _state;
   late final _GraftNotifier<S> _notifier;
   bool _isDisposed = false;
+  bool _pendingNotify = false;
+  bool _isNotifying = false;
 
   /// Creates a new [Graft] with the given [initialState].
   ///
@@ -128,13 +131,31 @@ abstract class Graft<S extends GraftState> {
       return;
     }
 
-    final change = GraftChange<S>(
-      currentState: _state,
-      nextState: _state,
-    );
+    if (_isNotifying) {
+      if (!_pendingNotify) {
+        _pendingNotify = true;
+        scheduleMicrotask(() {
+          _pendingNotify = false;
+          if (!_isDisposed) {
+            notify();
+          }
+        });
+      }
+      return;
+    }
 
-    observer?.onChange(this, change);
-    _notifier.forceNotify();
+    _isNotifying = true;
+    try {
+      final change = GraftChange<S>(
+        currentState: _state,
+        nextState: _state,
+      );
+
+      observer?.onChange(this, change);
+      _notifier.forceNotify();
+    } finally {
+      _isNotifying = false;
+    }
   }
 
   /// Updates the state to [newState] and notifies all listeners.

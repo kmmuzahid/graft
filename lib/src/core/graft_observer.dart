@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'graft.dart';
 import 'graft_change.dart';
 
@@ -71,6 +72,10 @@ abstract class GraftObserver {
   /// }
   /// ```
   void onDispose(dynamic graft) {}
+
+  /// Called whenever a slot widget inside [graft] rebuilds.
+  /// [slotIndex] is the 0-based index within the layout, or 0 for single slot.
+  void onSlotRebuild(dynamic graft, int slotIndex, Widget widget) {}
 }
 
 /// Out-of-the-box development observer featuring high-visibility ANSI colorized terminal logs.
@@ -85,12 +90,17 @@ abstract class GraftObserver {
 /// ```dart
 /// void main() {
 ///   if (kDebugMode) {
-///     Graft.observer = GraftDevObserver();
+///     Graft.observer = GraftDevObserver(logRebuilds: true);
 ///   }
 ///   runApp(const MyApp());
 /// }
 /// ```
 class GraftDevObserver extends GraftObserver {
+  /// Whether to print diagnostics on fine-grained slot rebuilds.
+  final bool logRebuilds;
+
+  GraftDevObserver({this.logRebuilds = false});
+
   static const _reset = '\x1B[0m';
   static const _bold = '\x1B[1m';
   static const _green = '\x1B[32m';
@@ -98,6 +108,17 @@ class GraftDevObserver extends GraftObserver {
   static const _yellow = '\x1B[33m';
   static const _red = '\x1B[31m';
   static const _magenta = '\x1B[35m';
+
+  @override
+  void onSlotRebuild(dynamic graft, int slotIndex, Widget widget) {
+    if (kDebugMode && logRebuilds) {
+      debugPrint(
+        '$_bold$_cyan[🔄 GRAFT SLOT REBUILD]$_reset | '
+        '$_magenta${graft.runtimeType}$_reset | '
+        'Slot #$slotIndex (${widget.runtimeType})',
+      );
+    }
+  }
 
   @override
   void onCreate(dynamic graft) {

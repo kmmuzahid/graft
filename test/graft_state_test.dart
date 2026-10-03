@@ -159,12 +159,13 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: graft.slots(
-              (children) => Column(children: children),
-              (s) => [
-              const _ConstHeaderWidget(),
-              _DynamicFieldWidget(label: 'Name', value: s.name),
-              _DynamicFieldWidget(label: 'Age', value: s.age.toString(), isAge: true),
-            ]),
+              layout: (children) => Column(children: children),
+              children: (s) => [
+                const _ConstHeaderWidget(),
+                _DynamicFieldWidget(label: 'Name', value: s.name),
+                _DynamicFieldWidget(label: 'Age', value: s.age.toString(), isAge: true),
+              ],
+            ),
           ),
         ),
       );
@@ -232,7 +233,7 @@ void main() {
           home: Scaffold(
             body: Column(
               children: [
-                counter.slot((count) => Text('Slot Count: $count')),
+                counter.slot(builder: (count) => Text('Slot Count: $count')),
               ],
             ),
           ),

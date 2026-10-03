@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graft/graft.dart';
 
@@ -72,16 +73,28 @@ void main() {
       expect(observer.logs, contains('dispose: CounterGraft'));
     });
 
-    test('GraftDevObserver formats and logs lifecycle events without throwing', () {
-      final devObserver = GraftDevObserver();
+    test('GraftDevObserver formats and logs lifecycle events and slot rebuilds', () {
+      final devObserver = GraftDevObserver(logRebuilds: true);
       Graft.observer = devObserver;
 
       final graft = CounterGraft();
       graft.increment();
+      devObserver.onSlotRebuild(graft, 0, const Text('slot'));
       graft.triggerError(Exception('sample error'));
       graft.dispose();
 
       expect(graft.isDisposed, isTrue);
+
+      final defaultObserver = TestObserver();
+      defaultObserver.onSlotRebuild(graft, 0, const Text('slot'));
+    });
+
+    test('GraftRouteTracker currentRoute and routeStack getters', () {
+      expect(GraftRouteTracker.routeStack, isA<List<Route<dynamic>>>());
+      // When empty, currentRoute is null
+      if (GraftRouteTracker.routeStack.isEmpty) {
+        expect(GraftRouteTracker.currentRoute, isNull);
+      }
     });
 
     test('GraftChange equality, hashCode and toString', () {

@@ -42,8 +42,33 @@ extension GraftWidgetsX<S extends GraftState> on Graft<S> {
   ///
   /// ⚠️ **Avoid Misuse:**
   /// - Do **NOT** use `graft.slot` inside `graft.slots(...)`. Those multi-child layouts
+  /// Creates an isolated single-child slot that diffs its content.
+  ///
+  /// ### Why use `graft.slot(...)`?
+  /// Rebuilds **ONLY** when the widget returned by [builder] changes properties or identity.
+  /// Unrelated state changes in other fields will result in **0 rebuilds** for this slot.
+  ///
+  /// Also handles full-screen state switching (e.g. Loading / Error / Content):
+  /// when the returned widget type changes (e.g. `Spinner` to `Dashboard`), it automatically
+  /// swaps the widget.
+  ///
+  /// ### Example:
+  /// ```dart
+  /// // 1. Single Field in AppBar / ListTile:
+  /// AppBar(
+  ///   title: graft.slot(
+  ///     builder: (s) => Text(s.title),
+  ///   ),
+  /// )
+  /// ```
+  ///
+  /// ⚠️ **Avoid Misuse:**
+  /// - Do **NOT** use `graft.slot` inside `graft.slots(...)`. Those multi-child layouts
   ///   **already** isolate and diff every child slot automatically!
-  Widget slot(Widget Function(S state) builder, {Key? key}) {
+  Widget slot({
+    required Widget Function(S state) builder,
+    Key? key,
+  }) {
     GraftScopeGuard.verifyNotActive(this, 'graft.slot');
     return GraftSingleSlotScope<S>(
       key: key,
@@ -53,13 +78,13 @@ extension GraftWidgetsX<S extends GraftState> on Graft<S> {
   }
 
   // ===========================================================================
-  // 2. MULTI-SLOTS (LIST OF WIDGETS + OPTIONAL LAYOUT)
+  // 2. MULTI-SLOTS (LIST OF WIDGETS + REQUIRED LAYOUT)
   // ===========================================================================
 
   /// Creates a reactive multi-child container whose child slots diff independently.
   ///
-  /// Takes a [layout] function as the first parameter (e.g. `(children) => Column(children: children)`),
-  /// and [children] as the second parameter returning the list of child widgets.
+  /// Takes a required named [layout] function (e.g. `(children) => Column(children: children)`),
+  /// and required named [children] function returning the list of child widgets.
   ///
   /// ### Why use `graft.slots(...)`?
   /// Automatically isolates each child into its own diffing slot:
@@ -67,14 +92,14 @@ extension GraftWidgetsX<S extends GraftState> on Graft<S> {
   /// - Unchanged children: **0 rebuilds** (equivalence match).
   /// - Only slots with changed content rebuild in Flutter's render pipeline.
   /// - Collection-`if` and collection-`for` are 100% supported natively.
-  /// - 100% layout agnostic: Works with [Column], [Row], [Wrap], [Stack], [ListView], etc.
+  /// - 100% layout agnostic: Works with [Column], [Row], [Wrap], [Stack], [Flex], etc.
   ///
   /// ### Example:
   /// ```dart
   /// // 1. Vertical Column:
   /// graft.slots(
-  ///   (children) => Column(children: children),
-  ///   (s) => [
+  ///   layout: (children) => Column(children: children),
+  ///   children: (s) => [
   ///     const ProfileHeader(),
   ///     Text(s.name),
   ///     if (s.isVerified) const VerifiedBadge(),
@@ -84,8 +109,8 @@ extension GraftWidgetsX<S extends GraftState> on Graft<S> {
   ///
   /// // 2. Horizontal Row:
   /// graft.slots(
-  ///   (children) => Row(children: children),
-  ///   (s) => [
+  ///   layout: (children) => Row(children: children),
+  ///   children: (s) => [
   ///     const Icon(Icons.star),
   ///     Text('${s.rating}'),
   ///     Text('(${s.reviewCount})'),
@@ -100,9 +125,9 @@ extension GraftWidgetsX<S extends GraftState> on Graft<S> {
   ///   use **`graft.compute`** to guarantee 0-rebuild data-driven isolation.
   /// - Do **NOT** wrap children inside `graft.slots` with `graft.slot(...)`!
   ///   Every item in the list is **already** an isolated diffing slot automatically.
-  Widget slots(
-    Widget Function(List<Widget> children) layout,
-    List<Widget> Function(S state) children, {
+  Widget slots({
+    required Widget Function(List<Widget> children) layout,
+    required List<Widget> Function(S state) children,
     Key? key,
   }) {
     GraftScopeGuard.verifyNotActive(this, 'graft.slots');
@@ -128,9 +153,9 @@ extension GraftWidgetsX<S extends GraftState> on Graft<S> {
   ///
   /// ### Example:
   /// ```dart
-  /// graft.compute(
-  ///   (s) => s.notifications.length, // Derived computation: int
-  ///   (count) => HeavyBadge(count: count), // Builder runs ONLY when count changes!
+  /// graft.compute<int>(
+  ///   compute: (s) => s.notifications.length, // Derived computation: int
+  ///   builder: (count) => HeavyBadge(count: count), // Builder runs ONLY when count changes!
   /// )
   /// ```
   ///
@@ -141,16 +166,16 @@ extension GraftWidgetsX<S extends GraftState> on Graft<S> {
   /// - For **derived computed values** (e.g. `(s) => s.items.length` or `(s) => s.total > 100`).
   /// - For simple widgets like `Text(s.name)`, `graft.slot` and `graft.slots` already do fast
   ///   diffing with zero ceremony.
-  Widget compute<R>(
-    R Function(S state) computation,
-    Widget Function(R value) builder, {
+  Widget compute<R>({
+    required R Function(S state) compute,
+    required Widget Function(R value) builder,
     Key? key,
   }) {
     GraftScopeGuard.verifyNotActive(this, 'graft.compute');
     return _GraftComputation<S, R>(
       key: key,
       graft: this,
-      computation: computation,
+      computation: compute,
       builder: builder,
     );
   }
@@ -161,7 +186,7 @@ extension GraftWidgetsX<S extends GraftState> on Graft<S> {
 
   /// Creates a 100% lazy, virtualized collection with per-item slot diffing.
   ///
-  /// Works with **ANY** Flutter builder widget:
+  /// Works out-of-the-box with automatic [ListView.builder], or customize with **ANY** Flutter builder:
   /// - [ListView.builder] / [ListView.separated]
   /// - [GridView.builder]
   /// - [PageView.builder]
@@ -169,58 +194,86 @@ extension GraftWidgetsX<S extends GraftState> on Graft<S> {
   /// - [CarouselView]
   ///
   /// ### How it works:
-  /// - **Layout Agnostic**: The [layout] function receives `(itemCount, itemBuilder)`.
-  ///   You pass standard Flutter widgets without any wrapper interference.
+  /// - **Zero Layout Plumbing**: Defaults automatically to `ListView.builder`.
   /// - **100% Automated**: Pass `items: (s) => s.tasks` once. The engine automatically derives
   ///   `itemCount` and indexes each item.
+  /// - **Position & Data Access**: [itemBuilder] receives `(item, index)` for zebra striping, rank numbers, etc.
+  ///   Or use `item: (item)` for a zero-ceremony 1-argument shorthand.
   /// - **Fine-Grained Isolation**: Unchanged items have **0 rebuilds**. Only the modified item rebuilds (**1 rebuild**)!
   ///
-  /// ### Example (ListView):
+  /// ### Example (Default ListView):
   /// ```dart
   /// graft.builder<TaskItem>(
-  ///   (itemCount, itemBuilder) => ListView.builder(
-  ///     padding: const EdgeInsets.all(8),
-  ///     itemCount: itemCount,
-  ///     itemBuilder: itemBuilder,
-  ///   ),
   ///   items: (s) => s.tasks,
-  ///   itemBuilder: (context, task, index) => TaskListTile(task: task),
+  ///   itemBuilder: (task, index) => TaskListTile(task: task, isEven: index.isEven),
   /// )
   /// ```
   ///
-  /// ### Example (GridView):
+  /// ### Example (Custom GridView):
   /// ```dart
   /// graft.builder<Product>(
-  ///   (itemCount, itemBuilder) => GridView.builder(
+  ///   items: (s) => s.products,
+  ///   itemBuilder: (product, index) => ProductGridTile(product: product),
+  ///   layout: (itemCount, itemBuilder) => GridView.builder(
   ///     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2),
   ///     itemCount: itemCount,
   ///     itemBuilder: itemBuilder,
   ///   ),
-  ///   items: (s) => s.products,
-  ///   itemBuilder: (context, product, index) => ProductGridTile(product: product),
   /// )
   /// ```
-  Widget builder<T>(
-    Widget Function(int itemCount, NullableIndexedWidgetBuilder itemBuilder) layout, {
-    List<T> Function(S state)? items,
-    int Function(S state)? itemCount,
-    T Function(S state, int index)? item,
-    required Widget Function(BuildContext context, T item, int index) itemBuilder,
-    Key Function(T item, int index)? itemKey,
+  Widget builder<T>({
+    required List<T> Function(S state) items,
+    Widget Function(T item, int index)? itemBuilder,
+    Widget Function(T item)? item,
+    /// Optional stable key extractor for list items.
+    ///
+    /// **You do NOT need this in most cases.**
+    /// By default, Graft uses `ValueKey(index)` which is correct and
+    /// automatic for any list where items are only added, removed at the
+    /// end, or updated in-place at a fixed position.
+    ///
+    /// **Only provide [itemKey] when your list can be dynamically reordered**
+    /// (e.g. drag-and-drop, sort-by-field, or items inserted at arbitrary
+    /// positions). In these cases, position-based keys cause wrong elements
+    /// to update — use a stable ID field instead:
+    ///
+    /// ```dart
+    /// // ✅ When items can reorder:
+    /// graft.builder<TaskItem>(
+    ///   items: (s) => s.tasks,
+    ///   itemBuilder: (task, index) => TaskCard(task, index: index),
+    ///   itemKey: (item) => ValueKey(item.id),
+    /// );
+    ///
+    /// // ✅ When index is not needed in the card:
+    /// graft.builder<TaskItem>(
+    ///   items: (s) => s.tasks,
+    ///   itemBuilder: (task, _) => TaskCard(task),
+    ///   // No itemKey needed — automatic ValueKey(index) is applied.
+    /// );
+    /// ```
+    Key Function(T item)? itemKey,
+    Widget Function(int itemCount, NullableIndexedWidgetBuilder itemBuilder)? layout,
     Key? key,
   }) {
     assert(
-      items != null || (itemCount != null && item != null),
-      'Either provide `items: (s) => ...` or both `itemCount` and `item`.',
+      itemBuilder != null || item != null,
+      'Either provide `itemBuilder: (item, index) => ...` or `item: (item) => ...`.',
     );
     GraftScopeGuard.verifyNotActive(this, 'graft.builder');
+    final effectiveLayout = layout ??
+        (count, b) => ListView.builder(
+              itemCount: count,
+              itemBuilder: b,
+            );
+    final effectiveItemBuilder = itemBuilder ?? (T itm, int _) => item!(itm);
     return GraftBuilderDiffEngine<S, T>(
       key: key,
       graft: this,
-      layout: layout,
-      itemCount: itemCount ?? ((s) => items!(s).length),
-      item: item ?? ((s, i) => items!(s)[i]),
-      itemBuilder: itemBuilder,
+      layout: effectiveLayout,
+      itemCount: (s) => items(s).length,
+      item: (s, i) => items(s)[i],
+      itemBuilder: (context, itm, index) => effectiveItemBuilder(itm, index),
       itemKey: itemKey,
     );
   }
@@ -235,9 +288,9 @@ extension GraftWidgetsX<S extends GraftState> on Graft<S> {
   /// - [CarouselView]
   ///
   /// Rebuilds **ONLY** when [selector] returns a new or modified item.
-  Widget item<T>(
-    T Function(S state) selector,
-    Widget Function(BuildContext context, T item) builder, {
+  Widget item<T>({
+    required T Function(S state) selector,
+    required Widget Function(T item) builder,
     Key? key,
   }) {
     GraftScopeGuard.verifyNotActive(this, 'graft.item');
@@ -245,7 +298,7 @@ extension GraftWidgetsX<S extends GraftState> on Graft<S> {
       key: key,
       graft: this,
       selector: selector,
-      builder: builder,
+      builder: (context, itm) => builder(itm),
     );
   }
 }
@@ -297,6 +350,7 @@ class _GraftComputationState<S extends GraftState, R> extends State<_GraftComput
       setState(() {
         _computedValue = newValue;
       });
+      Graft.observer?.onSlotRebuild(widget.graft, 0, widget.builder(newValue));
     }
   }
 
@@ -361,28 +415,14 @@ extension ValueGraftWidgetsX<T> on ValueGraft<T> {
   /// ### Examples:
   /// ```dart
   /// // 1. Standalone Counter:
-  /// counterGraft.slot((count) => Text('Count: $count'))
-  ///
-  /// // 2. Per-Item Micro-State in ListView.builder:
-  /// // When items in a large list hold their own ValueGraft (e.g. isLiked, quantity),
-  /// // tapping like rebuilds ONLY that tiny cell with 0 rebuilds for the parent list!
-  /// ListView.builder(
-  ///   itemCount: items.length,
-  ///   itemBuilder: (context, index) {
-  ///     final item = items[index];
-  ///     return ListTile(
-  ///       title: Text(item.title),
-  ///       trailing: item.isLiked.slot(
-  ///         (liked) => IconButton(
-  ///           icon: Icon(liked ? Icons.favorite : Icons.favorite_border),
-  ///           onPressed: () => item.isLiked.value = !item.isLiked.value,
-  ///         ),
-  ///       ),
-  ///     );
-  ///   },
+  /// counterGraft.slot(
+  ///   builder: (count) => Text('Count: $count'),
   /// )
   /// ```
-  Widget slot(Widget Function(T value) builder, {Key? key}) {
+  Widget slot({
+    required Widget Function(T value) builder,
+    Key? key,
+  }) {
     GraftScopeGuard.verifyNotActive(this, 'graft.slot');
     return GraftSingleSlotScope<GraftValue<T>>(
       key: key,

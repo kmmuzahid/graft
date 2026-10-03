@@ -281,8 +281,8 @@ class HomeScreen extends StatelessWidget {
         actions: [
           // Pre-flight derived computation: graft.compute
           graft.compute(
-            (s) => s.notificationCount,
-            (count) => IconButton(
+            compute: (s) => s.notificationCount,
+            builder: (count) => IconButton(
               icon: Badge(
                 label: Text('$count'),
                 child: const Icon(Icons.notifications),
@@ -308,8 +308,8 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(height: 8),
 
             graft.slots(
-              (children) => Column(children: children),
-              (s) => [
+              layout: (children) => Column(children: children),
+              children: (s) => [
                 // Const widget: Flutter skips re-rendering entirely (0 rebuilds)
                 const Card(
                   color: Colors.deepPurple,
@@ -408,18 +408,18 @@ class HomeScreen extends StatelessWidget {
 
             ListTile(
               leading: graft.slot(
-                (s) => CircleAvatar(
+                builder: (s) => CircleAvatar(
                   backgroundColor: s.isVerified ? Colors.green : Colors.grey,
                   child: Text(s.name.isNotEmpty ? s.name[0] : '?'),
                 ),
               ),
               title: graft.slot(
-                (s) => Text(
+                builder: (s) => Text(
                   s.name,
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
-              subtitle: graft.slot((s) => Text(s.email)),
+              subtitle: graft.slot(builder: (s) => Text(s.email)),
               trailing: const Icon(Icons.arrow_forward_ios, size: 16),
             ),
 
@@ -428,7 +428,7 @@ class HomeScreen extends StatelessWidget {
             Card(
               color: Colors.deepPurple.shade50,
               child: graft.slot(
-                (s) => Padding(
+                builder: (s) => Padding(
                   padding: const EdgeInsets.all(12),
                   child: Text(
                     'Card slot diffed: ${s.name} (${s.isVerified ? "Verified" : "Unverified"})',
@@ -572,8 +572,8 @@ class EditProfileScreen extends StatelessWidget {
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: graft.slots(
-          (children) => Column(children: children),
-          (s) => [
+          layout: (children) => Column(children: children),
+          children: (s) => [
             const Text(
               'This screen called context.use<UserGraft>() and borrowed the existing instance from HomeScreen.',
               style: TextStyle(fontSize: 15),
@@ -629,8 +629,8 @@ class IsolatedProfileScreen extends StatelessWidget {
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: graft.slots(
-          (children) => Column(children: children),
-          (s) => [
+          layout: (children) => Column(children: children),
+          children: (s) => [
             const Text(
               'This screen used context.create<UserGraft>() to create a completely independent instance.',
               style: TextStyle(fontSize: 15),
@@ -698,13 +698,8 @@ class StandardListScreen extends StatelessWidget {
           ),
           Expanded(
             child: graft.builder<TaskItem>(
-              (itemCount, itemBuilder) => ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                itemCount: itemCount,
-                itemBuilder: itemBuilder,
-              ),
               items: (s) => s.tasks,
-              itemBuilder: (context, task, index) {
+              itemBuilder: (task, index) {
                 return Card(
                   child: ListTile(
                     leading: Checkbox(
@@ -774,7 +769,8 @@ class ValueGraftListScreen extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: catalog.slot((s) {
+            child: catalog.slot(
+              builder: (s) {
               if (s.isLoading) {
                 return const Center(
                   child: Column(
@@ -803,7 +799,7 @@ class ValueGraftListScreen extends StatelessWidget {
                       title: Text(product.title),
                       subtitle: product.quantity.slot(
                         // 💥 Only this quantity label rebuilds when incremented/decremented!
-                        (qty) => Text('In Cart: $qty units'),
+                        builder: (qty) => Text('In Cart: $qty units'),
                       ),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -829,7 +825,7 @@ class ValueGraftListScreen extends StatelessWidget {
                           const SizedBox(width: 8),
                           product.isLiked.slot(
                             // 💥 Only this heart icon rebuilds when toggled!
-                            (isLiked) => IconButton(
+                            builder: (isLiked) => IconButton(
                               icon: Icon(
                                 isLiked
                                     ? Icons.favorite
@@ -905,8 +901,8 @@ class MultiGraftCompositionScreen extends StatelessWidget {
 
             // Parent Graft: userGraft.slots
             userGraft.slots(
-              (children) => Column(children: children),
-              (userState) => [
+              layout: (children) => Column(children: children),
+              children: (userState) => [
                 // Slot 0: User Profile Card (Parent Graft)
                 Card(
                   elevation: 2,
@@ -976,8 +972,8 @@ class MultiGraftCompositionScreen extends StatelessWidget {
                     border: Border.all(color: Colors.amber.shade700, width: 2),
                   ),
                   child: counterGraft.slots(
-                    (children) => Column(children: children),
-                    (counterState) => [
+                    layout: (children) => Column(children: children),
+                    children: (counterState) => [
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [

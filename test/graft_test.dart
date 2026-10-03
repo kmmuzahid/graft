@@ -132,6 +132,35 @@ void main() {
       // Safe emission after dispose
       graft.increment();
       expect(graft.state.count, 0);
+
+      // Safe notify after dispose
+      graft.notify();
+    });
+
+    test('reentrant notify() during listener notification batches via microtask safely', () async {
+      final graft = TestGraft();
+      int listenerCalls = 0;
+      bool reentrantTriggered = false;
+
+      graft.addListener(() {
+        listenerCalls++;
+        if (!reentrantTriggered) {
+          reentrantTriggered = true;
+          // Trigger reentrant notify() synchronously while notifying
+          graft.notify();
+        }
+      });
+
+      graft.notify();
+      // Synchronously, only the first notify() pass ran
+      expect(listenerCalls, 1);
+
+      // Allow scheduled microtask to complete
+      await Future<void>.delayed(Duration.zero);
+
+      // Second notify pass completed via microtask
+      expect(listenerCalls, 2);
+      graft.dispose();
     });
   });
 

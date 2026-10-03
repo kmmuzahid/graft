@@ -97,8 +97,8 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: graft.slots(
-            (children) => Column(children: children),
-            (s) => [
+            layout: (children) => Column(children: children),
+            children: (s) => [
               const ConstHeaderWidget(),
               DynamicNameWidget(s.name),
               DynamicEmailWidget(s.email),
@@ -152,8 +152,8 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: graft.slots(
-            (children) => Row(children: children),
-            (s) => [
+            layout: (children) => Row(children: children),
+            children: (s) => [
               Text('Rating: ${s.name}'),
               Text('Contact: ${s.email}'),
             ],
@@ -181,8 +181,8 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: ListTile(
-            leading: graft.slot((s) => DynamicNameWidget(s.name)),
-            title: graft.slot((s) => DynamicEmailWidget(s.email)),
+            leading: graft.slot(builder: (s) => DynamicNameWidget(s.name)),
+            title: graft.slot(builder: (s) => DynamicEmailWidget(s.email)),
             trailing: const ConstHeaderWidget(),
           ),
         ),
@@ -228,8 +228,8 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: graft.slots(
-            (children) => Column(children: children),
-            (s) => [
+            layout: (children) => Column(children: children),
+            children: (s) => [
               Text('Name: ${s.name}'),
               if (s.isVerified) const Text('Verified Badge'),
               Text('Email: ${s.email}'),
@@ -276,8 +276,8 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: graft.compute(
-            (s) => s.isVerified,
-            (isVerified) {
+            compute: (s) => s.isVerified,
+            builder: (isVerified) {
               computeBuilds++;
               return Text(isVerified ? 'VERIFIED' : 'NOT VERIFIED');
             },
@@ -316,12 +316,14 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: graft.slot((state) {
-            if (state.isLoading) {
-              return const Text('Loading...');
-            }
-            return Text('Content for ${state.name}');
-          }),
+          body: graft.slot(
+            builder: (state) {
+              if (state.isLoading) {
+                return const Text('Loading...');
+              }
+              return Text('Content for ${state.name}');
+            },
+          ),
         ),
       ),
     );
@@ -359,9 +361,9 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: graft.slots(
-            (children) => Column(children: children),
-            (s) => [
-              graft.slot((s) => Text(s.name)),
+            layout: (children) => Column(children: children),
+            children: (s) => [
+              graft.slot(builder: (s) => Text(s.name)),
             ],
           ),
         ),
@@ -387,10 +389,10 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: graftA.slots(
-            (children) => Column(children: children),
-            (sA) => [
+            layout: (children) => Column(children: children),
+            children: (sA) => [
               Text('User: ${sA.name}'),
-              graftB.slot((sB) => Text('Other: ${sB.email}')),
+              graftB.slot(builder: (sB) => Text('Other: ${sB.email}')),
             ],
           ),
         ),
@@ -413,8 +415,8 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: graft.slots(
-            (children) => Column(children: children),
-            (s) => [
+            layout: (children) => Column(children: children),
+            children: (s) => [
               // Non-const 3rd-party-like widget without GraftEquivalent
               // ignore: prefer_const_constructors
               MockCkText('COREKIT EXAMPLE'),
@@ -475,8 +477,8 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: graft.slots(
-            (children) => Column(children: children),
-            (s) => [
+            layout: (children) => Column(children: children),
+            children: (s) => [
               const MockKeyedWidget(key: ValueKey('stable_key')),
               Text('Name: ${s.name}'),
             ],
@@ -507,8 +509,8 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: graft.slots(
-            (children) => Column(children: children),
-            (s) => [
+            layout: (children) => Column(children: children),
+            children: (s) => [
               GestureDetector(
                 onTap: () => buttonClicks++,
                 child: const Text('Tap Me'),
@@ -576,8 +578,8 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: graft.slots(
-            (children) => Column(children: children),
-            (s) => [
+            layout: (children) => Column(children: children),
+            children: (s) => [
               const MockCompositeText('Fixed CoreKit Label'),
               Text(s.name),
             ],
@@ -621,15 +623,15 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: graftA.slots(
-            (children) => Column(children: children),
-            (sA) => [
+            layout: (children) => Column(children: children),
+            children: (sA) => [
               Text('Name: ${sA.name}'),
               Container(
                 color: Colors.amber,
                 padding: const EdgeInsets.all(8),
                 child: graftB.slots(
-                  (children) => Row(children: children),
-                  (sB) => [
+                  layout: (children) => Row(children: children),
+                  children: (sB) => [
                     Text('Nested: ${sB.email}'),
                   ],
                 ),
@@ -669,12 +671,8 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: graft.builder<String>(
-            (itemCount, itemBuilder) => ListView.builder(
-              itemCount: itemCount,
-              itemBuilder: itemBuilder,
-            ),
             items: (s) => [s.name, s.email],
-            itemBuilder: (context, val, index) {
+            itemBuilder: (val, index) {
               if (index == 0) buildCountAlice++;
               if (index == 1) buildCountBob++;
               return Text('Item $index: $val');
@@ -710,17 +708,17 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: graft.builder<String>(
-            (itemCount, itemBuilder) => GridView.builder(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2),
-              itemCount: itemCount,
-              itemBuilder: itemBuilder,
-            ),
             items: (s) => [s.name, s.email],
-            itemBuilder: (context, val, index) {
+            itemBuilder: (val, index) {
               if (index == 0) buildCount0++;
               if (index == 1) buildCount1++;
               return Text('Grid $index: $val');
             },
+            layout: (itemCount, itemBuilder) => GridView.builder(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2),
+              itemCount: itemCount,
+              itemBuilder: itemBuilder,
+            ),
           ),
         ),
       ),
@@ -756,8 +754,8 @@ void main() {
             itemCount: 2,
             itemBuilder: (context, index) {
               return graft.item<String>(
-                (s) => index == 0 ? s.name : s.email,
-                (ctx, val) {
+                selector: (s) => index == 0 ? s.name : s.email,
+                builder: (val) {
                   if (index == 0) buildCount0++;
                   if (index == 1) buildCount1++;
                   return Text('Grid $index: $val');
@@ -793,13 +791,13 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: graft.builder<String>(
-            (itemCount, itemBuilder) => ListView.builder(
+            items: (s) => [s.name],
+            itemBuilder: (val, index) => Text(val),
+            layout: (itemCount, itemBuilder) => ListView.builder(
               itemCount: itemCount,
               // ❌ Mistake: forgot to pass itemBuilder!
               itemBuilder: (context, index) => Text('Wrong $index'),
             ),
-            items: (s) => [s.name],
-            itemBuilder: (context, val, index) => Text(val),
           ),
         ),
       ),
@@ -822,12 +820,12 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: graft.builder<String>(
-            (itemCount, itemBuilder) => ListView.builder(
+            items: (s) => [s.name],
+            itemBuilder: (val, index) => Text(val),
+            layout: (itemCount, itemBuilder) => ListView.builder(
               itemCount: 999, // ❌ Mistake: hardcoded count instead of using itemCount
               itemBuilder: itemBuilder,
             ),
-            items: (s) => [s.name],
-            itemBuilder: (context, val, index) => Text(val),
           ),
         ),
       ),
@@ -851,8 +849,8 @@ void main() {
         home: Scaffold(
           body: graft.slots(
             // ❌ Mistake: forgot to pass children!
-            (children) => const Column(children: [Text('Hardcoded')]),
-            (s) => [Text(s.name)],
+            layout: (children) => const Column(children: [Text('Hardcoded')]),
+            children: (s) => [Text(s.name)],
           ),
         ),
       ),
@@ -878,8 +876,8 @@ void main() {
       return MaterialApp(
         home: Scaffold(
           body: graft.slots(
-            (children) => Column(children: children),
-            (s) => [
+            layout: (children) => Column(children: children),
+            children: (s) => [
               const Text('Slot 1: Header'),
               if (showMiddleSlot) const Text('Slot 2: Removable Widget'),
               Text('Slot 3: ${s.name}'),
@@ -923,7 +921,7 @@ void main() {
       return MaterialApp(
         home: Scaffold(
           body: graft.slot(
-            (s) => Text('$prefix${s.name}'),
+            builder: (s) => Text('$prefix${s.name}'),
           ),
         ),
       );
@@ -953,12 +951,8 @@ void main() {
       return MaterialApp(
         home: Scaffold(
           body: graft.builder<String>(
-            (itemCount, itemBuilder) => ListView.builder(
-              itemCount: itemCount,
-              itemBuilder: itemBuilder,
-            ),
             items: (s) => [s.name],
-            itemBuilder: (context, name, index) => Text('$prefix$name'),
+            itemBuilder: (name, index) => Text('$prefix$name'),
           ),
         ),
       );
@@ -977,6 +971,106 @@ void main() {
 
     graft.dispose();
   });
+
+  testWidgets('graft.slot notifies GraftObserver.onSlotRebuild on rebuild',
+      (tester) async {
+    int observerRebuildCount = 0;
+    final testObserver = _ObserverWithSlotTracking(
+        onRebuild: () => observerRebuildCount++);
+    Graft.observer = testObserver;
+
+    final graft = ProfileGraft();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: graft.slot(builder: (s) => Text(s.name)),
+        ),
+      ),
+    );
+    expect(find.text('Alice'), findsOneWidget);
+
+    graft.updateName('Bob');
+    await tester.pump();
+    expect(find.text('Bob'), findsOneWidget);
+    expect(observerRebuildCount, 1);
+
+    Graft.observer = null;
+    graft.dispose();
+  });
+
+  testWidgets('graft.compute notifies GraftObserver.onSlotRebuild on rebuild',
+      (tester) async {
+    int observerRebuildCount = 0;
+    final testObserver = _ObserverWithSlotTracking(
+        onRebuild: () => observerRebuildCount++);
+    Graft.observer = testObserver;
+
+    final graft = ProfileGraft();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: graft.compute<String>(
+            compute: (s) => s.name,
+            builder: (name) => Text('Name: $name'),
+          ),
+        ),
+      ),
+    );
+    expect(find.text('Name: Alice'), findsOneWidget);
+
+    graft.updateName('Bob');
+    await tester.pump();
+    expect(find.text('Name: Bob'), findsOneWidget);
+    expect(observerRebuildCount, 1);
+
+    Graft.observer = null;
+    graft.dispose();
+  });
+
+  testWidgets(
+      'graft.builder with item parameter and list shrinkage notifies observer',
+      (tester) async {
+    int observerRebuildCount = 0;
+    final testObserver = _ObserverWithSlotTracking(
+        onRebuild: () => observerRebuildCount++);
+    Graft.observer = testObserver;
+
+    final graft = ProfileGraft();
+    var list = ['Alice', 'Bob'];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: graft.builder<String>(
+            items: (_) => list,
+            item: (name) => Text('Hello $name'),
+          ),
+        ),
+      ),
+    );
+    expect(find.text('Hello Alice'), findsOneWidget);
+    expect(find.text('Hello Bob'), findsOneWidget);
+
+    // Shrink list to trigger bounds check
+    list = ['Alice 2'];
+    graft.updateName('Alice 2');
+    await tester.pump();
+
+    expect(find.text('Hello Alice 2'), findsOneWidget);
+
+    Graft.observer = null;
+    graft.dispose();
+  });
+}
+
+class _ObserverWithSlotTracking extends GraftObserver {
+  final VoidCallback onRebuild;
+  _ObserverWithSlotTracking({required this.onRebuild});
+
+  @override
+  void onSlotRebuild(dynamic graft, int slotIndex, Widget widget) {
+    onRebuild();
+  }
 }
 
 class MockCompositeText extends StatelessWidget {

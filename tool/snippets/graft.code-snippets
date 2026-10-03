@@ -1,0 +1,85 @@
+{
+  "Graft Controller & State": {
+    "prefix": "graft-controller",
+    "body": [
+      "class ${1:Feature}State extends GraftState {",
+      "  ${2:// State fields}",
+      "}",
+      "",
+      "class ${1:Feature}Graft extends Graft<${1:Feature}State> {",
+      "  ${1:Feature}Graft() : super(${1:Feature}State());",
+      "",
+      "  ${3:// Actions mutating state cleanly via cascade}",
+      "}"
+    ],
+    "description": "Scaffolds a new Graft controller and GraftState domain class"
+  },
+  "ValueGraft Controller": {
+    "prefix": "graft-value",
+    "body": [
+      "class ${1:Counter}Graft extends ValueGraft<${2:int}> {",
+      "  ${1:Counter}Graft([${2:int} initial = ${3:0}]) : super(initial);",
+      "",
+      "  void increment() => value++;",
+      "}"
+    ],
+    "description": "Scaffolds a lightweight ValueGraft for primitive types and enums"
+  },
+  "Graft Single Child Slot": {
+    "prefix": "graft-slot",
+    "body": [
+      "${1:graft}.slot(",
+      "  builder: (${2:s}) => ${3:Text(s.title)},",
+      ")"
+    ],
+    "description": "Fine-grained isolated single-child slot (0 rebuilds on unchanged slots)"
+  },
+  "Graft Multi-Child Slots Layout": {
+    "prefix": "graft-slots",
+    "body": [
+      "${1:graft}.slots(",
+      "  layout: (children) => ${2:Column}(children: children),",
+      "  children: (${3:s}) => [",
+      "    ${4:// Slot widgets diffed individually}",
+      "  ],",
+      ")"
+    ],
+    "description": "Fine-grained multi-child layout slot diffing engine with explicit layout wrapper"
+  },
+  "Graft Virtualized Collection Builder": {
+    "prefix": "graft-builder",
+    "body": [
+      "${1:graft}.builder<${2:Item}>(",
+      "  items: ${3:s.items},",
+      "  itemBuilder: (item, index) => ${4:ListTile(title: Text(item.title))},",
+      ")"
+    ],
+    "description": "Zero-rebuild virtualized collection builder for ListView, GridView, etc."
+  },
+  "Graft Pre-flight Computed Slot": {
+    "prefix": "graft-compute",
+    "body": [
+      "${1:graft}.compute<${2:int}>(",
+      "  compute: (${3:s}) => ${4:s.items.length},",
+      "  builder: (${5:val}) => ${6:Text('$val')},",
+      ")"
+    ],
+    "description": "Pre-flight derived data computation slot (skips builder if derived value unchanged)"
+  },
+  "Graft Declarative Unit Test": {
+    "prefix": "graft-test",
+    "body": [
+      "graftTest<${1:Feature}Graft, ${1:Feature}State>(",
+      "  '${2:emits expected state when action is triggered}',",
+      "  build: () => ${1:Feature}Graft(),",
+      "  act: (graft) {",
+      "    ${3:// graft.action();}",
+      "  },",
+      "  expect: [",
+      "    ${4:// (s) => expect(s.value, equals(...)),}",
+      "  ],",
+      ");"
+    ],
+    "description": "Declarative, sub-millisecond pure Dart unit test template for Graft"
+  }
+}

@@ -41,7 +41,7 @@ extension GraftContextX on BuildContext {
       return GraftRegistry.getOrCreateSingleton<T>();
     }
 
-    final route = ModalRoute.of(this);
+    final route = ModalRoute.of(this) ?? GraftRouteTracker.currentRoute;
 
     if (route != null) {
       final existing = GraftRouteTracker.findInStack<T>(route);
@@ -80,7 +80,7 @@ extension GraftContextX on BuildContext {
       return GraftRegistry.getOrCreateSingleton<T>();
     }
 
-    final route = ModalRoute.of(this);
+    final route = ModalRoute.of(this) ?? GraftRouteTracker.currentRoute;
     final newInstance = factory != null ? factory() : GraftRegistry.create<T>();
 
     if (route != null) {

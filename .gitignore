@@ -31,3 +31,6 @@ migrate_working_dir/
 
 # Symbol processing related
 symbols/
+
+# FVM Version Cache
+.fvm/

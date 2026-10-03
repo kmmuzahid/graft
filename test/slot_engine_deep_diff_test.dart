@@ -14,6 +14,13 @@ class CustomEquivalentWidget extends StatelessWidget implements GraftEquivalent 
   Widget build(BuildContext context) => Text('ID: $id');
 }
 
+class CyclicalWidget extends StatelessWidget {
+  const CyclicalWidget({super.key});
+
+  @override
+  Widget build(BuildContext context) => this;
+}
+
 class DeepState extends GraftState {
   int value;
   DeepState(this.value);
@@ -232,16 +239,43 @@ void main() {
       expect(GraftMultiChildDiffEngine.isWidgetEquivalent(sl1, sl3), isFalse);
     });
 
-    testWidgets('GraftEquivalent and depth limit (> 20)', (tester) async {
+    testWidgets('GraftEquivalent and lazy cycle detection', (tester) async {
       const eq1 = CustomEquivalentWidget(10);
       const eq2 = CustomEquivalentWidget(10);
       const eq3 = CustomEquivalentWidget(20);
       expect(GraftMultiChildDiffEngine.isWidgetEquivalent(eq1, eq2), isTrue);
       expect(GraftMultiChildDiffEngine.isWidgetEquivalent(eq1, eq3), isFalse);
 
+      // Deeply nested widgets (> 20 levels deep) now diff successfully without arbitrary cutoffs:
+      Widget buildDeepTree(int depth) {
+        if (depth == 0) return const Text('leaf');
+        return Padding(padding: const EdgeInsets.all(1), child: buildDeepTree(depth - 1));
+      }
+
+      final deepTreeA = buildDeepTree(25);
+      final deepTreeB = buildDeepTree(25);
       expect(
-        GraftMultiChildDiffEngine.isWidgetEquivalent(const Text('A'), const Text('A'), null, 25),
-        isFalse,
+        GraftMultiChildDiffEngine.isWidgetEquivalent(deepTreeA, deepTreeB),
+        isTrue,
+      );
+
+      // Cycle detection: self-referential widget safely returns false without stack overflow
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) {
+              const cyclicA = CyclicalWidget();
+              const cyclicB = CyclicalWidget();
+              final isEq = GraftMultiChildDiffEngine.isWidgetEquivalent(
+                cyclicA,
+                cyclicB,
+                context,
+              );
+              expect(isEq, isFalse);
+              return const SizedBox();
+            },
+          ),
+        ),
       );
     });
 
@@ -252,14 +286,9 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: graft.builder<int>(
-              (count, builder) => ListView.builder(
-                itemCount: count,
-                itemBuilder: builder,
-              ),
-              itemCount: (s) => s.value,
-              item: (s, index) => index * 2,
-              itemKey: (item, index) => ValueKey('key_$item'),
-              itemBuilder: (context, item, index) => Text('Item: $item'),
+              items: (s) => List.generate(s.value, (index) => index * 2),
+              itemKey: (item) => ValueKey('key_$item'),
+              itemBuilder: (item, index) => Text('Item: $item'),
             ),
           ),
         ),
@@ -282,10 +311,10 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: graft.compute(
-              (s) => s.value,
-              (v1) => graft.compute(
-                (s) => s.value,
-                (v2) => Text('$v1-$v2'),
+              compute: (s) => s.value,
+              builder: (v1) => graft.compute(
+                compute: (s) => s.value,
+                builder: (v2) => Text('$v1-$v2'),
               ),
             ),
           ),
@@ -307,8 +336,8 @@ void main() {
         return MaterialApp(
           home: Scaffold(
             body: g.compute<int>(
-              (s) => s.value,
-              (val) => Text('Computed: $val'),
+              compute: (s) => s.value,
+              builder: (val) => Text('Computed: $val'),
             ),
           ),
         );
@@ -394,24 +423,24 @@ void main() {
             body: Column(
               children: [
                 graft.slots(
-                  (children) => ListView(shrinkWrap: true, children: children),
-                  (s) => [Text('ListView: ${s.value}')],
+                  layout: (children) => ListView(shrinkWrap: true, children: children),
+                  children: (s) => [Text('ListView: ${s.value}')],
                 ),
                 graft.slots(
-                  (children) => GridView.count(shrinkWrap: true, crossAxisCount: 2, children: children),
-                  (s) => [Text('GridView: ${s.value}')],
+                  layout: (children) => GridView.count(shrinkWrap: true, crossAxisCount: 2, children: children),
+                  children: (s) => [Text('GridView: ${s.value}')],
                 ),
                 graft.slots(
-                  (children) => Card(child: Column(children: children)),
-                  (s) => [Text('Card: ${s.value}')],
+                  layout: (children) => Card(child: Column(children: children)),
+                  children: (s) => [Text('Card: ${s.value}')],
                 ),
                 graft.slots(
-                  (children) => Padding(padding: const EdgeInsets.all(4), child: Column(children: children)),
-                  (s) => [Text('Padding: ${s.value}')],
+                  layout: (children) => Padding(padding: const EdgeInsets.all(4), child: Column(children: children)),
+                  children: (s) => [Text('Padding: ${s.value}')],
                 ),
                 graft.slots(
-                  (children) => Container(child: Column(children: children)),
-                  (s) => [Text('Container: ${s.value}')],
+                  layout: (children) => Container(child: Column(children: children)),
+                  children: (s) => [Text('Container: ${s.value}')],
                 ),
               ],
             ),
@@ -438,8 +467,11 @@ void main() {
           home: Scaffold(
             body: Column(
               children: [
-                g.slot((s) => Text('Slot: ${s.value}')),
-                g.slots((children) => Column(children: children), (s) => [Text('Slots: ${s.value}')]),
+                g.slot(builder: (s) => Text('Slot: ${s.value}')),
+                g.slots(
+                  layout: (children) => Column(children: children),
+                  children: (s) => [Text('Slots: ${s.value}')],
+                ),
               ],
             ),
           ),
@@ -474,38 +506,38 @@ void main() {
               children: [
                 Expanded(
                   child: graft.builder<int>(
-                    (count, builder) => PageView.builder(itemCount: count, itemBuilder: builder),
                     items: (s) => List.generate(s.value, (i) => i),
-                    itemBuilder: (context, item, index) => Text('Page: $item'),
+                    itemBuilder: (item, index) => Text('Page: $item'),
+                    layout: (count, builder) => PageView.builder(itemCount: count, itemBuilder: builder),
                   ),
                 ),
                 Expanded(
                   child: graft.builder<int>(
-                    (count, builder) => Scrollbar(
+                    items: (s) => List.generate(s.value, (i) => i),
+                    itemBuilder: (item, index) => Text('Scroll: $item'),
+                    layout: (count, builder) => Scrollbar(
                       child: ListView.builder(itemCount: count, itemBuilder: builder),
                     ),
-                    items: (s) => List.generate(s.value, (i) => i),
-                    itemBuilder: (context, item, index) => Text('Scroll: $item'),
                   ),
                 ),
                 Expanded(
                   child: graft.builder<int>(
-                    (count, builder) => RefreshIndicator(
+                    items: (s) => List.generate(s.value, (i) => i),
+                    itemBuilder: (item, index) => Text('Refresh: $item'),
+                    layout: (count, builder) => RefreshIndicator(
                       onRefresh: () async {},
                       child: ListView.builder(itemCount: count, itemBuilder: builder),
                     ),
-                    items: (s) => List.generate(s.value, (i) => i),
-                    itemBuilder: (context, item, index) => Text('Refresh: $item'),
                   ),
                 ),
                 Expanded(
                   child: graft.builder<int>(
-                    (count, builder) => Padding(
+                    items: (s) => List.generate(s.value, (i) => i),
+                    itemBuilder: (item, index) => Text('Pad: $item'),
+                    layout: (count, builder) => Padding(
                       padding: const EdgeInsets.all(2),
                       child: ListView.builder(itemCount: count, itemBuilder: builder),
                     ),
-                    items: (s) => List.generate(s.value, (i) => i),
-                    itemBuilder: (context, item, index) => Text('Pad: $item'),
                   ),
                 ),
               ],
@@ -523,26 +555,24 @@ void main() {
     testWidgets('GraftSingleSlotScope, GraftBuilderDiffEngine, and _GraftComputation isEquivalentTo', (tester) async {
       final graft = DeepGraft();
 
-      final slot1 = graft.slot((s) => Text('${s.value}'));
-      final slot2 = graft.slot((s) => Text('${s.value}'));
+      final slot1 = graft.slot(builder: (s) => Text('${s.value}'));
+      final slot2 = graft.slot(builder: (s) => Text('${s.value}'));
       expect((slot1 as GraftEquivalent).isEquivalentTo(slot2), isTrue);
       expect((slot1 as GraftEquivalent).isEquivalentTo(const SizedBox()), isFalse);
 
       final builder1 = graft.builder<int>(
-        (c, b) => ListView.builder(itemCount: c, itemBuilder: b),
         items: (s) => [1],
-        itemBuilder: (c, item, i) => Text('$item'),
+        itemBuilder: (item, i) => Text('$item'),
       );
       final builder2 = graft.builder<int>(
-        (c, b) => ListView.builder(itemCount: c, itemBuilder: b),
         items: (s) => [1],
-        itemBuilder: (c, item, i) => Text('$item'),
+        itemBuilder: (item, i) => Text('$item'),
       );
       expect((builder1 as GraftEquivalent).isEquivalentTo(builder2), isTrue);
       expect((builder1 as GraftEquivalent).isEquivalentTo(const SizedBox()), isFalse);
 
-      final comp1 = graft.compute((s) => s.value, (v) => Text('$v'));
-      final comp2 = graft.compute((s) => s.value, (v) => Text('$v'));
+      final comp1 = graft.compute(compute: (s) => s.value, builder: (v) => Text('$v'));
+      final comp2 = graft.compute(compute: (s) => s.value, builder: (v) => Text('$v'));
       expect((comp1 as GraftEquivalent).isEquivalentTo(comp2), isTrue);
       expect((comp1 as GraftEquivalent).isEquivalentTo(const SizedBox()), isFalse);
 
@@ -567,7 +597,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: graft.slot((s) => graft.slot((s2) => Text('${s.value}'))),
+            body: graft.slot(builder: (s) => graft.slot(builder: (s2) => Text('${s.value}'))),
           ),
         ),
       );
@@ -588,9 +618,8 @@ void main() {
         return MaterialApp(
           home: Scaffold(
             body: g.builder<int>(
-              (count, builder) => ListView.builder(itemCount: count, itemBuilder: builder),
               items: (s) => List.generate(s.value, (i) => i),
-              itemBuilder: (context, item, index) => Text('Item: $item'),
+              itemBuilder: (item, index) => Text('Item: $item'),
             ),
           ),
         );
@@ -612,10 +641,10 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: graft.slot((s) {
+            body: graft.slot(builder: (s) {
               return Builder(
                 builder: (ctx) {
-                  return graft.slot((s2) => Text('${s2.value}'));
+                  return graft.slot(builder: (s2) => Text('${s2.value}'));
                 },
               );
             }),
@@ -648,15 +677,15 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: graft.builder<int>(
-              (count, builder) => CustomScrollView(
+              items: (s) => [10, 20],
+              itemBuilder: (item, i) => Text('Sliver: $item'),
+              layout: (count, builder) => CustomScrollView(
                 slivers: [
                   SliverList(
                     delegate: SliverChildBuilderDelegate(builder, childCount: count),
                   ),
                 ],
               ),
-              items: (s) => [10, 20],
-              itemBuilder: (ctx, item, i) => Text('Sliver: $item'),
             ),
           ),
         ),
@@ -671,8 +700,8 @@ void main() {
     testWidgets('GraftItemSlot edge cases and reassemble', (tester) async {
       final graft = DeepGraft();
       final slotWidget = graft.item<int>(
-        (s) => s.value,
-        (ctx, val) => Text('SlotItem: $val'),
+        selector: (s) => s.value,
+        builder: (val) => Text('SlotItem: $val'),
       );
 
       await tester.pumpWidget(MaterialApp(home: Scaffold(body: slotWidget)));
@@ -690,8 +719,8 @@ void main() {
       final g1 = DeepGraft();
       final g2 = DeepGraft();
 
-      final itemSlot1 = g1.item<int>((s) => s.value, (ctx, v) => Text('$v'));
-      final itemSlot2 = g1.item<int>((s) => s.value, (ctx, v) => Text('$v'));
+      final itemSlot1 = g1.item<int>(selector: (s) => s.value, builder: (v) => Text('$v'));
+      final itemSlot2 = g1.item<int>(selector: (s) => s.value, builder: (v) => Text('$v'));
       expect((itemSlot1 as GraftEquivalent).isEquivalentTo(itemSlot2), isTrue);
       expect((itemSlot1 as GraftEquivalent).isEquivalentTo(const SizedBox()), isFalse);
 
@@ -699,8 +728,8 @@ void main() {
         return MaterialApp(
           home: Scaffold(
             body: g.item<int>(
-              (s) => s.value,
-              (ctx, v) => Text('Val: $v'),
+              selector: (s) => s.value,
+              builder: (v) => Text('Val: $v'),
             ),
           ),
         );
@@ -720,8 +749,8 @@ void main() {
 
       // Selector throws initially
       final throwingSlot = g1.item<int>(
-        (s) => throw FormatException('Initial error'),
-        (ctx, v) => Text('$v'),
+        selector: (s) => throw FormatException('Initial error'),
+        builder: (v) => Text('$v'),
       );
       await tester.pumpWidget(MaterialApp(home: Scaffold(body: throwingSlot)));
       expect(find.byType(SizedBox), findsWidgets);
@@ -737,8 +766,8 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: graft.compute<int>(
-              (s) => s.value,
-              (val) => Text('CompVal: $val'),
+              compute: (s) => s.value,
+              builder: (val) => Text('CompVal: $val'),
             ),
           ),
         ),
@@ -755,8 +784,8 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: graft.compute<int>(
-              (s) => s.value,
-              (val) => Text('UpdatedCompVal: $val'),
+              compute: (s) => s.value,
+              builder: (val) => Text('UpdatedCompVal: $val'),
             ),
           ),
         ),
@@ -775,12 +804,12 @@ void main() {
             body: Column(
               children: [
                 graft.slots(
-                  (children) => CustomWrapperWithChild(child: Column(children: children)),
-                  (s) => [Text('CustomWrap: ${s.value}')],
+                  layout: (children) => CustomWrapperWithChild(child: Column(children: children)),
+                  children: (s) => [Text('CustomWrap: ${s.value}')],
                 ),
                 graft.slots(
-                  (children) => CustomThrowingChildWidget(childWidget: Column(children: children)),
-                  (s) => [Text('ThrowWrap: ${s.value}')],
+                  layout: (children) => CustomThrowingChildWidget(childWidget: Column(children: children)),
+                  children: (s) => [Text('ThrowWrap: ${s.value}')],
                 ),
               ],
             ),
@@ -798,11 +827,11 @@ void main() {
       final graft = DeepGraft();
 
       final sliverWidget = graft.builder<int>(
-        (count, builder) => SliverList(
+        items: (s) => [100],
+        itemBuilder: (item, i) => Text('DirectSliver: $item'),
+        layout: (count, builder) => SliverList(
           delegate: SliverChildBuilderDelegate(builder, childCount: count),
         ),
-        items: (s) => [100],
-        itemBuilder: (ctx, item, i) => Text('DirectSliver: $item'),
       );
 
       await tester.pumpWidget(
@@ -828,8 +857,8 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: graft.item<int>(
-              (s) => s.value,
-              (ctx, v) => staticWidget,
+              selector: (s) => s.value,
+              builder: (v) => staticWidget,
             ),
           ),
         ),
@@ -845,11 +874,11 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: graft.builder<int>(
-              (count, builder) => CustomWrapperWithChild(
+              items: (s) => [1, 2],
+              itemBuilder: (item, i) => Text('WrappedItem: $item'),
+              layout: (count, builder) => CustomWrapperWithChild(
                 child: ListView.builder(itemCount: count, itemBuilder: builder),
               ),
-              items: (s) => [1, 2],
-              itemBuilder: (ctx, item, i) => Text('WrappedItem: $item'),
             ),
           ),
         ),
@@ -861,11 +890,11 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: graft.builder<int>(
-              (count, builder) => Container(
+              items: (s) => [1, 2],
+              itemBuilder: (item, i) => Text('ContainerItem: $item'),
+              layout: (count, builder) => Container(
                 child: ListView.builder(itemCount: count, itemBuilder: builder),
               ),
-              items: (s) => [1, 2],
-              itemBuilder: (ctx, item, i) => Text('ContainerItem: $item'),
             ),
           ),
         ),
