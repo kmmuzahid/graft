@@ -1,6 +1,7 @@
 // ignore_for_file: deprecated_member_use
 
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/error/error.dart' show ErrorSeverity;
 import 'package:analyzer/error/listener.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
@@ -13,6 +14,7 @@ class AvoidNestedGraftSlotRule extends DartLintRule {
         'Avoid nesting "{0}" inside another "{1}". Graft slots are already isolated diffing engines.',
     correctionMessage:
         'Return regular widgets directly or use graft.compute for derived state.',
+    errorSeverity: ErrorSeverity.ERROR,
   );
 
   static const _slotMethodNames = {'slot', 'slots', 'compute', 'builder', 'item'};

@@ -1,6 +1,6 @@
 name: graft_lint
 description: Custom lint rules and analyzer plugin for the Graft reactive state management library.
-version: 0.1.0-alpha.1
+version: 0.1.1-alpha.1
 homepage: https://github.com/kmmuzahid/graft/tree/main/packages/graft_lint
 repository: https://github.com/kmmuzahid/graft
 issue_tracker: https://github.com/kmmuzahid/graft/issues

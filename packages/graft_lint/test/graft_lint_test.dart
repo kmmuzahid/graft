@@ -1,3 +1,4 @@
+import 'package:analyzer/error/error.dart' show ErrorSeverity;
 import 'package:graft_lint/graft_lint.dart';
 import 'package:graft_lint/src/rules/avoid_nested_graft_slot.dart';
 import 'package:graft_lint/src/rules/require_graft_route_observer.dart';
@@ -10,11 +11,12 @@ void main() {
       expect(plugin, isNotNull);
     });
 
-    test('AvoidNestedGraftSlotRule has correct code and name', () {
+    test('AvoidNestedGraftSlotRule has correct code, name, and error severity', () {
       final rule = AvoidNestedGraftSlotRule();
       expect(rule.code.name, 'avoid_nested_graft_slot');
       expect(rule.code.problemMessage, contains('Avoid nesting'));
       expect(rule.code.correctionMessage, contains('Return regular widgets'));
+      expect(rule.code.errorSeverity, ErrorSeverity.ERROR);
     });
 
     test('RequireGraftRouteObserverRule has correct code and name', () {
