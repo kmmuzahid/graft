@@ -34,3 +34,6 @@ symbols/
 
 # FVM Version Cache
 .fvm/
+
+# Coverage
+coverage/
