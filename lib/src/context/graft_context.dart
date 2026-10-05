@@ -69,9 +69,10 @@ extension GraftContextX on BuildContext {
     }
 
     if (route != null) {
-      GraftRouteTracker.registerOwned<T>(route, newInstance);
+      final effectiveRoute = GraftRouteTracker.resolveOwnerRoute(route);
+      GraftRouteTracker.registerOwned<T>(effectiveRoute, newInstance);
       // Auto-attaches to standard Flutter Route.popped: cleans up even without GraftRouteObserver!
-      route.popped.then((_) {
+      effectiveRoute.popped.then((_) {
         if (!newInstance.isDisposed) {
           newInstance.dispose();
         }
@@ -113,8 +114,9 @@ extension GraftContextX on BuildContext {
 
     final route = ModalRoute.of(this) ?? GraftRouteTracker.currentRoute;
     if (route != null) {
-      GraftRouteTracker.registerOwned<T>(route, newInstance);
-      route.popped.then((_) {
+      final effectiveRoute = GraftRouteTracker.resolveOwnerRoute(route);
+      GraftRouteTracker.registerOwned<T>(effectiveRoute, newInstance);
+      effectiveRoute.popped.then((_) {
         if (!newInstance.isDisposed) {
           newInstance.dispose();
         }

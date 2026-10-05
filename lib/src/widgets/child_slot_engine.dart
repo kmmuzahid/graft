@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/graft.dart';
 import '../core/graft_mask.dart';
 import '../core/graft_state.dart';
+import 'no_subscription_context.dart';
 import 'slot_metadata.dart';
 
 /// Interface for custom widgets to declare fine-grained content equivalence for slot diffing.
@@ -446,10 +447,13 @@ class GraftMultiChildDiffEngine<S extends GraftState> extends StatefulWidget
         visited.add(a);
         visited.add(b);
         try {
-          final builtA = (a as dynamic).build(context);
-          final builtB = (b as dynamic).build(context);
+          final safeContext = context is NoSubscriptionContext
+              ? context
+              : NoSubscriptionContext(context);
+          final builtA = (a as dynamic).build(safeContext);
+          final builtB = (b as dynamic).build(safeContext);
           if (builtA is Widget && builtB is Widget) {
-            return isWidgetEquivalent(builtA, builtB, context, visited);
+            return isWidgetEquivalent(builtA, builtB, safeContext, visited);
           }
         } catch (_) {}
       }

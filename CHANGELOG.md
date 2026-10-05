@@ -5,6 +5,29 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 
 ---
 
+## 0.1.2-alpha.2
+
+### ⚡ Core Engine Hardening & Context Decoupling
+- **Recursive Snapshot Contract & Nested State Diffing**:
+  - Upgraded `GraftState`'s snapshot engine to recursively clone nested `GraftState` sub-states via their `props`, alongside deep snapshots of `List`, `Set`, and `Map` collections.
+  - Deep-equality diffing in `diffChanges` detects in-place cascade mutations on nested models (`state..address.city = 'Berlin'..update()`) with 100% snapshot integrity, eliminating the need for `copyWith` boilerplate.
+  - Verified in `test/nested_inplace_mutation_test.dart`.
+- **Safe AST Reconciliation with `NoSubscriptionContext`**:
+  - Introduced `NoSubscriptionContext`, a specialized proxy `BuildContext` that safely resolves `InheritedWidget`s (such as `Theme.of(context)` or `MediaQuery.of(context)`) during fine-grained widget diffing without registering the underlying element in `InheritedElement._dependents`.
+  - Guarantees zero context dependency leaks and prevents out-of-band rebuild cascades during background slot evaluation.
+  - Verified in `test/context_isolation_leak_test.dart`.
+- **Transient Route Lifecycle Protection (`PopupRoute`)**:
+  - Enhanced `GraftRouteTracker` with `resolveOwnerRoute` to distinguish host screen routes (`PageRoute`) from transient overlay routes (`PopupRoute`, such as `showDialog` or `showModalBottomSheet`).
+  - When dialogs or bottom sheets borrow or instantiate controllers via `context.use<T>()`, ownership is cleanly anchored to the hosting `PageRoute`. Dismissing the popup no longer triggers premature controller disposal.
+  - Verified in `test/dialog_popup_lifecycle_test.dart`.
+- **Deterministic Multi-Field Bitmask Union**:
+  - Upgraded `GraftBoundary`'s backward adaptive dependency learning to accumulate observed field bitmasks via bitwise union (`_learnedDependencies[graft] |= fieldMask`) across all builder passes, preventing multi-field dependency dropping.
+  - Verified in `test/deterministic_slot_bitmask_test.dart`.
+- **Comprehensive Test Suite Expansion**:
+  - Expanded test coverage from 116 to **164 test cases** (100% pass rate) with 0 static analysis warnings across unit, widget, and hardware benchmark suites.
+
+---
+
 ## 0.1.2-alpha.1
 
 ### ⚡ Hardware-Aligned Engine & Self-Optimizing Architecture

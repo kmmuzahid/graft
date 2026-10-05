@@ -116,6 +116,8 @@ class _GraftBoundaryState extends State<GraftBoundary> {
             (_learnedDependencies[graft] ?? GraftMask.empty).withBit(single);
       } else if (_learnedDependencies[graft] == null || _learnedDependencies[graft]!.isEmpty) {
         _learnedDependencies[graft] = dirtyMask;
+      } else {
+        _learnedDependencies[graft] = _learnedDependencies[graft]!.union(dirtyMask);
       }
     }
 

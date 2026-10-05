@@ -84,40 +84,66 @@ abstract class GraftState {
 
   @pragma('vm:prefer-inline')
   static Object? _snapshotValue(Object? value) {
-    if (value is List) return List<Object?>.of(value, growable: false);
-    if (value is Set) return Set<Object?>.of(value);
-    if (value is Map) return Map<Object?, Object?>.of(value);
+    if (value == null) return null;
+    if (value is GraftState) {
+      final subProps = value.props;
+      return List<Object?>.generate(
+        subProps.length,
+        (i) => _snapshotValue(subProps[i]),
+        growable: false,
+      );
+    }
+    if (value is List) {
+      return List<Object?>.generate(
+        value.length,
+        (i) => _snapshotValue(value[i]),
+        growable: false,
+      );
+    }
+    if (value is Set) {
+      return value.map(_snapshotValue).toSet();
+    }
+    if (value is Map) {
+      return Map<Object?, Object?>.fromEntries(
+        value.entries.map((e) => MapEntry(e.key, _snapshotValue(e.value))),
+      );
+    }
     return value;
   }
 
-  static bool _fastListEquals(List a, List b) {
-    final len = a.length;
-    for (int j = 0; j < len; j++) {
-      final ejA = a[j];
-      final ejB = b[j];
-      if (!identical(ejA, ejB) && ejA != ejB) return false;
+  static bool _deepEquals(Object? a, Object? b) {
+    if (identical(a, b)) return true;
+    if (a == null || b == null) return a == b;
+    if (a is List && b is List) {
+      final len = a.length;
+      if (len != b.length) return false;
+      for (int i = 0; i < len; i++) {
+        if (!_deepEquals(a[i], b[i])) return false;
+      }
+      return true;
     }
-    return true;
-  }
-
-  static bool _fastSetEquals(Set a, Set b) {
-    for (final elem in b) {
-      if (!a.contains(elem)) return false;
+    if (a is Set && b is Set) {
+      if (a.length != b.length) return false;
+      for (final elem in b) {
+        if (!a.contains(elem)) return false;
+      }
+      return true;
     }
-    return true;
-  }
-
-  static bool _fastMapEquals(Map a, Map b) {
-    for (final entry in b.entries) {
-      final key = entry.key;
-      if (!a.containsKey(key) || a[key] != entry.value) return false;
+    if (a is Map && b is Map) {
+      if (a.length != b.length) return false;
+      for (final entry in a.entries) {
+        if (!b.containsKey(entry.key) || !_deepEquals(entry.value, b[entry.key])) {
+          return false;
+        }
+      }
+      return true;
     }
-    return true;
+    return a == b;
   }
 
   /// Compares current [props] against the in-place baseline snapshot.
   /// Returns [GraftMask.allDirty] on first evaluation, or a [GraftMask] of modified property indices.
-  /// Handles in-place mutations on collections (List, Set, Map) transparently.
+  /// Handles in-place mutations on collections (List, Set, Map) and nested [GraftState] objects transparently.
   /// Internal engine method: must not be called or overridden by user code.
   @internal
   @nonVirtual
@@ -147,22 +173,29 @@ abstract class GraftState {
 
       bool isDirty = false;
 
-      // Fast pointer identity first (1 CPU cycle for primitives and unmutated references)
-      if (!identical(p, c)) {
+      // 1. If current property is a nested GraftState:
+      if (c is GraftState) {
+        final currentSubSnapshot = _snapshotValue(c);
+        isDirty = !_deepEquals(p, currentSubSnapshot);
+      }
+      // 2. Fast pointer identity first (1 CPU cycle for primitives and unmutated references)
+      else if (!identical(p, c)) {
         if (p is List && c is List) {
-          isDirty = p.length != c.length || !_fastListEquals(p, c);
+          final currentListSnapshot = _snapshotValue(c);
+          isDirty = p.length != c.length || !_deepEquals(p, currentListSnapshot);
         } else if (p is Set && c is Set) {
-          isDirty = p.length != c.length || !_fastSetEquals(p, c);
+          final currentSetSnapshot = _snapshotValue(c);
+          isDirty = p.length != c.length || !_deepEquals(p, currentSetSnapshot);
         } else if (p is Map && c is Map) {
-          isDirty = p.length != c.length || !_fastMapEquals(p, c);
+          final currentMapSnapshot = _snapshotValue(c);
+          isDirty = p.length != c.length || !_deepEquals(p, currentMapSnapshot);
         } else {
           isDirty = (p != c);
         }
-      } else if (c is Iterable) {
+      } else if (c is Iterable || c is Map) {
         // Fallback for mutable collection reference without prior snapshot
-        isDirty = true;
-      } else if (c is Map) {
-        isDirty = true;
+        final currentSnapshot = _snapshotValue(c);
+        isDirty = !_deepEquals(p, currentSnapshot);
       }
 
       if (isDirty) {

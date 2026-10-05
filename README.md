@@ -8,7 +8,7 @@
 [![Flutter 3.10+](https://img.shields.io/badge/Flutter-3.10+-02569B.svg?logo=flutter)](https://flutter.dev)
 
 > [!IMPORTANT]
-> ### 🚀 Graft is in Public Alpha (`0.1.2-alpha.1`) — Let's Have a Ride!
+> ### 🚀 Graft is in Public Alpha (`0.1.2-alpha.2`) — Let's Have a Ride!
 > Graft is actively evolving in its initial alpha release. It is **not yet declared production-ready**.
 > We warmly invite the Flutter developer community to take it for a spin: test it in your projects, push its slot diffing and route scoping to the limits, and help us make it even better!
 > 
@@ -25,13 +25,13 @@ State management in Flutter has historically forced developers to choose between
 Graft rejects this compromise. It is engineered around 6 foundational pillars:
 
 1. **Zero-Wrapper Domain State:** State models are pure Dart classes extending `GraftState`. No `Signal<T>`, no `.obs`, no `.value`, and strictly zero code generation (`build_runner` is never required).
-2. **Mandatory `props` Contract:** Domain properties are declared via `List<Object?> get props;`, an abstract compiler-enforced contract eliminating forgotten fields and ensuring 100% snapshot integrity.
+2. **Mandatory `props` & Recursive Snapshot Contract:** Domain properties are declared via `List<Object?> get props;`, an abstract compiler-enforced contract. Graft uses recursive deep snapshotting for nested `GraftState` sub-states and collections, eliminating forgotten fields and ensuring 100% snapshot integrity during in-place cascade mutations.
 3. **Unbounded Hardware-Aligned `GraftMask`:** State field modifications are mapped into an unbounded, 32-bit chunked word-based bitset (`GraftMask`). It diffs $\le 64$ fields in CPU registers and effortlessly scales to 128, 500, or 1000+ fields with 100% web JS compatibility and 0 GC heap allocations.
-4. **Synchronous In-Place Mutation & Reset:** Direct synchronous updates via `state..field = val..update()` and complete baseline resets via `state.reset()`. No async coalescing delays, no fragmented `emit()` / `mutate()` / `produce()`.
-5. **Two-Wrapper Architecture:**
-   - **`GraftBoundary`**: High-level subtree rebuild barrier featuring **Ambient Auto-Discovery** (zero manual lists via `GraftScopeTracker`) and **Backward Adaptive Learning**.
-   - **`graft((s) => ...)`**: Fine-grained surgical leaf slot with Depth-$N$ parent rebuild insulation.
-6. **Automatic Route-Aware Lifecycle:** Controllers automatically inherit down predecessor routes and cleanly self-dispose when their owning route is popped from the Navigator stack.
+4. **Synchronous In-Place Mutation & Reset:** Direct synchronous updates via `state..field = val..update()` and complete baseline resets via `state.reset()`. Primitives, nested models, and collection items are accurately diffed without requiring immutable `copyWith` methods.
+5. **Two-Wrapper Architecture & Context Decoupling:**
+   - **`GraftBoundary`**: High-level subtree rebuild barrier featuring **Ambient Auto-Discovery** (zero manual lists via `GraftScopeTracker`) and **Backward Adaptive Learning** with multi-field bitwise union accumulation.
+   - **`graft((s) => ...)`**: Fine-grained surgical leaf slot with Depth-$N$ parent rebuild insulation, powered by `NoSubscriptionContext` to prevent `Theme`/`MediaQuery` subscription bleeding during widget diffing.
+6. **Automatic Route-Aware Lifecycle & PopupRoute Protection:** Controllers automatically inherit down predecessor routes and cleanly self-dispose when their owning screen route pops. Transient routes (`showDialog`, `showModalBottomSheet`) borrow safely without prematurely disposing host controllers via `resolveOwnerRoute`.
 
 ---
 
@@ -40,7 +40,7 @@ Graft rejects this compromise. It is engineered around 6 foundational pillars:
 ```text
 ┌────────────────────────────────────────────────────────────────────────┐
 │                      DEVELOPER CALL (ZERO BOILERPLATE)                 │
-│                 state..tasks.add(item)..name = 'Bob'..update()         │
+│         state..address.city = 'Berlin'..tasks.add(item)..update()      │
 └───────────────────────────────────┬────────────────────────────────────┘
                                     │
                                     ▼
@@ -48,14 +48,14 @@ Graft rejects this compromise. It is engineered around 6 foundational pillars:
 │                          GRAFT CORE ENGINE                             │
 │                  diffChanges(): Evaluate props against _baseline       │
 │                                   │                                    │
-│         ┌─────────────────────────┴────────────────────────┐           │
-│         ▼                                                  ▼           │
-│  [ Primitive Values ]                             [ Collections ]      │
-│  (int, String, bool)                             (List, Set, Map)      │
-│  1-Cycle Pointer Identity:                       Invisible Snapshot:   │
-│  identical(prev, curr)                           length & items check  │
-│         │                                                  │           │
-│         └─────────────────────────┬────────────────────────┘           │
+│         ┌─────────────────────────┼────────────────────────┐           │
+│         ▼                         ▼                        ▼           │
+│  [ Primitive Values ]   [ Nested Sub-States ]     [ Collections ]      │
+│  (int, String, bool)    (GraftState in props)    (List, Set, Map)      │
+│  1-Cycle Identity:      Deep Recursive Props     Recursive Elements    │
+│  identical(prev, curr)  Snapshot Comparison      Snapshot Equality     │
+│         │                         │                        │           │
+│         └─────────────────────────┼────────────────────────┘           │
 │                                   ▼                                    │
 │            Compute 64-bit Integer dirtyMask in CPU registers           │
 │                                   │                                    │
@@ -65,20 +65,18 @@ Graft rejects this compromise. It is engineered around 6 foundational pillars:
                                     │
                                     ▼
 ┌────────────────────────────────────────────────────────────────────────┐
-│                        UI SLOT RECONCILIATION                          │
+│              UI SLOT RECONCILIATION & CONTEXT DECOUPLING               │
 │                 GraftMultiChildDiffEngine / GraftBoundary              │
-│                                   │                                    │
-│                                   ▼                                    │
-│                 Pre-Flight Check: slot.isDirty(dirtyMask)?             │
 │                                   │                                    │
 │                 ┌─────────────────┴─────────────────┐                  │
 │                 ▼                                   ▼                  │
-│          [ Clean Slot ]                      [ Dirty Slot ]            │
-│       dirtyMask.intersects == 0           dirtyMask.intersects != 0    │
+│     [ NoSubscriptionContext ]             [ Slot Content Equivalence ] │
+│  Safely inspects custom widgets       Evaluates fine-grained updates   │
+│  without Theme / MediaQuery leaks     Fingerprint + diff in < 5 ns     │
 │                 │                                   │                  │
-│                 ▼                                   ▼                  │
-│        ⚡ 1 CPU Cycle Bypass               Surgical Leaf Update         │
-│     0 Widget Allocs, 0 Rebuilds       ValueNotifier.value = newWidget  │
+│                 └─────────────────┬─────────────────┘                  │
+│                                   ▼                                    │
+│                 Surgical Leaf Update (ValueNotifier.value)             │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -89,18 +87,22 @@ Graft rejects this compromise. It is engineered around 6 foundational pillars:
 ```text
 Navigator / UI                 Graft Tracker & Context           Graft Controller & State          UI Slot Reconciliation            Remote API
       │                                   │                                  │                               │                           │
-      │── 1. ROUTE SCOPING & INHERITANCE (context.use<T>()) ─────────────────│───────────────────────────────│───────────────────────────│
-      │   Push Route A ──────────────────►│                                  │                               │                           │
+      │── 1. ROUTE SCOPING & TRANSIENT POPUP PROTECTION (context.use<T>()) ─│───────────────────────────────│───────────────────────────│
+      │   Push Route A (PageRoute) ──────►│                                  │                               │                           │
       │   context.use<UserGraft>() ──────►│── Instantiate UserGraft() ──────►│                               │                           │
-      │                                   │   Register & hook route.popped   │                               │                           │
+      │   Open Dialog (PopupRoute) ──────►│   resolveOwnerRoute(PopupRoute)  │                               │                           │
+      │   dialog.use<UserGraft>() ───────►│   Anchors ownership to Route A!  │                               │                           │
+      │   Dismiss Dialog ────────────────►│   Dialog closes, Graft remains!  │                               │                           │
       │                                   │                                  │                               │                           │
-      │── 2. AMBIENT AUTO-DISCOVERY & LEAF MOUNTING ─────────────────────────│───────────────────────────────│───────────────────────────│
+      │── 2. AMBIENT AUTO-DISCOVERY & ISOLATED CONTEXT INSPECTION ───────────│───────────────────────────────│───────────────────────────│
       │                                   │                                  │◄── Reads state property ──────┤ (via GraftScopeTracker)   │
-      │                                   │                                  │◄── Subscribes mask listener ──┤ (Backward Learning)       │
+      │                                   │                                  │◄── NoSubscriptionContext ─────┤ (Zero Theme/Media leaks)  │
+      │                                   │                                  │◄── Subscribes mask listener ──┤ (Multi-field bitwise union)
       │                                   │                                  │                               │                           │
-      │── 3. SYNCHRONOUS IN-PLACE MUTATION & 1-CYCLE HARDWARE DIFFING ───────│───────────────────────────────│───────────────────────────│
-      │── state..name = 'Bob'..update() ──┼─────────────────────────────────►│                               │                           │
+      │── 3. SYNCHRONOUS IN-PLACE MUTATION & RECURSIVE SNAPSHOT DIFFING ─────│───────────────────────────────│───────────────────────────│
+      │── state..city = 'Berlin'..update()┼─────────────────────────────────►│                               │                           │
       │                                   │                                  │── diffChanges() vs baseline   │                           │
+      │                                   │                                  │   Deep sub-props / list check │                           │
       │                                   │                                  │   Compute dirtyMask bitset    │                           │
       │                                   │                                  │── notifyMask(dirtyMask) ─────►│                           │
       │                                   │                                  │                               ├── [Clean Slot (mask == 0)]│
@@ -719,7 +721,7 @@ Graft is validated by a comprehensive suite of unit, widget, and hardware benchm
 
 ```bash
 fvm flutter test
-# 00:06 +157: All tests passed!
+# 00:09 +164: All tests passed!
 ```
 
 ```bash
@@ -727,14 +729,14 @@ fvm flutter analyze
 # No issues found!
 ```
 
-### 📋 Test Suite Breakdown (157 / 157 Tests Passing)
+### 📋 Test Suite Breakdown (164 / 164 Tests Passing)
 
 | Architectural Domain | Test Suite Files | What Is Verified |
 | :--- | :--- | :--- |
-| **State & Collections** | `test/graft_state_test.dart`<br>`test/collection_mutation_test.dart`<br>`test/graft_mask_test.dart`<br>`test/large_state_bitmask_test.dart` | In-place baseline mutations (`List`, `Set`, `Map`), 64-bit integer bitmasks, unbounded mask growth to 1,000+ fields, and synchronous reset. |
-| **Rebuild Firewall & Diff Engine** | `test/bitmask_preflight_test.dart`<br>`test/safe_ast_context_test.dart`<br>`test/depth_n_isolation_test.dart`<br>`test/slot_engine_test.dart`<br>`test/slot_engine_deep_diff_test.dart`<br>`test/multi_field_slot_test.dart`<br>`test/disordering_test.dart`<br>`test/dynamic_branch_test.dart` | 1-cycle bitmask pre-flight bypass, safe AST widget diffing without out-of-band builds, Depth-$N$ parent container insulation, dynamic if/else branching, and multi-field bitmask accumulation. |
+| **State & Collections** | `test/graft_state_test.dart`<br>`test/nested_inplace_mutation_test.dart`<br>`test/collection_mutation_test.dart`<br>`test/graft_mask_test.dart`<br>`test/large_state_bitmask_test.dart` | In-place baseline mutations (`List`, `Set`, `Map`), recursive deep snapshotting for nested `GraftState` sub-states, 64-bit integer bitmasks, unbounded mask growth to 1,000+ fields, and synchronous reset. |
+| **Rebuild Firewall & Diff Engine** | `test/context_isolation_leak_test.dart`<br>`test/deterministic_slot_bitmask_test.dart`<br>`test/bitmask_preflight_test.dart`<br>`test/safe_ast_context_test.dart`<br>`test/depth_n_isolation_test.dart`<br>`test/slot_engine_test.dart`<br>`test/slot_engine_deep_diff_test.dart`<br>`test/multi_field_slot_test.dart`<br>`test/disordering_test.dart`<br>`test/dynamic_branch_test.dart` | `NoSubscriptionContext` preventing `Theme`/`MediaQuery` dependency leaks during AST diffing, multi-field bitmask union accumulation, 1-cycle bitmask pre-flight bypass, safe AST widget diffing without out-of-band builds, Depth-$N$ parent container insulation, dynamic if/else branching, and multi-field bitmask accumulation. |
 | **Auto-Discovery & Tickers** | `test/graft_boundary_test.dart`<br>`test/multi_graft_combinator_test.dart`<br>`test/animation_isolation_test.dart` | Ambient auto-discovery across multiple controllers, backward adaptive learning, 60fps/120fps continuous animation isolation, and ticker lifecycle safety. |
-| **Routing & Lifecycle** | `test/graft_route_test.dart`<br>`test/graft_route_extended_test.dart`<br>`test/nested_route_isolation_test.dart`<br>`test/lifecycle_test.dart` | `context.use<T>()` route-stack borrowing, parallel navigator isolation (bottom navigation tabs & GoRouter `StatefulShellRoute`), and automatic leak-free disposal on `route.popped`. |
+| **Routing & Lifecycle** | `test/dialog_popup_lifecycle_test.dart`<br>`test/graft_route_test.dart`<br>`test/graft_route_extended_test.dart`<br>`test/nested_route_isolation_test.dart`<br>`test/lifecycle_test.dart` | `context.use<T>()` route-stack borrowing, transient `PopupRoute` dialog and bottom sheet safety with `resolveOwnerRoute` anchoring, parallel navigator isolation (bottom navigation tabs & GoRouter `StatefulShellRoute`), and automatic leak-free disposal on host `route.popped`. |
 | **Async Concurrency** | `test/async_concurrency_race_test.dart`<br>`test/coalescing_test.dart` | Internal task token guard (`_currentAsyncTaskId`), automatic dropping of out-of-order stale responses, and synchronous microtask reentrancy coalescing. |
 | **Benchmarks & Tooling** | `test/zero_allocation_benchmark_test.dart`<br>`test/benchmark/column_rebuild_benchmark_test.dart`<br>`test/large_list_benchmark_test.dart`<br>`test/graft_test_utils_test.dart`<br>`test/graft_observer_test.dart` | Sub-microsecond diff passes, 90.0% rebuild reduction in columns, 10,000-item virtualized list surgical diffing, and pure Dart `graftTest` harness. |
 

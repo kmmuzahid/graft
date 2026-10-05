@@ -92,6 +92,25 @@ class GraftRouteTracker {
     _routeInstances.remove(route);
   }
 
+  /// Resolves the true persistent owner route for [requestedRoute].
+  ///
+  /// If [requestedRoute] is a transient route (such as a [PopupRoute] used for
+  /// Dialogs, Menus, or BottomSheets), walks backwards through the navigation stack
+  /// to anchor ownership to the underlying persistent [PageRoute].
+  static Route<dynamic> resolveOwnerRoute(Route<dynamic> requestedRoute) {
+    if (requestedRoute is PopupRoute) {
+      final currentIndex = _routeStack.lastIndexOf(requestedRoute);
+      final startIndex = currentIndex != -1 ? currentIndex - 1 : _routeStack.length - 1;
+      for (int i = startIndex; i >= 0; i--) {
+        final ancestor = _routeStack[i];
+        if (ancestor is! PopupRoute) {
+          return ancestor;
+        }
+      }
+    }
+    return requestedRoute;
+  }
+
   /// Looks up an existing [Graft] of type [T] in [currentRoute] or predecessor ancestor routes
   /// in the active navigation stack.
   ///
@@ -99,29 +118,31 @@ class GraftRouteTracker {
   static T? findInStack<T extends Graft>(Route<dynamic>? currentRoute) {
     if (currentRoute == null) return null;
 
+    final effectiveCurrent = resolveOwnerRoute(currentRoute);
+
     // 1. Check current route's instances
-    final currentInstances = _routeInstances[currentRoute];
+    final currentInstances = _routeInstances[effectiveCurrent];
     if (currentInstances != null && currentInstances.containsKey(T)) {
       return currentInstances[T] as T;
     }
 
     // 2. Search backwards in the active route stack
-    final currentIndex = _routeStack.lastIndexOf(currentRoute);
+    final currentIndex = _routeStack.lastIndexOf(effectiveCurrent);
     final startIndex = currentIndex != -1 ? currentIndex - 1 : _routeStack.length - 1;
 
     for (int i = startIndex; i >= 0; i--) {
       final ancestorRoute = _routeStack[i];
       // Only inherit from ancestor routes that belong to the same Navigator:
-      if (currentRoute.navigator != null &&
+      if (effectiveCurrent.navigator != null &&
           ancestorRoute.navigator != null &&
-          ancestorRoute.navigator != currentRoute.navigator) {
+          ancestorRoute.navigator != effectiveCurrent.navigator) {
         continue;
       }
       final ancestorInstances = _routeInstances[ancestorRoute];
       if (ancestorInstances != null && ancestorInstances.containsKey(T)) {
         final existing = ancestorInstances[T] as T;
         // Cache reference on current route for faster subsequent lookups
-        _routeInstances.putIfAbsent(currentRoute, () => {})[T] = existing;
+        _routeInstances.putIfAbsent(effectiveCurrent, () => {})[T] = existing;
         return existing;
       }
     }
@@ -133,20 +154,22 @@ class GraftRouteTracker {
   ///
   /// When [ownerRoute] pops, [graft] will be disposed automatically.
   static void registerOwned<T extends Graft>(Route<dynamic> ownerRoute, T graft) {
-    if (!_routeStack.contains(ownerRoute)) {
-      _routeStack.add(ownerRoute);
+    final effectiveOwner = resolveOwnerRoute(ownerRoute);
+
+    if (!_routeStack.contains(effectiveOwner)) {
+      _routeStack.add(effectiveOwner);
     }
 
-    _owners[graft] = ownerRoute;
-    _routeInstances.putIfAbsent(ownerRoute, () => {})[T] = graft;
+    _owners[graft] = effectiveOwner;
+    _routeInstances.putIfAbsent(effectiveOwner, () => {})[T] = graft;
 
     // Safety fallback: attach to route.popped future
-    ownerRoute.popped.then((_) {
+    effectiveOwner.popped.then((_) {
       if (!graft.isDisposed) {
         graft.dispose();
       }
       _owners.remove(graft);
-      _routeInstances.remove(ownerRoute);
+      _routeInstances.remove(effectiveOwner);
     });
   }
 
