@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'graft.dart';
 
 /// Base class for domain states that enables direct cascade mutation with zero boilerplate.
@@ -13,8 +14,8 @@ import 'graft.dart';
 ///     ..isLoading = false
 ///     ..update(); // Batched diffing: notifies listeners once!
 ///   ```
-/// - **Fine-Grained Slot Diffing:** Calling [update] triggers slot diffing in `graft.column`,
-///   `graft.slot`, etc. Only the specific UI slots displaying modified fields will rebuild.
+/// - **Fine-Grained Slot Diffing:** Override [tracked] to declare domain fields. Calling [update]
+///   computes a 64-bit integer dirty bitmask in CPU registers and triggers surgical leaf-rebuilds.
 /// - **Internal Binding:** Automatically linked to its owning [Graft] controller upon construction.
 ///
 /// ### Example:
@@ -23,21 +24,16 @@ import 'graft.dart';
 ///   String name = '';
 ///   String email = '';
 ///   bool isOnline = false;
-/// }
 ///
-/// class UserGraft extends Graft<UserState> {
-///   UserGraft() : super(UserState());
-///
-///   void updateProfile({required String name, required String email}) {
-///     state
-///       ..name = name
-///       ..email = email
-///       ..update(); // Notifies listeners and diffs UI slots
-///   }
+///   @override
+///   List<Object?> get tracked => [name, email, isOnline];
 /// }
 /// ```
 abstract class GraftState {
   Graft? _graft;
+  List<Object?>? _baseline;
+  int _dirtyMask = -1;
+  bool _microtaskScheduled = false;
 
   /// Binds this state instance to its owning [Graft] controller.
   ///
@@ -45,25 +41,84 @@ abstract class GraftState {
   /// You typically do not need to call this method manually.
   void bindGraft(Graft graft) {
     _graft = graft;
+    initBaseline();
   }
 
-  /// Triggers fine-grained slot diffing and notifies all listeners of changes.
-  ///
-  /// ### Why call `state.update()`?
-  /// Calling [update] commits in-place field mutations, notifies the global observer,
-  /// and prompts reactive UI widgets (`graft.column`, `graft.slot`, etc.) to run
-  /// an isolated slot diffing pass.
-  ///
-  /// ### Example:
+  /// Initializes the baseline snapshot of tracked fields.
+  void initBaseline() {
+    final current = tracked;
+    if (current.isNotEmpty) {
+      _baseline = List<Object?>.of(current, growable: false);
+    }
+  }
+
+  /// Override this getter to declare tracked fields for fine-grained slot diffing.
+  /// Example:
   /// ```dart
-  /// void rename(String newName) {
-  ///   state
-  ///     ..name = newName
-  ///     ..update();
-  /// }
+  /// @override
+  /// List<Object?> get tracked => [name, score, isVerified];
   /// ```
+  List<Object?> get tracked => const [];
+
+  /// Returns the current dirty bitmask from the last diff pass.
+  int get dirtyMask => _dirtyMask;
+
+  /// Compares current [tracked] fields against the in-place baseline snapshot.
+  /// Returns -1 on first evaluation (all dirty), or a 64-bit bitmask of modified field indices.
+  int diffChanges() {
+    final current = tracked;
+    final len = current.length;
+    if (len == 0) {
+      _dirtyMask = -1;
+      return -1;
+    }
+
+    final prev = _baseline;
+    if (prev == null || prev.length != len) {
+      _baseline = List<Object?>.of(current, growable: false);
+      _dirtyMask = -1;
+      return -1;
+    }
+
+    int mask = 0;
+    for (int i = 0; i < len; i++) {
+      final p = prev[i];
+      final c = current[i];
+
+      // Fast pointer identity first (1 CPU cycle), then value equality
+      if (!identical(p, c) && p != c) {
+        mask |= (1 << i);
+        prev[i] = c; // In-place update to baseline: 0 GC heap allocations
+      }
+    }
+    _dirtyMask = mask;
+    return mask;
+  }
+
+  /// Triggers fine-grained slot diffing and notifies all listeners synchronously.
   void update() {
-    _graft?.notify();
+    _flush();
+  }
+
+  /// Triggers fine-grained slot diffing coalesced in the microtask queue.
+  /// Useful when performing bulk asynchronous or rapid iterative updates.
+  void updateCoalesced() {
+    if (_microtaskScheduled) return;
+    _microtaskScheduled = true;
+    scheduleMicrotask(_flush);
+  }
+
+  /// Flushes state updates immediately and synchronously. Useful in unit tests.
+  void updateImmediate() {
+    _flush();
+  }
+
+  void _flush() {
+    _microtaskScheduled = false;
+    final mask = diffChanges();
+    if (mask != 0) {
+      _graft?.notifyMask(mask);
+    }
   }
 }
 

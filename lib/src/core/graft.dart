@@ -56,6 +56,7 @@ abstract class Graft<S extends GraftState> {
 
   late S _state;
   late final _GraftNotifier<S> _notifier;
+  final List<void Function(int dirtyMask)> _maskListeners = [];
   bool _isDisposed = false;
   bool _pendingNotify = false;
   bool _isNotifying = false;
@@ -115,6 +116,30 @@ abstract class Graft<S extends GraftState> {
     if (!_isDisposed) {
       _notifier.removeListener(listener);
     }
+  }
+
+  /// Adds a listener to be notified with a 64-bit integer [dirtyMask] whenever tracked fields update.
+  void addMaskListener(void Function(int dirtyMask) listener) {
+    if (!_isDisposed) {
+      _maskListeners.add(listener);
+    }
+  }
+
+  /// Removes a previously registered mask [listener].
+  void removeMaskListener(void Function(int dirtyMask) listener) {
+    if (!_isDisposed) {
+      _maskListeners.remove(listener);
+    }
+  }
+
+  /// Dispatches [dirtyMask] to all mask listeners, then triggers [notify].
+  void notifyMask(int dirtyMask) {
+    if (_isDisposed) return;
+    final listeners = List<void Function(int dirtyMask)>.from(_maskListeners);
+    for (final listener in listeners) {
+      listener(dirtyMask);
+    }
+    notify();
   }
 
   /// Notifies all listeners and triggers fine-grained slot diffing for [state].
@@ -187,6 +212,10 @@ abstract class Graft<S extends GraftState> {
     );
 
     observer?.onChange(this, change);
+    final maskCopy = List<void Function(int)>.from(_maskListeners);
+    for (final listener in maskCopy) {
+      listener(-1);
+    }
     _notifier.value = newState;
   }
 
@@ -215,6 +244,7 @@ abstract class Graft<S extends GraftState> {
 
     observer?.onDispose(this);
     _isDisposed = true;
+    _maskListeners.clear();
     _notifier.dispose();
   }
 }

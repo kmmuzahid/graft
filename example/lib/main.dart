@@ -17,6 +17,9 @@ class UserState extends GraftState {
     this.isVerified = true,
     this.notificationCount = 3,
   });
+
+  @override
+  List<Object?> get tracked => [name, email, isVerified, notificationCount];
 }
 
 // =============================================================================
@@ -441,10 +444,39 @@ class HomeScreen extends StatelessWidget {
             const Divider(),
 
             // =================================================================
-            // Route-Stack Sharing & Lifecycle
+            // 3. Depth-N Rebuild Isolation Firewall (GraftBoundary)
             // =================================================================
             const _SectionHeader(
-              title: '3. Route-Stack Lifecycle & Inheritance',
+              title: '3. Depth-N Rebuild Isolation Firewall (GraftBoundary)',
+              subtitle: 'Isolates intermediate parent containers so only the surgical leaf rebuilds.',
+            ),
+            const SizedBox(height: 8),
+
+            _HeavyShellContainer(
+              child: graft.boundary(
+                () => Row(
+                  children: [
+                    const Icon(Icons.shield_outlined, color: Colors.deepPurple),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Leaf inside GraftBoundary: ${graft.state.name}',
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 24),
+            const Divider(),
+
+            // =================================================================
+            // 4. Route-Stack Sharing & Lifecycle
+            // =================================================================
+            const _SectionHeader(
+              title: '4. Route-Stack Lifecycle & Inheritance',
               subtitle: 'Pushed screens borrow the active Graft. Disposed when owner pops.',
             ),
             const SizedBox(height: 12),
@@ -1069,3 +1101,72 @@ class _SectionHeader extends StatelessWidget {
     );
   }
 }
+
+class _HeavyShellContainer extends StatefulWidget {
+  final Widget child;
+  const _HeavyShellContainer({required this.child});
+
+  @override
+  State<_HeavyShellContainer> createState() => _HeavyShellContainerState();
+}
+
+class _HeavyShellContainerState extends State<_HeavyShellContainer> {
+  int _buildCount = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    _buildCount++;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.deepPurple.shade200, width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.deepPurple.withValues(alpha: 0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                '🛡️ Outer Parent Container',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _buildCount == 1 ? Colors.green.shade100 : Colors.red.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'Parent Builds: $_buildCount (Locked!)',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: _buildCount == 1 ? Colors.green.shade800 : Colors.red.shade800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'This parent container NEVER rebuilds when child state updates:',
+            style: TextStyle(fontSize: 13, color: Colors.black54),
+          ),
+          const Divider(height: 20),
+          widget.child,
+        ],
+      ),
+    );
+  }
+}
+

@@ -2,6 +2,11 @@
 
 All notable changes to `graft_lint` will be documented in this file.
 
+## 0.1.2-alpha.1
+
+* **New Rule (`prefer_tracked_in_graft_state`):** Warns developers when a domain state class extending `GraftState` declares fields without overriding `tracked`. Guides developers to declare `List<Object?> get tracked => [...]` to enable 1-cycle hardware bitmask diffing and 0 GC heap allocations.
+* **Expanded `avoid_nested_graft_slot`:** Added `boundary` to prohibited nesting patterns (e.g. nesting `graft.boundary` inside `graft.slots` or `slot`).
+
 ## 0.1.1-alpha.1
 
 * **Breaking (Diagnostics):** Promoted `avoid_nested_graft_slot` rule severity from `Warning` to `Error` (`ErrorSeverity.ERROR`) by default.

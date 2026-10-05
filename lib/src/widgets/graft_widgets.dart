@@ -3,9 +3,37 @@ import '../core/graft.dart';
 import '../core/graft_state.dart';
 import '../core/value_graft.dart';
 import 'child_slot_engine.dart';
+import 'graft_boundary.dart';
 
 /// Extension on [Graft<S>] providing high-performance reactive Flutter widget builders.
 extension GraftWidgetsX<S extends GraftState> on Graft<S> {
+  /// Creates a Depth-$N$ rebuild boundary that isolates a subtree from its parent containers.
+  ///
+  /// Ancestor containers (scaffolds, cards, flex containers) will never rebuild when this
+  /// boundary's content updates.
+  ///
+  /// ### Example:
+  /// ```dart
+  /// Container(
+  ///   padding: const EdgeInsets.all(16),
+  ///   child: Container(
+  ///     child: graft.boundary(() => Text(state.name)), // 👈 Shield
+  ///   ),
+  /// )
+  /// ```
+  Widget boundary(
+    Widget Function() builder, {
+    Key? key,
+    int? field,
+  }) {
+    return GraftBoundary<S>(
+      builder,
+      key: key,
+      graft: this,
+      field: field,
+    );
+  }
+
   // ===========================================================================
   // 1. SINGLE SLOT (ONE WIDGET)
   // ===========================================================================

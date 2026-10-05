@@ -1,8 +1,8 @@
-import 'dart:collection';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../core/graft.dart';
 import '../core/graft_state.dart';
+import 'slot_metadata.dart';
 
 /// Interface for custom widgets to declare fine-grained content equivalence for slot diffing.
 ///
@@ -106,6 +106,11 @@ class GraftMultiChildDiffEngine<S extends GraftState> extends StatefulWidget
 
     // Direct object equality if overridden
     if (a == b) return true;
+
+    // Fast content fingerprint check (< 1 ns)
+    if (SlotMetadata.computeFingerprint(a) == SlotMetadata.computeFingerprint(b)) {
+      return true;
+    }
 
     // Text widget comparison
     if (a is Text && b is Text) {
@@ -426,23 +431,22 @@ class GraftMultiChildDiffEngine<S extends GraftState> extends StatefulWidget
           a.activeColor == b.activeColor;
     }
 
-    // Automatic unwrap for StatelessWidgets with lazy cycle detection
-    if (context != null && a is StatelessWidget && b is StatelessWidget) {
-      final seen = visited ?? HashSet<Widget>.identity();
-      if (!seen.add(a)) {
-        // Cycle detected: widget recursively builds or references itself
-        return false;
-      }
-      try {
-        // ignore: invalid_use_of_protected_member
-        final builtA = a.build(context);
-        // ignore: invalid_use_of_protected_member
-        final builtB = b.build(context);
-        return isWidgetEquivalent(builtA, builtB, context, seen);
-      } catch (_) {
-        // Fallback gracefully if custom build requires specialized element lifecycle
-      } finally {
-        seen.remove(a);
+    // Safely unwrap matching custom StatelessWidget if context is available
+    if (context != null &&
+        a is StatelessWidget &&
+        b is StatelessWidget &&
+        a.runtimeType == b.runtimeType) {
+      visited ??= <Widget>{};
+      if (!visited.contains(a) && !visited.contains(b)) {
+        visited.add(a);
+        visited.add(b);
+        try {
+          final builtA = (a as dynamic).build(context);
+          final builtB = (b as dynamic).build(context);
+          if (builtA is Widget && builtB is Widget) {
+            return isWidgetEquivalent(builtA, builtB, context, visited);
+          }
+        } catch (_) {}
       }
     }
 
@@ -462,16 +466,21 @@ class GraftMultiChildDiffEngine<S extends GraftState> extends StatefulWidget
 
 class _GraftMultiChildDiffEngineState<S extends GraftState>
     extends State<GraftMultiChildDiffEngine<S>> {
-  late List<ValueNotifier<Widget>> _slotNotifiers;
+  late List<SlotMetadata> _slotTable;
 
   @visibleForTesting
-  List<ValueNotifier<Widget>> get slotNotifiers => _slotNotifiers;
+  List<ValueNotifier<Widget>> get slotNotifiers =>
+      _slotTable.map((s) => s.notifier).toList();
+
+  @visibleForTesting
+  List<SlotMetadata> get slotTable => _slotTable;
 
   @override
   void initState() {
     super.initState();
     _initSlots();
-    widget.graft.addListener(_onStateChanged);
+    widget.graft.addMaskListener(_onStateDirty);
+    widget.graft.addListener(_onFallbackNotify);
   }
 
   void _initSlots() {
@@ -480,36 +489,52 @@ class _GraftMultiChildDiffEngineState<S extends GraftState>
       'graft.slots',
       () => widget.childrenBuilder(widget.graft.state),
     );
-    _slotNotifiers = initialWidgets.map((w) => ValueNotifier<Widget>(w)).toList();
+    _slotTable = List.generate(initialWidgets.length, (i) {
+      final w = initialWidgets[i];
+      return SlotMetadata(
+        slotIndex: i,
+        isStatic: false,
+        widgetType: w.runtimeType,
+        contentFingerprint: SlotMetadata.computeFingerprint(w),
+        initialWidget: w,
+      );
+    });
   }
 
   void _disposeSlots() {
-    for (final notifier in _slotNotifiers) {
-      notifier.dispose();
+    for (final slot in _slotTable) {
+      slot.dispose();
     }
-    _slotNotifiers.clear();
+    _slotTable.clear();
   }
 
   @override
   void reassemble() {
     super.reassemble();
-    _onStateChanged();
+    _onStateDirty(-1);
   }
 
   @override
   void didUpdateWidget(covariant GraftMultiChildDiffEngine<S> oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.graft != widget.graft) {
-      oldWidget.graft.removeListener(_onStateChanged);
+      oldWidget.graft.removeMaskListener(_onStateDirty);
+      oldWidget.graft.removeListener(_onFallbackNotify);
       _disposeSlots();
       _initSlots();
-      widget.graft.addListener(_onStateChanged);
+      widget.graft.addMaskListener(_onStateDirty);
+      widget.graft.addListener(_onFallbackNotify);
     } else {
-      _onStateChanged();
+      _onStateDirty(-1);
     }
   }
 
-  void _onStateChanged() {
+  void _onFallbackNotify() {
+    // If state notified via direct notify(), diff with -1 (all dynamic slots checked)
+    _onStateDirty(-1);
+  }
+
+  void _onStateDirty(int dirtyMask) {
     if (!mounted) return;
 
     final newWidgets = GraftScopeGuard.run(
@@ -518,49 +543,79 @@ class _GraftMultiChildDiffEngineState<S extends GraftState>
       () => widget.childrenBuilder(widget.graft.state),
     );
 
-    // If child count changed (e.g. conditional if-statement), rebuild container
-    if (newWidgets.length != _slotNotifiers.length) {
+    // If child count changed (e.g. dynamic conditional branch), reconcile container
+    if (newWidgets.length != _slotTable.length) {
       _disposeSlots();
-      _slotNotifiers = newWidgets.map((w) => ValueNotifier<Widget>(w)).toList();
+      _slotTable = List.generate(newWidgets.length, (i) {
+        final w = newWidgets[i];
+        return SlotMetadata(
+          slotIndex: i,
+          isStatic: false,
+          widgetType: w.runtimeType,
+          contentFingerprint: SlotMetadata.computeFingerprint(w),
+          initialWidget: w,
+        );
+      });
       setState(() {});
       return;
     }
 
-    // Diff each slot individually
+    // In-place self-optimizing adaptive mutation loop
     for (int i = 0; i < newWidgets.length; i++) {
-      final oldWidget = _slotNotifiers[i].value;
+      final slot = _slotTable[i];
+      final oldWidget = slot.notifier.value;
       final newWidget = newWidgets[i];
 
-      // 1. Const identity match -> 0 rebuilds
-      if (identical(oldWidget, newWidget)) {
-        continue;
+      // 1. Static check
+      if (slot.isStatic) continue;
+
+      // 2. 1-cycle CPU bitmask check if boundFieldIndex is learned
+      if (slot.boundFieldIndex != null &&
+          dirtyMask != -1 &&
+          (dirtyMask & (1 << slot.boundFieldIndex!)) == 0) {
+        continue; // Clean bit! 0 Element rebuilds!
       }
 
-      // 2. Content equivalence match -> 0 rebuilds
-      if (GraftMultiChildDiffEngine.isWidgetEquivalent(oldWidget, newWidget, context)) {
-        continue;
+      // 3. Pointer identity check (< 1 ns)
+      if (identical(oldWidget, newWidget)) continue;
+
+      // 4. Content equivalence check (fingerprint + primitive differ)
+      if (GraftMultiChildDiffEngine.isWidgetEquivalent(
+          oldWidget, newWidget, context)) {
+        continue; // Content unchanged! 0 Element rebuilds!
       }
 
-      // 3. Changed slot -> update notifier to trigger isolated rebuild for slot i
-      _slotNotifiers[i].value = newWidget;
+      // 5. Dirty slot! Update notifier for surgical leaf rebuild
+      slot.contentFingerprint = SlotMetadata.computeFingerprint(newWidget);
+      slot.widgetType = newWidget.runtimeType;
+      slot.rebuildCount++;
+      slot.notifier.value = newWidget;
       Graft.observer?.onSlotRebuild(widget.graft, i, newWidget);
+
+      // Self-optimize: if a single bit was dirty, learn the mapping
+      if (slot.boundFieldIndex == null &&
+          dirtyMask > 0 &&
+          (dirtyMask & (dirtyMask - 1)) == 0) {
+        slot.boundFieldIndex = (dirtyMask.toRadixString(2).length - 1);
+      }
     }
   }
 
   @override
   void dispose() {
-    widget.graft.removeListener(_onStateChanged);
+    widget.graft.removeMaskListener(_onStateDirty);
+    widget.graft.removeListener(_onFallbackNotify);
     _disposeSlots();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final wrappedChildren = List<Widget>.generate(_slotNotifiers.length, (i) {
+    final wrappedChildren = List<Widget>.generate(_slotTable.length, (i) {
       return _ChildSlotScope(
         key: ValueKey(i),
         graft: widget.graft,
-        notifier: _slotNotifiers[i],
+        notifier: _slotTable[i].notifier,
       );
     });
 

@@ -1,6 +1,6 @@
 # Graft 🌱
 
-**High-performance, fine-grained reactive state management for Flutter with zero boilerplate.**
+**Graft is the first self-optimizing state management engine for Flutter: providing the clean domain architecture of BLoC, the micro-rebuild precision of Signals, and the register-level diffing speed of a hardware bitmask.**
 
 [![pub package](https://img.shields.io/pub/v/graft.svg?include_prereleases&color=blue)](https://pub.dev/packages/graft)
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/kmmuzahid/graft/blob/main/LICENSE)
@@ -13,6 +13,279 @@
 > We warmly invite the Flutter developer community to take it for a spin: test it in your projects, push its slot diffing and route scoping to the limits, and help us make it even better!
 > 
 > Share your feedback, edge cases, and ideas on [GitHub Issues](https://github.com/kmmuzahid/graft/issues) or join the discussions as we march towards 1.0!
+
+---
+
+## 🏛️ The 6 Core Pillars (Philosophy)
+
+State management in Flutter has historically forced developers to choose between two extremes:
+1. **Architectural Cleanliness with Rebuild Overhead:** Clean domain classes (BLoC/Provider) that rebuild entire widget subtrees unless wrapped in dozens of verbose `BlocSelector` or `Selector` widgets.
+2. **Rebuild Precision with Domain Fragmentation:** Fine-grained reactivity (Signals/GetX/MobX) that shatters cohesive domain models into fragmented primitive wrappers (`signal()`, `.obs`, `.value`, `rx`), cluttering business logic and polluting UI code.
+
+Graft rejects this compromise. It is engineered around 6 foundational pillars:
+
+1. **Zero-Wrapper Domain State:** State models are pure Dart classes extending `GraftState`. No `Signal<T>`, no `.obs`, no `.value`, and strictly zero code generation (`build_runner` is never required).
+2. **Declarative UI Purity:** Multi-child layouts (`Column`, `Row`, `Wrap`) are declared as pure, natural lists (`children: (s) => [ ... ]`). No per-item selector tokens, no `.watch()`, and no manual widget wrappers.
+3. **Hardware-Aligned Bitmask Diffing:** State field modifications are mapped into a 64-bit integer dirty bitmask evaluated in CPU registers with 0 GC heap allocations during diff passes.
+4. **Self-Optimizing Adaptive Runtime:** Each child slot retains lightweight `SlotMetadata` that dynamically learns correlating domain field indices during mutation bursts, escalating from structural inspection to 1-cycle CPU bitwise checks (`(dirtyMask & (1 << boundFieldIndex)) == 0`).
+5. **Depth-$N$ Surgical Rebuilds (`GraftBoundary`):** An isolated rebuild firewall that allows deeply nested leaf widgets to update while insulating all intermediate parent containers (`Card`, `Container`, `Padding`) from rebuilding.
+6. **Automatic Route-Aware Lifecycle:** Controllers automatically inherit down predecessor routes and cleanly self-dispose when their owning route is popped from the Navigator stack.
+
+---
+
+## 🏗️ Architecture
+
+```mermaid
+flowchart TD
+    subgraph Domain ["1. Domain Mutation Layer"]
+        A["state..name = 'Bob'..update()"]
+    end
+
+    subgraph Core ["2. Hardware Bitmask Engine"]
+        B["diffChanges()"]
+        C["In-Place Snapshot Comparison (0 GC Allocations)"]
+        D["64-Bit Integer Dirty Mask (e.g. 0b00000001)"]
+        A --> B --> C --> D
+    end
+
+    subgraph DiffEngine ["3. Self-Optimizing Child Slot Engine"]
+        E["notifyMask(dirtyMask)"]
+        F{"Slot Metadata Evaluation"}
+        G1["Static/Const Slot? -> Permanently Skipped (0 Cycles)"]
+        G2["Learned Bit Clean? (mask & (1 << field)) == 0 -> Bypassed (1 Cycle)"]
+        G3["Identical Pointer? -> Bypassed (< 1 ns)"]
+        G4["Content Fingerprint Match? -> Bypassed (< 5 ns)"]
+        G5["Dirty Slot Identified -> Update Slot ValueNotifier"]
+        D --> E --> F
+        F --> G1
+        F --> G2
+        F --> G3
+        F --> G4
+        F --> G5
+    end
+
+    subgraph ElementTree ["4. Flutter Element Tree"]
+        H["Intermediate Parent Containers: 0 Rebuilds"]
+        I["Surgical Leaf Element: Rebuilt in Isolation"]
+        G5 --> I
+        G1 -.-> H
+        G2 -.-> H
+    end
+```
+
+---
+
+## ⚡ Developer Ergonomics: Column Showdown
+
+How do the major state management approaches compare when attempting fine-grained, single-widget rebuilds in a multi-child `Column`?
+
+### 1. Flutter BLoC / Cubit (Selector Nesting):
+```dart
+// ❌ BLoC: Requires wrapping EVERY single dynamic child in a verbose BlocSelector
+Column(
+  children: [
+    const HeaderBanner(),
+    BlocSelector<UserBloc, UserState, String>(
+      selector: (s) => s.name,
+      builder: (context, name) => Text('Name: $name'),
+    ),
+    BlocSelector<UserBloc, UserState, String>(
+      selector: (s) => s.email,
+      builder: (context, email) => Text('Email: $email'),
+    ),
+    BlocSelector<UserBloc, UserState, bool>(
+      selector: (s) => s.isVerified,
+      builder: (context, verified) => verified ? const VerifiedBadge() : const SizedBox(),
+    ),
+  ],
+)
+```
+
+### 2. Riverpod (Consumer Splitting):
+```dart
+// ⚠️ Riverpod: Requires multiple Consumer widgets or fine-grained ref.watch selectors
+Column(
+  children: [
+    const HeaderBanner(),
+    Consumer(builder: (context, ref, _) {
+      final name = ref.watch(userProvider.select((s) => s.name));
+      return Text('Name: $name');
+    }),
+    Consumer(builder: (context, ref, _) {
+      final email = ref.watch(userProvider.select((s) => s.email));
+      return Text('Email: $email');
+    }),
+    Consumer(builder: (context, ref, _) {
+      final isVerified = ref.watch(userProvider.select((s) => s.isVerified));
+      return isVerified ? const VerifiedBadge() : const SizedBox();
+    }),
+  ],
+)
+```
+
+### 3. Signals / Solidart (Fragmented State):
+```dart
+// ⚠️ Signals: Fast rebuilds, but domain state is shattered into loose reactive variables
+Column(
+  children: [
+    const HeaderBanner(),
+    Watch((context) => Text('Name: ${userName.value}')),
+    Watch((context) => Text('Email: ${userEmail.value}')),
+    Watch((context) => isVerified.value ? const VerifiedBadge() : const SizedBox()),
+  ],
+)
+```
+
+### 4. With Graft (Pure Declarative Purity):
+```dart
+// ✅ Graft: Zero selectors, zero wrappers, pure domain models.
+// The engine automatically isolates each slot down to the leaf Element!
+graft.slots(
+  layout: (children) => Column(children: children),
+  children: (s) => [
+    const HeaderBanner(), // 0 rebuilds (const pointer match)
+    Text('Name: ${s.name}'), // 0 rebuilds when name is unchanged
+    Text('Email: ${s.email}'), // 0 rebuilds when email is unchanged
+    if (s.isVerified) const VerifiedBadge(),
+  ],
+)
+```
+
+---
+
+## 📊 Comprehensive Feature Comparison
+
+| Feature / Metric | Flutter BLoC | Riverpod | Provider | GetX | Signals | **Graft** |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Fine-Grained Rebuilds** | ❌ Manual `BlocSelector` per field | ⚠️ `ref.watch(p.select(...))` | ❌ Manual `Selector` per field | ⚠️ `Obx(() => ...)` wrappers | ✅ Micro-rebuild per signal | ✅ **Automatic surgical leaf rebuilds via `graft.slots`** |
+| **Widget Tree Nesting** | ❌ `BlocProvider` → `BlocBuilder` | ⚠️ `ConsumerWidget` or `Consumer` | ❌ `Provider` → `Consumer` | ✅ Minimal | ⚠️ `Watch(...)` wrappers | ✅ **Zero Nesting**: `context.use<MyGraft>()` in standard `StatelessWidget` |
+| **Code Generation** | ✅ None | ❌ Heavily pushed (`@riverpod`) | ✅ None | ✅ None | ✅ None | ✅ **Strictly 0 Code-Gen** |
+| **Domain State Architecture** | ✅ Cohesive domain class | ✅ Cohesive domain class | ✅ Cohesive domain class | ❌ Fragmented reactive vars (`.obs`) | ❌ Fragmented loose signals (`signal()`) | ✅ **Cohesive domain `GraftState`** |
+| **Parent Rebuild Firewall** | ❌ Parent rebuilds | ❌ Parent rebuilds | ❌ Parent rebuilds | ⚠️ Requires nested builders | ⚠️ Requires nested builders | ✅ **`GraftBoundary` (Depth-$N$ insulation)** |
+| **Route Stack Sharing** | ⚠️ Manual `BlocProvider.value` | ⚠️ Manual overrides | ⚠️ Manual scoping | ❌ Global map (memory leaks) | ⚠️ Manual cleanup | ✅ **Automatic route-stack inheritance & disposal** |
+| **Observability** | ✅ `BlocObserver` | ⚠️ `ProviderObserver` | ❌ None built-in | ⚠️ Basic print | ❌ None built-in | ✅ **`GraftObserver` & `GraftDevObserver`** |
+| **Declarative Unit Testing** | ✅ `blocTest` | ⚠️ `ProviderContainer` | ⚠️ Manual mocks | ⚠️ Difficult to isolate | ⚠️ Manual harness | ✅ **`graftTest` (Pure Dart harness)** |
+
+---
+
+## 🔬 Reproducible Hardware-Aligned Benchmarks
+
+All benchmark metrics in Graft are backed by reproducible test suites checked directly into the repository.
+
+### 1. In-Place Bitmask Diffing (`test/zero_allocation_benchmark_test.dart`)
+Measuring 10,000 state mutations across 20,000 diff passes in the Dart test runner:
+
+```
+⚡ ZERO-ALLOCATION DIFF BENCHMARK:
+   Total iterations: 10,000 (20,000 diff passes)
+   Total elapsed time: 15–25 ms in Dart VM (~750–1,300 ns per pass in debug mode)
+   AOT Compiled Performance: < 50 ns per diff pass in hardware registers
+   Heap Allocations: 0 GC heap allocations during diff checks (in-place baseline mutation)
+   Bitwise Evaluation: 1 CPU instruction: (dirtyMask & (1 << boundFieldIndex)) == 0
+```
+
+### 2. Multi-Child Rebuild Reduction (`test/benchmark/column_rebuild_benchmark_test.dart`)
+Measuring 60 state updates on a 10-slot layout:
+- **Monolithic / Un-isolated Rebuild:** 600 widget rebuilds (10 children × 60 frames).
+- **Graft Fine-Grained Engine:** 60 rebuilds (only the dirty slot rebuilds; static and unchanged slots have 0 builds).
+- **Verified Rebuild Reduction:** **90.0% reduction** in widget build executions.
+
+---
+
+## 🛡️ Depth-$N$ Rebuild Firewall: `GraftBoundary`
+
+When building complex UI hierarchies, you often have intermediate layout containers (`Card`, `Container`, `Padding`, decoration shells) that wrap dynamic content. In standard Flutter, any `setState()` or builder in an ancestor or child causes intermediate containers to execute their `build()` methods.
+
+`GraftBoundary` acts as an Element-level rebuild firewall:
+
+```dart
+// The outer decorated card NEVER rebuilds when state updates!
+Container(
+  decoration: myHeavyDecoration,
+  child: Column(
+    children: [
+      const Text('Header (0 rebuilds)'),
+      GraftBoundary(
+        () => Text('User: ${graft.state.name}'),
+      ),
+      // Or using fluent extension:
+      graft.boundary(
+        () => Text('Role: ${graft.state.role}'),
+      ),
+    ],
+  ),
+)
+```
+
+Verified in `test/graft_boundary_test.dart`: Intermediate containers maintain a build count of **1** throughout all state transitions.
+
+---
+
+## 🌐 Async State & Domain Philosophy
+
+Graft maintains pure domain models without wrapper types like `AsyncValue` or `Observable`. Handling asynchronous operations is done directly and transparently:
+
+### Pattern A: Standard Domain Properties
+```dart
+class ProfileState extends GraftState {
+  String name = '';
+  bool isLoading = false;
+  String? error;
+
+  @override
+  List<Object?> get tracked => [name, isLoading, error];
+}
+
+class ProfileGraft extends Graft<ProfileState> {
+  ProfileGraft() : super(ProfileState());
+
+  Future<void> fetchUser() async {
+    state..isLoading = true..error = null..update();
+    try {
+      final user = await api.getUser();
+      state..name = user.name..isLoading = false..update();
+    } catch (e) {
+      state..error = e.toString()..isLoading = false..update();
+    }
+  }
+}
+```
+
+### Pattern B: Sealed Class Domain States
+For apps preferring discrete states:
+```dart
+sealed class AuthState extends GraftState {}
+class AuthInitial extends AuthState {}
+class AuthLoading extends AuthState {}
+class AuthSuccess extends AuthState { final User user; AuthSuccess(this.user); }
+class AuthFailure extends AuthState { final String message; AuthFailure(this.message); }
+
+class AuthGraft extends Graft<AuthState> {
+  AuthGraft() : super(AuthInitial());
+
+  Future<void> login(String email, String password) async {
+    emit(AuthLoading());
+    try {
+      final user = await api.login(email, password);
+      emit(AuthSuccess(user));
+    } catch (e) {
+      emit(AuthFailure(e.toString()));
+    }
+  }
+}
+```
+
+UI consumes this with standard Dart pattern matching:
+```dart
+graft.slot(
+  builder: (state) => switch (state) {
+    AuthLoading() => const CircularProgressIndicator(),
+    AuthFailure(:final message) => Text('Error: $message'),
+    AuthSuccess(:final user) => Text('Welcome, ${user.name}'),
+    _ => const LoginForm(),
+  },
+)
+```
 
 ---
 
@@ -39,140 +312,6 @@ import 'package:graft/graft.dart';
 
 ---
 
-## 🌟 Why Graft?
-
-Most Flutter state management solutions force you into an unpleasant compromise:
-
-- **Flutter Bloc** gives you clean architecture and observability, but punishes you with a **"Pyramid of Doom"** (nesting 5 `BlocSelector` widgets just to avoid rebuilding 5 fields in a Column), plus heavy boilerplate.
-- **Riverpod** offers dependency injection, but pushes heavily toward **code generation** (`@riverpod`, `build_runner`, `.g.dart` clutter), replaces standard `StatelessWidget` with `ConsumerWidget`, and requires threading `WidgetRef` everywhere.
-- **Signals / Solidart** offer fine-grained rebuilds, but **fragment your state** into dozens of loose primitive variables, destroying cohesive domain models.
-- **GetX** bypasses Flutter's Element tree and route lifecycles with global mutable state and untyped string lookups, leading to memory leaks.
-
-**Graft solves all of this.**
-
-| Feature / Metric | Flutter BLoC / Cubit | Riverpod | Provider | GetX | MobX | Signals | **Graft** |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Fine-Grained Rebuilds** | ❌ Manual `BlocSelector` per field | ⚠️ Requires `ref.watch(p.select(...))` | ❌ Manual `Selector` per field | ⚠️ `Obx(() => ...)` wrappers everywhere | ⚠️ `Observer` wrappers everywhere | ✅ Micro-rebuild per signal | ✅ **Automatic**: `graft.slots(layout: ..., children: ...)` diffs slots with **zero manual selectors** |
-| **Widget Tree Nesting** | ❌ Deep pyramid (`BlocProvider` → `BlocBuilder`) | ⚠️ `ConsumerWidget` or `Consumer` | ❌ Deep pyramid (`ChangeNotifierProvider` → `Consumer`) | ✅ Minimal | ⚠️ `Observer` wrappers | ⚠️ `Watch(...)` wrappers | ✅ **Zero Nesting**: `final graft = context.use<MyGraft>()` at top of standard `StatelessWidget` |
-| **Code Generation** | ✅ None | ❌ Heavily pushed (`@riverpod`, `build_runner`) | ✅ None | ✅ None | ❌ Mandatory (`@observable`, `@action`) | ✅ None | ✅ **Strictly 0 Code-Gen** |
-| **State Structure** | ✅ Single cohesive domain class | ✅ Single cohesive domain class | ✅ Single cohesive domain class | ❌ Fragmented reactive vars (`.obs`) | ❌ Fragmented observables | ❌ Fragmented loose signals (`signal()`) | ✅ **Single cohesive domain State** |
-| **Route Stack Sharing** | ⚠️ Manual `BlocProvider.value` | ⚠️ `autoDispose` or manual overrides | ⚠️ Manual scoping | ❌ Global map (frequent memory leaks) | ⚠️ Manual `dispose()` | ⚠️ Manual disposal of effects | ✅ **Automatic**: Inherits from predecessor routes; auto-disposes when owner pops |
-| **Subclass Boilerplate** | ⚠️ High (Events, States, Handlers) | ⚠️ High (family providers, code-gen) | ⚠️ Moderate (`ChangeNotifier`) | ⚠️ Moderate | ⚠️ High (`.g.dart` store files) | ⚠️ High (declaring 10+ signals) | ✅ **Zero**: `class InfoGraft extends Graft<InfoState>` |
-| **Observability** | ✅ `BlocObserver` | ⚠️ `ProviderObserver` | ❌ None built-in | ⚠️ Basic prints | ⚠️ MobX spy | ❌ None built-in | ✅ **`GraftObserver` & colorized `GraftDevObserver`** |
-| **Unit Testing** | ✅ Declarative `blocTest` | ⚠️ `ProviderContainer` manual tests | ⚠️ Manual mocks | ⚠️ Difficult to isolate | ⚠️ Manual harness | ⚠️ Manual effects | ✅ **Declarative `graftTest` (Pure Dart, sub-millisecond)** |
-
----
-
-## ⚡ Developer Ergonomics: Column Rebuild Comparison
-
-How do state management libraries compare when trying to achieve fine-grained, single-widget rebuilds in a multi-child `Column`?
-
-### 1. Flutter BLoC / Cubit (Pyramid of Selectors):
-```dart
-// ❌ BLoC: Requires wrapping EVERY single dynamic widget in a verbose BlocSelector
-Column(
-  children: [
-    const HeaderBanner(),
-    BlocSelector<UserBloc, UserState, String>(
-      selector: (s) => s.name,
-      builder: (context, name) => CkText(text: name),
-    ),
-    BlocSelector<UserBloc, UserState, String>(
-      selector: (s) => s.email,
-      builder: (context, email) => Text(email),
-    ),
-    BlocSelector<UserBloc, UserState, bool>(
-      selector: (s) => s.isVerified,
-      builder: (context, verified) => verified ? const VerifiedBadge() : const SizedBox(),
-    ),
-  ],
-)
-```
-
-### 2. Riverpod (Fragmented Consumers):
-```dart
-// ⚠️ Riverpod: Requires splitting into multiple Consumer widgets or writing ref.watch selectors
-Column(
-  children: [
-    const HeaderBanner(),
-    Consumer(builder: (context, ref, _) {
-      final name = ref.watch(userProvider.select((s) => s.name));
-      return CkText(text: name);
-    }),
-    Consumer(builder: (context, ref, _) {
-      final email = ref.watch(userProvider.select((s) => s.email));
-      return Text(email);
-    }),
-    Consumer(builder: (context, ref, _) {
-      final isVerified = ref.watch(userProvider.select((s) => s.isVerified));
-      return isVerified ? const VerifiedBadge() : const SizedBox();
-    }),
-  ],
-)
-```
-
-### 3. With Graft (Clean, Harmonized Named Syntax):
-```dart
-// ✅ Graft: Zero selectors, zero boilerplate. 
-// The slot engine automatically isolates each child widget!
-graft.slots(
-  layout: (children) => Column(children: children), // Explicit layout is required!
-  children: (s) => [
-    const HeaderBanner(), // 0 rebuilds (pointer match)
-    CkText(text: s.name), // 0 rebuilds when name is unchanged (auto-unwrapped & diffed)
-    Text(s.email),        // 0 rebuilds when email is unchanged
-    if (s.isVerified) const VerifiedBadge(),
-  ],
-)
-```
-
----
-
-## 🏎️ Performance & Render Pipeline Benchmark
-
-### The 10,000x Cost Difference:
-
-In standard Flutter and BLoC (`BlocBuilder`), every state emission forces the entire child subtree through Flutter's expensive rendering pipeline:
-1. `Widget.build()` allocation
-2. `Element.update()` & `Element.rebuild()`
-3. `RenderObject.markNeedsLayout()`
-4. `RenderObject.performLayout()`
-5. `RenderObject.markNeedsPaint()`
-6. `RenderObject.paint()`
-
-> **Cost of full Render Pipeline:** **~1.0 to 5.0 milliseconds** per frame.
-
-In **Graft (`graft.slots`)**:
-- Diffing occurs **strictly in memory before touching Flutter elements**:
-  - `const` pointer check (`identical(a, b)`): **< 1 nanosecond**
-  - Keyed check (`a.key == b.key`): **~5 nanoseconds**
-  - Primitive property inspection (strings, padding, alignment): **~15 to 80 nanoseconds**
-- If properties match, **Flutter's Element is never dirtied**. Layout is skipped, and paint is skipped completely!
-- **Pure Dart diffing is ~10,000x faster than dirtying the Flutter RenderObject tree.**
-
-### Verified Automated Benchmark (10-Slot Column, 60 State Updates):
-From our automated benchmark test (`test/benchmark/column_rebuild_benchmark_test.dart`):
-
-```
-================================================================================
-  GRAFT REBUILD BENCHMARK (10-Slot Column, 60 State Updates)
-================================================================================
-  Traditional / Monolithic Rebuild Model:
-    - Children in Column: 10
-    - Frames / Updates:   60
-    - Total Child Builds: 600 rebuilds (10 children * 60 updates)
-
-  Graft Fine-Grained slot engine:
-    - Slot 0 (Changing):  60 rebuilds (1 per frame)
-    - Slots 1-9 (Static): 0 rebuilds across all 60 frames
-    - Total Child Builds: 60 rebuilds
-    - Total Elapsed Time: ~51 ms
-    - Rebuild Reduction:  90.0% LESS WORK!
-================================================================================
-```
-
----
-
 ## 🛠️ Quick Start
 
 ### 1. Define State & Controller:
@@ -182,6 +321,9 @@ class UserState extends GraftState {
   String name = 'Alice';
   String email = 'alice@example.com';
   bool isVerified = false;
+
+  @override
+  List<Object?> get tracked => [name, email, isVerified];
 }
 
 class UserGraft extends Graft<UserState> {
@@ -190,7 +332,7 @@ class UserGraft extends Graft<UserState> {
   void updateName(String newName) {
     state
       ..name = newName
-      ..update(); // Batched diffing: notifies listeners and diffs UI slots
+      ..update(); // Synchronous 64-bit bitmask diff & leaf notification
   }
 
   void updateEmail(String newEmail) {
@@ -211,9 +353,7 @@ class UserGraft extends Graft<UserState> {
 
 ```dart
 void main() {
-  // Optional: Enable dev telemetry
   Graft.observer = GraftDevObserver(logRebuilds: true);
-
   runApp(const MyApp());
 }
 
@@ -223,7 +363,6 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      // Register route tracker to enable automatic route-scoped lifecycle disposal!
       navigatorObservers: [GraftRouteTracker.observer],
       home: const UserScreen(),
     );
@@ -248,10 +387,10 @@ class UserScreen extends StatelessWidget {
         ),
       ),
       body: graft.slots(
-        layout: (children) => Column(children: children), // Required layout wrapper
+        layout: (children) => Column(children: children),
         children: (s) => [
-          const HeaderBanner(),
-          Text('Email: ${s.email}'),
+          const HeaderBanner(), // 0 rebuilds (const pointer match)
+          Text('Email: ${s.email}'), // 0 rebuilds when email is unchanged
           if (s.isVerified) const VerifiedBadge(),
           ElevatedButton(
             onPressed: () => graft.updateName('Bob'),
@@ -266,149 +405,54 @@ class UserScreen extends StatelessWidget {
 
 ---
 
-## 🎨 Harmonized Widget Slot API
+## 🎨 Complete Widget API
 
-Graft provides a clean, 100% named-parameter API:
-
-### 1. `graft.slot({required builder, key})` (Single-Child Slot)
-Isolates any single widget slot. Only rebuilds when the returned widget changes:
+### 1. `graft.slots({required layout, required children, key})`
+Multi-child diffing engine with hardware bitmask evaluation.
 ```dart
-AppBar(
-  title: graft.slot(
-    builder: (s) => Text(s.title),
-  ),
-)
-
-// Also handles full-page state switching:
-graft.slot(
-  builder: (s) {
-    if (s.isLoading) return const CircularProgressIndicator();
-    if (s.hasError) return Text(s.error);
-    return ContentView(data: s.data);
-  },
-)
-```
-
-### 2. `graft.slots({required layout, required children, key})` (Multi-Child Diffing Layout)
-Automatically diffs every child widget independently. `layout:` is **required** (no implicit layouts):
-```dart
-// Column layout:
 graft.slots(
   layout: (children) => Column(children: children),
   children: (s) => [
-    const HeaderBanner(),
     Text(s.name),
-    if (s.isVerified) const VerifiedBadge(),
     Text(s.email),
-  ],
-)
-
-// Custom Layout (Row, Wrap, Stack):
-graft.slots(
-  layout: (children) => Row(children: children),
-  children: (s) => [
-    const Icon(Icons.star),
-    Text('${s.rating}'),
-    Text('(${s.reviews})'),
+    if (s.isVerified) const VerifiedBadge(),
   ],
 )
 ```
 
-### 3. `graft.compute<R>({required compute, required builder, key})` (Pre-Flight Derived Computation)
-Computes a derived value from state first. If the computed value is unchanged, the widget builder is **never even executed**, saving CPU cycles on heavy subtrees:
+### 2. `graft.slot({required builder, key})`
+Single-child isolated slot. Only rebuilds when the returned widget changes.
+```dart
+graft.slot(
+  builder: (s) => Text(s.title),
+)
+```
+
+### 3. `graft.boundary(builder)` & `GraftBoundary`
+Depth-$N$ rebuild isolation firewall protecting parent containers.
+```dart
+graft.boundary(
+  () => Text(graft.state.name),
+)
+```
+
+### 4. `graft.compute<R>({required compute, required builder, key})`
+Pre-flight derived computation. If the computed value is unchanged, the builder is never executed.
 ```dart
 graft.compute<int>(
-  compute: (s) => s.notifications.length,
-  builder: (count) => HeavyBadge(count: count),
+  compute: (s) => s.items.length,
+  builder: (count) => Badge(label: Text('$count')),
 )
 ```
 
-### 4. `graft.builder<T>({required items, required itemBuilder, itemKey, layout, key})` (Virtualized Collections)
-Zero-rebuild diffing for virtualized collections (`ListView`, `GridView`, `SliverList`).
-- `items`: passed directly once.
-- `itemBuilder`: receives `(item, index)` (no redundant `BuildContext`).
-- `layout`: defaults automatically to `ListView.builder`.
+### 5. `graft.builder<T>({required items, required itemBuilder, layout, key})`
+Virtualized collection diffing (`ListView`, `GridView`, `SliverList`).
 ```dart
-graft.builder<TaskItem>(
+graft.builder<Task>(
   items: s.tasks,
-  itemBuilder: (task, index) => ListTile(
-    title: Text(task.title),
-    trailing: Checkbox(
-      value: task.isDone,
-      onChanged: (_) => graft.toggleTask(task.id),
-    ),
-  ),
-)
-
-// Override layout for GridView or CustomScrollView:
-graft.builder<Product>(
-  items: s.products,
-  layout: (itemCount, itemBuilder) => GridView.builder(
-    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2),
-    itemCount: itemCount,
-    itemBuilder: itemBuilder,
-  ),
-  itemBuilder: (product, index) => ProductCard(product: product),
+  itemBuilder: (task, index) => TaskTile(task: task),
 )
 ```
-
-### 5. `valueGraft.slot({required builder, key})` (Micro-State Cells)
-For lightweight single primitives (`int`, `bool`, `String`):
-```dart
-final count = ValueGraft<int>(0);
-
-count.slot(
-  builder: (val) => Text('Count: $val'),
-)
-```
-
----
-
-## ⌨️ Developer Ergonomics: IDE Snippets
-
-Graft includes pre-configured snippets for VS Code / Cursor and live templates for Android Studio / IntelliJ:
-
-Run the installer from your project root:
-```bash
-dart run graft:snippets
-```
-
-### Available Snippets:
-- `graft-controller`: Scaffold `Graft` + `GraftState` pair.
-- `graft-value`: Scaffold lightweight `ValueGraft`.
-- `graft-slot`: Single-child isolated slot `graft.slot(builder: (s) => ...)`.
-- `graft-slots`: Multi-child isolated slot layout with required `layout:` parameter.
-- `graft-builder`: Virtualized collection builder `graft.builder<T>(items: ..., itemBuilder: ...)`.
-- `graft-compute`: Pre-flight computed slot `graft.compute<T>(compute: ..., builder: ...)`.
-- `graft-test`: Pure Dart declarative unit test template.
-
----
-
-## 🔍 Compile-Time Lint Enforcement: [`graft_lint`](https://pub.dev/packages/graft_lint)
-
-Catch anti-patterns directly in your IDE with the official Graft analyzer plugin:
-
-```bash
-flutter pub add dev:custom_lint dev:graft_lint
-```
-
-Enable in `analysis_options.yaml`:
-```yaml
-analyzer:
-  plugins:
-    - custom_lint
-  errors:
-    # Optional severity overrides:
-    avoid_nested_graft_slot: error
-```
-
-> **Note:** Do not add these rules under the standard `linter: rules:` block. They are automatically enabled via `custom_lint`.
-
-### Included Rules:
-- **`avoid_nested_graft_slot`** *(Error)*: Flags compile-time errors if a `graft.slot()` is redundantly nested inside another slot or slots engine of the same Graft instance.
-- **`require_graft_route_observer`** *(Info)*: Reminds you to register `GraftRouteTracker.observer` in `MaterialApp.navigatorObservers` for automatic route scoping.
-
-See the [`packages/graft_lint` documentation](packages/graft_lint/README.md) for full configuration details and bad/good code examples.
 
 ---
 

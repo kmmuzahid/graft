@@ -11,8 +11,9 @@ Official analyzer plugin and custom lint rules for the [Graft](https://pub.dev/p
 
 | Rule | Severity | Description |
 |---|---|---|
-| [`avoid_nested_graft_slot`](#1-avoid_nested_graft_slot) | **Error** | Flags illegal nesting of `graft.slot()` or `slots()` inside another slot of the same Graft instance. |
-| [`require_graft_route_observer`](#2-require_graft_route_observer) | **Info** | Recommends registering `GraftRouteTracker.observer` in `MaterialApp.navigatorObservers` for automatic route scoping. |
+| [`avoid_nested_graft_slot`](#1-avoid_nested_graft_slot) | **Error** | Flags illegal nesting of `graft.slot()`, `slots()`, or `boundary()` inside another slot of the same Graft instance. |
+| [`prefer_tracked_in_graft_state`](#2-prefer_tracked_in_graft_state) | **Info** | Recommends overriding `List<Object?> get tracked => [...]` in `GraftState` subclasses for 1-cycle hardware bitmask diffing. |
+| [`require_graft_route_observer`](#3-require_graft_route_observer) | **Info** | Recommends registering `GraftRouteTracker.observer` in `MaterialApp.navigatorObservers` for automatic route scoping. |
 
 ---
 
@@ -103,7 +104,33 @@ graft.slots(
 
 ---
 
-### 2. `require_graft_route_observer`
+### 2. `prefer_tracked_in_graft_state`
+* **Severity:** `Info`
+* **Why:** Subclasses of `GraftState` that declare domain fields should override `List<Object?> get tracked => [...]`. This enables Graft's hardware-aligned 64-bit integer dirty bitmask, evaluated in CPU registers with 0 GC heap allocations during diff passes.
+
+#### ❌ Bad
+```dart
+class UserState extends GraftState {
+  String name = '';
+  int score = 0;
+  // Missing tracked getter: falls back to dynamic structural diffing
+}
+```
+
+#### ✅ Good
+```dart
+class UserState extends GraftState {
+  String name = '';
+  int score = 0;
+
+  @override
+  List<Object?> get tracked => [name, score]; // ⚡ 1-cycle bitmask enabled!
+}
+```
+
+---
+
+### 3. `require_graft_route_observer`
 * **Severity:** `Info`
 * **Why:** Graft uses route tracking to automatically clean up and dispose route-scoped Grafts when screens pop from the navigation stack.
 
