@@ -8,18 +8,22 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 ## 0.1.2-alpha.1
 
 ### ⚡ Hardware-Aligned Engine & Self-Optimizing Architecture
+- **Multi-Field Bitmask Tracking (`fieldDependenciesMask`)**: Upgraded `SlotMetadata` to accumulate multi-field dependencies into a cumulative 64-bit integer bitmask, completely resolving the single-bit locking bug and guaranteeing zero stale UI occurrences when slots depend on multiple domain fields.
+- **Copy-on-Write State Transitions (`produce`)**: Added `produce((s) => s..field = x)` method to `Graft<S>`, combining zero-boilerplate cascade syntax with distinct immutable `currentState` and `nextState` snapshots for auditable logging and time-travel testing.
+- **First-Class Async Engine (`GraftAsync<T>` & `runAsync`)**: Added sealed `GraftAsync<T>` hierarchy (`idle`, `loading`, `data`, `error`) and `runAsync()` automated task runner.
+- **Subtree Scoping for Modern Routing (`GraftScope`)**: Added `GraftScope` widget to support `GoRouter`'s `StatefulShellRoute`, persistent bottom navigation tabs, and modal dialogs with automatic subtree lifecycle cleanup.
 - **64-Bit Integer Dirty Bitmask**: Replaced synthetic context reflection hacks with hardware-level integer bitmasks evaluated in CPU registers.
 - **Zero-Allocation In-Place Snapshots**: State diffing mutates baseline snapshots in-place with 0 GC heap allocations. Verified in `test/zero_allocation_benchmark_test.dart` (~750–1,300 ns per pass in debug VM, < 50 ns in AOT compiled mode).
-- **Self-Optimizing Slot Table (`SlotMetadata`)**: Each slot retains lightweight metadata that adaptively correlates to domain field indices during mutation bursts, escalating from structural inspection to 1-cycle CPU bitwise checks: `(dirtyMask & (1 << boundFieldIndex)) == 0`.
-- **Depth-$N$ Rebuild Isolation Firewall (`GraftBoundary`)**: Added `GraftBoundary` and fluent extension `graft.boundary(() => Widget)` allowing leaf elements to rebuild with Depth-$N$ insulation, guaranteeing 0 rebuilds for intermediate parent containers (`Card`, `Container`, `Padding`).
+- **Self-Optimizing Slot Table (`SlotMetadata`)**: Each slot retains lightweight metadata that adaptively correlates to domain field indices during mutation bursts, escalating from structural inspection to 1-cycle CPU bitwise checks: `(dirtyMask & fieldDependenciesMask) != 0`.
+- **Depth-$N$ Rebuild Insulation (`graft((s) => ...)` & `graft.slot`)**: Unified single-slot leaf rendering with the ultra-clean callable syntax `graft((s) => ...)`, providing complete Element-level rebuild insulation for intermediate parent containers (`Card`, `Container`, `Padding`).
 - **Synchronous & Coalesced Updates**: Direct cascade updates via `state..update()` notify synchronously for zero-latency UI updates; added `state..updateCoalesced()` for microtask debouncing in rapid loops.
-- **Disordered Slot Resolution**: Full support for UI slot layouts that differ in order from state `tracked` definitions, verified in `test/disordering_test.dart`.
+- **Disordered Slot Resolution**: Full support for UI slot layouts that differ in order from state `tracked` definitions, verified in `test/disordering_test.dart` and `test/multi_field_slot_test.dart`.
 - **Dynamic Branch Reconciliation**: Slot table dynamically expands and contracts on conditional branches (`if`, collection-`for`), properly disposing dropped slot notifiers to prevent memory leaks.
-- **100% Verified Test Suite**: 105 test cases passing with zero warnings and zero analyzer issues across the entire workspace.
+- **100% Verified Test Suite**: 116 test cases passing with zero warnings and zero analyzer issues across the entire workspace.
 
 ### 🔍 Tooling & Linter Updates (`graft_lint`)
 - **New Rule (`prefer_tracked_in_graft_state`)**: Warns when a domain state class extending `GraftState` declares fields without overriding `tracked`, prompting developers to declare `List<Object?> get tracked => [...]` to unlock hardware-aligned 1-cycle bitmask execution.
-- **Enhanced `avoid_nested_graft_slot`**: Added `boundary` to prohibited nested calls.
+- **Enhanced `avoid_nested_graft_slot`**: Flags illegal nesting of slots and layout scopes.
 
 ---
 

@@ -3,7 +3,8 @@
 /// ### Why use GraftChange?
 /// Whenever a [Graft] state transitions or updates, a [GraftChange] is dispatched
 /// to [GraftObserver.onChange]. It captures a point-in-time snapshot of the transition,
-/// containing both the previous [currentState] and the updated [nextState].
+/// containing the previous [currentState], updated [nextState], automated field-level
+/// snapshots ([previousTracked] and [nextTracked]), and the 64-bit integer [dirtyMask].
 ///
 /// Use this in:
 /// - Custom logging and telemetry pipelines
@@ -16,8 +17,9 @@
 ///   @override
 ///   void onChange(dynamic graft, GraftChange change) {
 ///     print('${graft.runtimeType} changed:');
-///     print('  From: ${change.currentState}');
-///     print('  To:   ${change.nextState}');
+///     print('  Before: ${change.previousTracked}');
+///     print('  After:  ${change.nextTracked}');
+///     print('  Dirty mask: 0x${change.dirtyMask.toRadixString(16)}');
 ///   }
 /// }
 /// ```
@@ -28,10 +30,22 @@ class GraftChange<S> {
   /// The state after the transition.
   final S nextState;
 
+  /// Automated snapshot of [GraftState.tracked] fields immediately before mutation.
+  final List<Object?> previousTracked;
+
+  /// Automated snapshot of [GraftState.tracked] fields immediately after mutation.
+  final List<Object?> nextTracked;
+
+  /// The 64-bit integer dirty bitmask indicating which field indices were modified.
+  final int dirtyMask;
+
   /// Creates a [GraftChange] describing a transition from [currentState] to [nextState].
   const GraftChange({
     required this.currentState,
     required this.nextState,
+    this.previousTracked = const [],
+    this.nextTracked = const [],
+    this.dirtyMask = -1,
   });
 
   @override
@@ -40,12 +54,14 @@ class GraftChange<S> {
       other is GraftChange<S> &&
           runtimeType == other.runtimeType &&
           currentState == other.currentState &&
-          nextState == other.nextState;
+          nextState == other.nextState &&
+          dirtyMask == other.dirtyMask;
 
   @override
-  int get hashCode => currentState.hashCode ^ nextState.hashCode;
+  int get hashCode =>
+      currentState.hashCode ^ nextState.hashCode ^ dirtyMask.hashCode;
 
   @override
-  String toString() => 'GraftChange(current: $currentState, next: $nextState)';
+  String toString() =>
+      'GraftChange(current: $currentState, next: $nextState, previousTracked: $previousTracked, nextTracked: $nextTracked, dirtyMask: 0x${dirtyMask.toRadixString(16)})';
 }
-

@@ -17,7 +17,7 @@ class BenchmarkState extends GraftState {
   });
 
   @override
-  List<Object?> get tracked => [id, username, balance, isVip, tier];
+  List<Object?> get props => [id, username, balance, isVip, tier];
 }
 
 class BenchmarkGraft extends Graft<BenchmarkState> {
@@ -25,12 +25,15 @@ class BenchmarkGraft extends Graft<BenchmarkState> {
 }
 
 void main() {
-  test('10,000 diff passes on GraftState perform in-place baseline mutation with sub-microsecond latency', () {
+  test(
+      '10,000 diff passes on GraftState perform in-place baseline mutation with sub-microsecond latency',
+      () {
     final graft = BenchmarkGraft();
     final state = graft.state;
 
     // Verify baseline was captured during bindGraft
-    expect(state.diffChanges(), 0, reason: 'Initial diff with no mutations must be 0 (clean)');
+    expect(state.diffChanges(), 0,
+        reason: 'Initial diff with no mutations must be 0 (clean)');
 
     final stopwatch = Stopwatch()..start();
 
@@ -42,11 +45,13 @@ void main() {
       if (i % 2 == 0) {
         state.balance = 50000.0 + i + 1;
         final mask = state.diffChanges();
-        expect(mask, 1 << 2, reason: 'Field index 2 (balance) must be marked dirty');
+        expect(mask, 1 << 2,
+            reason: 'Field index 2 (balance) must be marked dirty');
       } else {
         state.tier = (i % 5) + 10;
         final mask = state.diffChanges();
-        expect(mask, 1 << 4, reason: 'Field index 4 (tier) must be marked dirty');
+        expect(mask, 1 << 4,
+            reason: 'Field index 4 (tier) must be marked dirty');
       }
 
       // Immediate subsequent diff without mutations must be 0
@@ -56,7 +61,8 @@ void main() {
 
     stopwatch.stop();
     final elapsedMicros = stopwatch.elapsedMicroseconds;
-    final perCycleNanos = (elapsedMicros * 1000) / (iterations * 2); // 20,000 diff passes
+    final perCycleNanos =
+        (elapsedMicros * 1000) / (iterations * 2); // 20,000 diff passes
 
     // Output reproducible benchmark telemetry
     // ignore: avoid_print
@@ -64,9 +70,11 @@ void main() {
     // ignore: avoid_print
     print('   Total iterations: $iterations (20,000 diff passes)');
     // ignore: avoid_print
-    print('   Total elapsed time: ${stopwatch.elapsedMilliseconds} ms (${elapsedMicros} μs)');
+    print(
+        '   Total elapsed time: ${stopwatch.elapsedMilliseconds} ms (${elapsedMicros} μs)');
     // ignore: avoid_print
-    print('   Average latency per diff pass: ${perCycleNanos.toStringAsFixed(1)} ns');
+    print(
+        '   Average latency per diff pass: ${perCycleNanos.toStringAsFixed(1)} ns');
 
     // 20,000 diff passes should finish well under 500ms even in unoptimized debug test runner mode
     expect(stopwatch.elapsedMilliseconds, lessThan(500));

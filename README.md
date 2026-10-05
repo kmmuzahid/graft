@@ -28,7 +28,7 @@ Graft rejects this compromise. It is engineered around 6 foundational pillars:
 2. **Declarative UI Purity:** Multi-child layouts (`Column`, `Row`, `Wrap`) are declared as pure, natural lists (`children: (s) => [ ... ]`). No per-item selector tokens, no `.watch()`, and no manual widget wrappers.
 3. **Hardware-Aligned Bitmask Diffing:** State field modifications are mapped into a 64-bit integer dirty bitmask evaluated in CPU registers with 0 GC heap allocations during diff passes.
 4. **Self-Optimizing Adaptive Runtime:** Each child slot retains lightweight `SlotMetadata` that dynamically learns correlating domain field indices during mutation bursts, escalating from structural inspection to 1-cycle CPU bitwise checks (`(dirtyMask & (1 << boundFieldIndex)) == 0`).
-5. **Depth-$N$ Surgical Rebuilds (`GraftBoundary`):** An isolated rebuild firewall that allows deeply nested leaf widgets to update while insulating all intermediate parent containers (`Card`, `Container`, `Padding`) from rebuilding.
+5. **Depth-$N$ Surgical Rebuilds (`graft((s) => ...)`):** An isolated rebuild boundary that allows deeply nested leaf widgets to update while insulating all intermediate parent containers (`Card`, `Container`, `Padding`) from rebuilding.
 6. **Automatic Route-Aware Lifecycle:** Controllers automatically inherit down predecessor routes and cleanly self-dispose when their owning route is popped from the Navigator stack.
 
 ---
@@ -161,7 +161,7 @@ graft.slots(
 | **Widget Tree Nesting** | ❌ `BlocProvider` → `BlocBuilder` | ⚠️ `ConsumerWidget` or `Consumer` | ❌ `Provider` → `Consumer` | ✅ Minimal | ⚠️ `Watch(...)` wrappers | ✅ **Zero Nesting**: `context.use<MyGraft>()` in standard `StatelessWidget` |
 | **Code Generation** | ✅ None | ❌ Heavily pushed (`@riverpod`) | ✅ None | ✅ None | ✅ None | ✅ **Strictly 0 Code-Gen** |
 | **Domain State Architecture** | ✅ Cohesive domain class | ✅ Cohesive domain class | ✅ Cohesive domain class | ❌ Fragmented reactive vars (`.obs`) | ❌ Fragmented loose signals (`signal()`) | ✅ **Cohesive domain `GraftState`** |
-| **Parent Rebuild Firewall** | ❌ Parent rebuilds | ❌ Parent rebuilds | ❌ Parent rebuilds | ⚠️ Requires nested builders | ⚠️ Requires nested builders | ✅ **`GraftBoundary` (Depth-$N$ insulation)** |
+| **Parent Rebuild Firewall** | ❌ Parent rebuilds | ❌ Parent rebuilds | ❌ Parent rebuilds | ⚠️ Requires nested builders | ⚠️ Requires nested builders | ✅ **`graft((s) => ...)` (Depth-$N$ insulation)** |
 | **Route Stack Sharing** | ⚠️ Manual `BlocProvider.value` | ⚠️ Manual overrides | ⚠️ Manual scoping | ❌ Global map (memory leaks) | ⚠️ Manual cleanup | ✅ **Automatic route-stack inheritance & disposal** |
 | **Observability** | ✅ `BlocObserver` | ⚠️ `ProviderObserver` | ❌ None built-in | ⚠️ Basic print | ❌ None built-in | ✅ **`GraftObserver` & `GraftDevObserver`** |
 | **Declarative Unit Testing** | ✅ `blocTest` | ⚠️ `ProviderContainer` | ⚠️ Manual mocks | ⚠️ Difficult to isolate | ⚠️ Manual harness | ✅ **`graftTest` (Pure Dart harness)** |
@@ -192,32 +192,29 @@ Measuring 60 state updates on a 10-slot layout:
 
 ---
 
-## 🛡️ Depth-$N$ Rebuild Firewall: `GraftBoundary`
+## 🛡️ Depth-$N$ Rebuild Insulation: `graft((s) => ...)`
 
-When building complex UI hierarchies, you often have intermediate layout containers (`Card`, `Container`, `Padding`, decoration shells) that wrap dynamic content. In standard Flutter, any `setState()` or builder in an ancestor or child causes intermediate containers to execute their `build()` methods.
+When building complex UI hierarchies, you often have intermediate layout containers (`Card`, `Container`, `Padding`, decoration shells) that wrap dynamic content. In standard Flutter, any `setState()` or top-level builder causes intermediate containers to execute their `build()` methods.
 
-`GraftBoundary` acts as an Element-level rebuild firewall:
+The callable `graft((s) => ...)` syntax acts as a self-contained Element-level rebuild boundary:
 
 ```dart
-// The outer decorated card NEVER rebuilds when state updates!
+// The outer decorated container NEVER rebuilds when state updates!
 Container(
   decoration: myHeavyDecoration,
   child: Column(
     children: [
       const Text('Header (0 rebuilds)'),
-      GraftBoundary(
-        () => Text('User: ${graft.state.name}'),
-      ),
-      // Or using fluent extension:
-      graft.boundary(
-        () => Text('Role: ${graft.state.role}'),
-      ),
+      // Surgical leaf slot with direct typed state injection:
+      graft((s) => Text('User: ${s.name}')),
+      // Automatically diffs content in < 1 ns without magic numbers:
+      graft((s) => Text('Role: ${s.role}')),
     ],
   ),
 )
 ```
 
-Verified in `test/graft_boundary_test.dart`: Intermediate containers maintain a build count of **1** throughout all state transitions.
+Verified in `test/depth_n_isolation_test.dart`: Intermediate containers maintain a build count of **1** throughout all state transitions.
 
 ---
 
@@ -428,12 +425,10 @@ graft.slot(
 )
 ```
 
-### 3. `graft.boundary(builder)` & `GraftBoundary`
-Depth-$N$ rebuild isolation firewall protecting parent containers.
+### 3. `graft((s) => ...)` (Callable Entry Point)
+Ultra-clean callable shortcut for single-child slots with automatic content diffing and Depth-$N$ parent insulation.
 ```dart
-graft.boundary(
-  () => Text(graft.state.name),
-)
+graft((s) => Text(s.name))
 ```
 
 ### 4. `graft.compute<R>({required compute, required builder, key})`

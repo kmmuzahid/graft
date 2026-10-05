@@ -8,7 +8,7 @@ class LifecycleState extends GraftState {
   LifecycleState(this.text);
 
   @override
-  List<Object?> get tracked => [text];
+  List<Object?> get props => [text];
 }
 
 class LifecycleGraft extends Graft<LifecycleState> {
@@ -54,7 +54,9 @@ void main() {
       expect(maskCalls, 1);
     });
 
-    testWidgets('GraftMultiChildDiffEngine unmount disposes all SlotMetadata notifiers and unregisters listeners', (tester) async {
+    testWidgets(
+        'GraftMultiChildDiffEngine unmount disposes all SlotMetadata notifiers and unregisters listeners',
+        (tester) async {
       final graft = LifecycleGraft();
 
       Widget app(bool showSlots) {
@@ -77,7 +79,9 @@ void main() {
       await tester.pumpWidget(app(true));
       expect(find.text('Text: initial'), findsOneWidget);
 
-      final engineState = tester.state(find.byType(GraftMultiChildDiffEngine<LifecycleState>)) as dynamic;
+      final engineState =
+          tester.state(find.byType(GraftMultiChildDiffEngine<LifecycleState>))
+              as dynamic;
       final slotTable = engineState.slotTable as List<SlotMetadata>;
       expect(slotTable.length, 2);
 
@@ -91,7 +95,8 @@ void main() {
 
       // Unmount the slots widget completely
       await tester.pumpWidget(app(false));
-      expect(find.byType(GraftMultiChildDiffEngine<LifecycleState>), findsNothing);
+      expect(
+          find.byType(GraftMultiChildDiffEngine<LifecycleState>), findsNothing);
 
       // Verify slot notifiers are disposed and unlinked
       expect(() => notifier0.addListener(() {}), throwsFlutterError);

@@ -30,27 +30,19 @@ class UserGraft extends Graft<UserState> {
   UserGraft() : super(UserState());
 
   void updateName(String newName) {
-    state
-      ..name = newName
-      ..update();
+    mutate((s) => s..name = newName);
   }
 
   void updateEmail(String newEmail) {
-    state
-      ..email = newEmail
-      ..update();
+    mutate((s) => s..email = newEmail);
   }
 
   void toggleVerified() {
-    state
-      ..isVerified = !state.isVerified
-      ..update();
+    mutate((s) => s..isVerified = !state.isVerified);
   }
 
   void incrementNotifications() {
-    state
-      ..notificationCount += 1
-      ..update();
+    mutate((s) => s..notificationCount += 1);
   }
 
   /// Batched Multi-Property Update:
@@ -62,12 +54,12 @@ class UserGraft extends Graft<UserState> {
     required bool isVerified,
     required int notifications,
   }) {
-    state
+    mutate((s) => s
       ..name = name
       ..email = email
       ..isVerified = isVerified
-      ..notificationCount = notifications
-      ..update(); // 💥 All 4 fields updated in 1 single pass!
+      ..notificationCount =
+          notifications); // 💥 All 4 fields updated in 1 single atomic pass!
   }
 }
 
@@ -89,28 +81,28 @@ class TaskListState extends GraftState {
 
 class TaskListGraft extends Graft<TaskListState> {
   TaskListGraft()
-    : super(
-        TaskListState(
-          tasks: [
-            TaskItem(id: '1', title: 'Install Graft package', isDone: true),
-            TaskItem(
-              id: '2',
-              title: 'Learn graft.slot and graft.slots',
-              isDone: true,
-            ),
-            TaskItem(
-              id: '3',
-              title: 'Explore ListView with and without ValueGraft',
-              isDone: false,
-            ),
-            TaskItem(
-              id: '4',
-              title: 'Build high-performance Flutter app',
-              isDone: false,
-            ),
-          ],
-        ),
-      );
+      : super(
+          TaskListState(
+            tasks: [
+              TaskItem(id: '1', title: 'Install Graft package', isDone: true),
+              TaskItem(
+                id: '2',
+                title: 'Learn graft.slot and graft.slots',
+                isDone: true,
+              ),
+              TaskItem(
+                id: '3',
+                title: 'Explore ListView with and without ValueGraft',
+                isDone: false,
+              ),
+              TaskItem(
+                id: '4',
+                title: 'Build high-performance Flutter app',
+                isDone: false,
+              ),
+            ],
+          ),
+        );
 
   void toggleTask(String id) {
     state
@@ -148,8 +140,8 @@ class ProductItem {
   final ValueGraft<int> quantity;
 
   ProductItem({required this.title, bool liked = false, int count = 1})
-    : isLiked = ValueGraft<bool>(liked),
-      quantity = ValueGraft<int>(count);
+      : isLiked = ValueGraft<bool>(liked),
+        quantity = ValueGraft<int>(count);
 }
 
 class ProductCatalogState extends GraftState {
@@ -275,8 +267,8 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Looks in route stack; if not found, creates new instance & owns it:
-    final graft = context.use<UserGraft>();
+    // Auto-instantiates and borrows across the navigation stack:
+    final graft = context.use(UserGraft.new);
 
     return Scaffold(
       appBar: AppBar(
@@ -330,7 +322,7 @@ class HomeScreen extends StatelessWidget {
 
                 // Slot 1: Name
                 ListTile(
-                  leading: const Icon(Icons.person, color: Colors.deepPurple),
+                  leading: Icon(Icons.person, color: Colors.deepPurple),
                   title: Text('Name: ${s.name}'),
                   subtitle: const Text('Rebuilds ONLY when name changes'),
                 ),
@@ -405,7 +397,8 @@ class HomeScreen extends StatelessWidget {
             // =================================================================
             const _SectionHeader(
               title: '2. Standard Widgets Composed with graft.slot',
-              subtitle: 'Place graft.slot inside any Flutter widget (ListTile, Card, etc.).',
+              subtitle:
+                  'Place graft.slot inside any Flutter widget (ListTile, Card, etc.).',
             ),
             const SizedBox(height: 8),
 
@@ -444,23 +437,24 @@ class HomeScreen extends StatelessWidget {
             const Divider(),
 
             // =================================================================
-            // 3. Depth-N Rebuild Isolation Firewall (GraftBoundary)
+            // 3. Depth-N Rebuild Isolation via graft((s) => ...)
             // =================================================================
             const _SectionHeader(
-              title: '3. Depth-N Rebuild Isolation Firewall (GraftBoundary)',
-              subtitle: 'Isolates intermediate parent containers so only the surgical leaf rebuilds.',
+              title: '3. Depth-N Rebuild Isolation via graft((s) => ...)',
+              subtitle:
+                  'Isolates intermediate parent containers so only the surgical leaf rebuilds.',
             ),
             const SizedBox(height: 8),
 
             _HeavyShellContainer(
-              child: graft.boundary(
-                () => Row(
+              child: graft(
+                (s) => Row(
                   children: [
                     const Icon(Icons.shield_outlined, color: Colors.deepPurple),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Leaf inside GraftBoundary: ${graft.state.name}',
+                        'Leaf inside graft((s) => ...): ${s.name}',
                         style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
                     ),
@@ -477,7 +471,8 @@ class HomeScreen extends StatelessWidget {
             // =================================================================
             const _SectionHeader(
               title: '4. Route-Stack Lifecycle & Inheritance',
-              subtitle: 'Pushed screens borrow the active Graft. Disposed when owner pops.',
+              subtitle:
+                  'Pushed screens borrow the active Graft. Disposed when owner pops.',
             ),
             const SizedBox(height: 12),
 
@@ -516,7 +511,8 @@ class HomeScreen extends StatelessWidget {
             // =================================================================
             const _SectionHeader(
               title: '4. ListView.builder Examples',
-              subtitle: 'Compare standard single-Graft lists vs. per-item ValueGraft.',
+              subtitle:
+                  'Compare standard single-Graft lists vs. per-item ValueGraft.',
             ),
             const SizedBox(height: 12),
 
@@ -560,7 +556,8 @@ class HomeScreen extends StatelessWidget {
             // =================================================================
             const _SectionHeader(
               title: '5. Multi-Graft Composition (Cross-Graft Nesting)',
-              subtitle: 'Consume multiple Grafts in one screen with ZERO MultiBlocProvider pyramids.',
+              subtitle:
+                  'Consume multiple Grafts in one screen with ZERO MultiBlocProvider pyramids.',
             ),
             const SizedBox(height: 12),
 
@@ -741,9 +738,8 @@ class StandardListScreen extends StatelessWidget {
                     title: Text(
                       task.title,
                       style: TextStyle(
-                        decoration: task.isDone
-                            ? TextDecoration.lineThrough
-                            : null,
+                        decoration:
+                            task.isDone ? TextDecoration.lineThrough : null,
                         color: task.isDone ? Colors.grey : null,
                       ),
                     ),
@@ -801,8 +797,7 @@ class ValueGraftListScreen extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: catalog.slot(
-              builder: (s) {
+            child: catalog.slot(builder: (s) {
               if (s.isLoading) {
                 return const Center(
                   child: Column(
@@ -906,7 +901,8 @@ class MultiGraftCompositionScreen extends StatelessWidget {
           children: [
             const _SectionHeader(
               title: 'Multi-Graft Composition & Nested Isolation',
-              subtitle: 'Consume multiple Grafts with zero pyramids and complete rebuild isolation.',
+              subtitle:
+                  'Consume multiple Grafts with zero pyramids and complete rebuild isolation.',
             ),
             const SizedBox(height: 16),
 
@@ -1143,7 +1139,9 @@ class _HeavyShellContainerState extends State<_HeavyShellContainer> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: _buildCount == 1 ? Colors.green.shade100 : Colors.red.shade100,
+                  color: _buildCount == 1
+                      ? Colors.green.shade100
+                      : Colors.red.shade100,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -1151,7 +1149,9 @@ class _HeavyShellContainerState extends State<_HeavyShellContainer> {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: _buildCount == 1 ? Colors.green.shade800 : Colors.red.shade800,
+                    color: _buildCount == 1
+                        ? Colors.green.shade800
+                        : Colors.red.shade800,
                   ),
                 ),
               ),
@@ -1169,4 +1169,3 @@ class _HeavyShellContainerState extends State<_HeavyShellContainer> {
     );
   }
 }
-

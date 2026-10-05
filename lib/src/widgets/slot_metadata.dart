@@ -18,9 +18,25 @@ class SlotMetadata {
   /// Fast integer content fingerprint for sub-nanosecond comparisons.
   int contentFingerprint;
 
-  /// The learned field index in the state's `dirtyMask` this slot correlates to.
-  /// When learned, allows 1-cycle CPU bitwise evaluation: `(dirtyMask & (1 << boundFieldIndex)) == 0`.
-  int? boundFieldIndex;
+  /// The cumulative learned field bitmask in the state's `dirtyMask` this slot correlates to.
+  /// When learned, allows 1-cycle CPU bitwise evaluation: `(dirtyMask & fieldDependenciesMask) != 0`.
+  int fieldDependenciesMask;
+
+  /// Returns the single bound field index if exactly one field is bound, or null if unmapped / multi-bound.
+  int? get boundFieldIndex {
+    if (fieldDependenciesMask > 0 && (fieldDependenciesMask & (fieldDependenciesMask - 1)) == 0) {
+      return fieldDependenciesMask.bitLength - 1;
+    }
+    return null;
+  }
+
+  set boundFieldIndex(int? index) {
+    if (index == null) {
+      fieldDependenciesMask = 0;
+    } else {
+      fieldDependenciesMask |= (1 << index);
+    }
+  }
 
   /// The individual surgical trigger for this slot's leaf Element.
   final ValueNotifier<Widget> notifier;
@@ -34,19 +50,19 @@ class SlotMetadata {
     required this.widgetType,
     required this.contentFingerprint,
     required Widget initialWidget,
-    this.boundFieldIndex,
-  }) : notifier = ValueNotifier<Widget>(initialWidget);
+    int? boundFieldIndex,
+    int fieldDependenciesMask = 0,
+  })  : fieldDependenciesMask = boundFieldIndex != null
+            ? (1 << boundFieldIndex)
+            : fieldDependenciesMask,
+        notifier = ValueNotifier<Widget>(initialWidget);
 
   /// Fast evaluation of whether this slot needs to rebuild given [dirtyMask].
   @pragma('vm:prefer-inline')
   bool isDirty(int dirtyMask) {
     if (isStatic) return false;
-    if (dirtyMask == -1) return true; // All dirty on first build or full flush
-    if (boundFieldIndex != null) {
-      return (dirtyMask & (1 << boundFieldIndex!)) != 0;
-    }
-    // If not yet mapped to a specific bit, must evaluate content fingerprint
-    return true;
+    if (dirtyMask == -1 || fieldDependenciesMask == 0) return true; // All dirty on first build or unmapped
+    return (dirtyMask & fieldDependenciesMask) != 0;
   }
 
   /// Disposes this slot's internal notifier.

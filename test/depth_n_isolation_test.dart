@@ -21,21 +21,15 @@ class BoundaryUserGraft extends Graft<BoundaryUserState> {
   BoundaryUserGraft() : super(BoundaryUserState());
 
   void updateName(String name) {
-    state
-      ..name = name
-      ..update();
+    mutate((s) => s..name = name);
   }
 
   void updateRole(String role) {
-    state
-      ..role = role
-      ..update();
+    mutate((s) => s..role = role);
   }
 
   void increment() {
-    state
-      ..counter = state.counter + 1
-      ..update();
+    mutate((s) => s..counter += 1);
   }
 }
 
@@ -73,7 +67,7 @@ class DeepNestedShell extends StatelessWidget {
   }
 }
 
-class BoundaryLeafText extends StatelessWidget {
+class BoundaryLeafText extends StatelessWidget implements GraftEquivalent {
   static int nameBuildCount = 0;
   static int roleBuildCount = 0;
 
@@ -81,6 +75,13 @@ class BoundaryLeafText extends StatelessWidget {
   final bool isName;
 
   const BoundaryLeafText(this.text, {super.key, required this.isName});
+
+  @override
+  bool isEquivalentTo(Widget other) {
+    return other is BoundaryLeafText &&
+        other.text == text &&
+        other.isName == isName;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -101,7 +102,9 @@ void main() {
     BoundaryLeafText.roleBuildCount = 0;
   });
 
-  testWidgets('GraftBoundary provides Depth-N rebuild firewall: parents have 0 rebuilds', (tester) async {
+  testWidgets(
+      'graft((s) => ...) provides Depth-N rebuild isolation: parents have 0 rebuilds',
+      (tester) async {
     final graft = BoundaryUserGraft();
 
     await tester.pumpWidget(
@@ -112,22 +115,19 @@ void main() {
               child: Column(
                 children: [
                   const Text('Static Header in Deep Tree'),
-                  // GraftBoundary shields entire parent hierarchy with field bitmask filtering
-                  GraftBoundary(
-                    () => BoundaryLeafText(
-                      'Name: ${graft.state.name}',
+                  // graft((s) => ...) shields entire parent hierarchy
+                  graft(
+                    (s) => BoundaryLeafText(
+                      'Name: ${s.name}',
                       isName: true,
                     ),
-                    graft: graft,
-                    field: 0, // Watched field: name
                   ),
-                  // Extension helper graft.boundary with field filtering
-                  graft.boundary(
-                    () => BoundaryLeafText(
-                      'Role: ${graft.state.role}',
+                  // Second isolated leaf slot: automatically diffs without magic numbers
+                  graft(
+                    (s) => BoundaryLeafText(
+                      'Role: ${s.role}',
                       isName: false,
                     ),
-                    field: 1, // Watched field: role
                   ),
                 ],
               ),
@@ -145,7 +145,7 @@ void main() {
     expect(find.text('Name: Alice'), findsOneWidget);
     expect(find.text('Role: Engineer'), findsOneWidget);
 
-    // 1. Update Name -> triggers boundary leaf rebuild
+    // 1. Update Name -> triggers only Name leaf rebuild
     graft.updateName('Bob');
     await tester.pump();
 
@@ -154,14 +154,14 @@ void main() {
         reason: 'Outer ParentInspectorContainer must have 0 rebuilds');
     expect(DeepNestedShell.buildCount, 1,
         reason: 'DeepNestedShell must have 0 rebuilds');
-    // Name leaf rebuilds, Role leaf does NOT rebuild because field: 1 was clean!
+    // Name leaf rebuilds, Role leaf does NOT rebuild because content is equivalent!
     expect(BoundaryLeafText.nameBuildCount, 2,
-        reason: 'Name leaf inside boundary must rebuild to show new name');
+        reason: 'Name leaf must rebuild to show new name');
     expect(BoundaryLeafText.roleBuildCount, 1,
-        reason: 'Role leaf inside boundary with field: 1 must have 0 rebuilds');
+        reason: 'Role leaf must have 0 rebuilds when role is unchanged');
     expect(find.text('Name: Bob'), findsOneWidget);
 
-    // 2. Update Role -> triggers boundary leaf rebuild
+    // 2. Update Role -> triggers only Role leaf rebuild
     graft.updateRole('Architect');
     await tester.pump();
 
@@ -170,15 +170,17 @@ void main() {
     expect(DeepNestedShell.buildCount, 1,
         reason: 'Shell container still 0 rebuilds');
     expect(BoundaryLeafText.nameBuildCount, 2,
-        reason: 'Name leaf with field: 0 must have 0 rebuilds on role update');
+        reason: 'Name leaf must have 0 rebuilds on role update');
     expect(BoundaryLeafText.roleBuildCount, 2,
-        reason: 'Role leaf with field: 1 must rebuild to show new role');
+        reason: 'Role leaf must rebuild to show new role');
     expect(find.text('Role: Architect'), findsOneWidget);
 
     graft.dispose();
   });
 
-  testWidgets('GraftBoundary without field parameter acts as a pure zero-boilerplate firewall', (tester) async {
+  testWidgets(
+      'graft.slot isolates deeply nested leaf widgets with 0 parent rebuilds',
+      (tester) async {
     final graft = BoundaryUserGraft();
 
     await tester.pumpWidget(
@@ -189,10 +191,9 @@ void main() {
               child: Column(
                 children: [
                   const Text('Static Header in Deep Tree'),
-                  // Pure zero-boilerplate boundary without any field parameter
-                  graft.boundary(
-                    () => BoundaryLeafText(
-                      'Name: ${graft.state.name}',
+                  graft.slot(
+                    builder: (s) => BoundaryLeafText(
+                      'Name: ${s.name}',
                       isName: true,
                     ),
                   ),
@@ -212,9 +213,12 @@ void main() {
     await tester.pump();
 
     // Parents STILL have 0 rebuilds!
-    expect(ParentInspectorContainer.buildCount, 1, reason: 'Parent container never rebuilds');
-    expect(DeepNestedShell.buildCount, 1, reason: 'DeepNestedShell never rebuilds');
-    expect(BoundaryLeafText.nameBuildCount, 2, reason: 'Only the leaf inside boundary rebuilds');
+    expect(ParentInspectorContainer.buildCount, 1,
+        reason: 'Parent container never rebuilds');
+    expect(DeepNestedShell.buildCount, 1,
+        reason: 'DeepNestedShell never rebuilds');
+    expect(BoundaryLeafText.nameBuildCount, 2,
+        reason: 'Leaf rebuilt to show Charlie');
     expect(find.text('Name: Charlie'), findsOneWidget);
 
     graft.dispose();

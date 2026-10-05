@@ -11,7 +11,7 @@ Official analyzer plugin and custom lint rules for the [Graft](https://pub.dev/p
 
 | Rule | Severity | Description |
 |---|---|---|
-| [`avoid_nested_graft_slot`](#1-avoid_nested_graft_slot) | **Error** | Flags illegal nesting of `graft.slot()`, `slots()`, or `boundary()` inside another slot of the same Graft instance. |
+| [`avoid_nested_graft_slot`](#1-avoid_nested_graft_slot) | **Error** | Flags illegal nesting of `graft.slot()` or `slots()` inside another slot of the same Graft instance. |
 | [`prefer_tracked_in_graft_state`](#2-prefer_tracked_in_graft_state) | **Info** | Recommends overriding `List<Object?> get tracked => [...]` in `GraftState` subclasses for 1-cycle hardware bitmask diffing. |
 | [`require_graft_route_observer`](#3-require_graft_route_observer) | **Info** | Recommends registering `GraftRouteTracker.observer` in `MaterialApp.navigatorObservers` for automatic route scoping. |
 

@@ -13,7 +13,7 @@ class CoalesceState extends GraftState {
   });
 
   @override
-  List<Object?> get tracked => [count, text, flag];
+  List<Object?> get props => [count, text, flag];
 }
 
 class CoalesceGraft extends Graft<CoalesceState> {
@@ -43,7 +43,9 @@ void main() {
     graft.dispose();
   });
 
-  test('updateCoalesced() coalesces 1,000 rapid synchronous updates into a single notification', () async {
+  test(
+      'updateCoalesced() coalesces 1,000 rapid synchronous updates into a single notification',
+      () async {
     final graft = CoalesceGraft();
     int notifications = 0;
     int? finalMask;
@@ -72,7 +74,8 @@ void main() {
     graft.dispose();
   });
 
-  test('updateCoalesced() accumulates dirty bitmask across different fields', () async {
+  test('updateCoalesced() accumulates dirty bitmask across different fields',
+      () async {
     final graft = CoalesceGraft();
     int notifications = 0;
     int? receivedMask;

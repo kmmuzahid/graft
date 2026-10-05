@@ -15,7 +15,7 @@ class DynamicBranchState extends GraftState {
   });
 
   @override
-  List<Object?> get tracked => [title, showDetails, tags.length];
+  List<Object?> get props => [title, showDetails, tags.length];
 }
 
 class DynamicBranchGraft extends Graft<DynamicBranchState> {
@@ -49,7 +49,9 @@ class DynamicBranchGraft extends Graft<DynamicBranchState> {
 }
 
 void main() {
-  testWidgets('graft.slots dynamic branching: list resizing, slot table reconciliation and memory safety', (tester) async {
+  testWidgets(
+      'graft.slots dynamic branching: list resizing, slot table reconciliation and memory safety',
+      (tester) async {
     final graft = DynamicBranchGraft();
 
     await tester.pumpWidget(
@@ -75,7 +77,9 @@ void main() {
     expect(find.text('Tag: Dart'), findsOneWidget);
     expect(find.text('STATIC FOOTER'), findsOneWidget);
 
-    var engineState = tester.state(find.byType(GraftMultiChildDiffEngine<DynamicBranchState>)) as dynamic;
+    var engineState =
+        tester.state(find.byType(GraftMultiChildDiffEngine<DynamicBranchState>))
+            as dynamic;
     expect((engineState.slotTable as List<SlotMetadata>).length, 4);
 
     // 1. Expand branch: showDetails becomes true => Total slots = 5
@@ -83,7 +87,9 @@ void main() {
     await tester.pump();
 
     expect(find.text('EXPANDED DETAILS BANNER'), findsOneWidget);
-    engineState = tester.state(find.byType(GraftMultiChildDiffEngine<DynamicBranchState>)) as dynamic;
+    engineState =
+        tester.state(find.byType(GraftMultiChildDiffEngine<DynamicBranchState>))
+            as dynamic;
     expect((engineState.slotTable as List<SlotMetadata>).length, 5);
 
     // 2. Add tag via dynamic loop => Total slots = 6
@@ -91,7 +97,9 @@ void main() {
     await tester.pump();
 
     expect(find.text('Tag: Graft'), findsOneWidget);
-    engineState = tester.state(find.byType(GraftMultiChildDiffEngine<DynamicBranchState>)) as dynamic;
+    engineState =
+        tester.state(find.byType(GraftMultiChildDiffEngine<DynamicBranchState>))
+            as dynamic;
     expect((engineState.slotTable as List<SlotMetadata>).length, 6);
 
     // 3. Mutate title (Slot 0) while resized -> ensures diffing still works correctly
@@ -107,7 +115,9 @@ void main() {
 
     expect(find.text('EXPANDED DETAILS BANNER'), findsNothing);
     expect(find.text('Tag: Graft'), findsNothing);
-    engineState = tester.state(find.byType(GraftMultiChildDiffEngine<DynamicBranchState>)) as dynamic;
+    engineState =
+        tester.state(find.byType(GraftMultiChildDiffEngine<DynamicBranchState>))
+            as dynamic;
     expect((engineState.slotTable as List<SlotMetadata>).length, 4);
 
     // 5. Mutate title again on contracted list -> ensures no stale listener references or errors

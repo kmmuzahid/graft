@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'graft_async.dart';
 import 'graft_change.dart';
 import 'graft_observer.dart';
 import 'graft_state.dart';
@@ -20,7 +21,7 @@ class _GraftNotifier<T> extends ValueNotifier<T> {
 ///
 /// ### Why use Graft?
 /// - **Zero Boilerplate:** No `copyWith()`, no `Equatable`, no `build_runner`.
-/// - **Fluent Mutation:** Update state via `state..field = value..update();`.
+/// - **Fluent Mutation:** Update state via `state..field = value..update();` or `mutate((s) => s..field = value);`.
 /// - **0-Rebuild Slot Diffing:** In `graft.column(...)`, only slots with changed data rebuild.
 /// - **Automatic Route Disposal:** Disposed when the screen that created it pops.
 ///
@@ -29,16 +30,18 @@ class _GraftNotifier<T> extends ValueNotifier<T> {
 /// class UserState extends GraftState {
 ///   String name = '';
 ///   int age = 0;
+///
+///   @override
+///   List<Object?> get tracked => [name, age];
 /// }
 ///
 /// class UserGraft extends Graft<UserState> {
 ///   UserGraft() : super(UserState());
 ///
 ///   void updateProfile(String name, int age) {
-///     state
+///     mutate((s) => s
 ///       ..name = name
-///       ..age = age
-///       ..update(); // Batched diffing: fires 1 frame update!
+///       ..age = age);
 ///   }
 /// }
 /// ```
@@ -77,6 +80,7 @@ abstract class Graft<S extends GraftState> {
   /// ```dart
   /// state..name = 'Alice'..update();
   /// ```
+  @nonVirtual
   S get state => _state;
 
   /// Directly assigns a new state instance and notifies listeners.
@@ -84,6 +88,7 @@ abstract class Graft<S extends GraftState> {
   /// ```dart
   /// state = nextState;
   /// ```
+  @nonVirtual
   set state(S newState) => emit(newState);
 
   /// A [ValueListenable] representation of this [Graft]'s state.
@@ -95,16 +100,19 @@ abstract class Graft<S extends GraftState> {
   ///   builder: (context, state, _) => Text(state.name),
   /// )
   /// ```
+  @nonVirtual
   ValueListenable<S> get listenable => _notifier;
 
   /// Whether this [Graft] has been disposed.
   ///
   /// Once disposed, all listeners are released and emissions are ignored.
+  @nonVirtual
   bool get isDisposed => _isDisposed;
 
   /// Adds a [listener] callback to be notified whenever [state] updates.
   ///
   /// Remember to remove the listener using [removeListener] when no longer needed.
+  @nonVirtual
   void addListener(VoidCallback listener) {
     if (!_isDisposed) {
       _notifier.addListener(listener);
@@ -112,6 +120,7 @@ abstract class Graft<S extends GraftState> {
   }
 
   /// Removes a previously registered [listener].
+  @nonVirtual
   void removeListener(VoidCallback listener) {
     if (!_isDisposed) {
       _notifier.removeListener(listener);
@@ -119,6 +128,7 @@ abstract class Graft<S extends GraftState> {
   }
 
   /// Adds a listener to be notified with a 64-bit integer [dirtyMask] whenever tracked fields update.
+  @nonVirtual
   void addMaskListener(void Function(int dirtyMask) listener) {
     if (!_isDisposed) {
       _maskListeners.add(listener);
@@ -126,27 +136,32 @@ abstract class Graft<S extends GraftState> {
   }
 
   /// Removes a previously registered mask [listener].
+  @nonVirtual
   void removeMaskListener(void Function(int dirtyMask) listener) {
     if (!_isDisposed) {
       _maskListeners.remove(listener);
     }
   }
 
-  /// Dispatches [dirtyMask] to all mask listeners, then triggers [notify].
-  void notifyMask(int dirtyMask) {
+  /// Dispatches [dirtyMask] to all mask listeners, then triggers notification.
+  /// Internal engine method: must not be called or overridden by user code.
+  @internal
+  @nonVirtual
+  void notifyMask(int dirtyMask, {GraftChange<S>? change}) {
     if (_isDisposed) return;
     final listeners = List<void Function(int dirtyMask)>.from(_maskListeners);
     for (final listener in listeners) {
       listener(dirtyMask);
     }
-    notify();
+    notify(change: change);
   }
 
   /// Notifies all listeners and triggers fine-grained slot diffing for [state].
   ///
   /// Typically called automatically by `state..update()` when using [GraftState].
   /// Can also be called directly to force a slot-diff pass.
-  void notify() {
+  @nonVirtual
+  void notify({GraftChange<S>? change}) {
     if (_isDisposed) {
       if (kDebugMode) {
         debugPrint(
@@ -162,7 +177,7 @@ abstract class Graft<S extends GraftState> {
         scheduleMicrotask(() {
           _pendingNotify = false;
           if (!_isDisposed) {
-            notify();
+            notify(change: change);
           }
         });
       }
@@ -171,15 +186,59 @@ abstract class Graft<S extends GraftState> {
 
     _isNotifying = true;
     try {
-      final change = GraftChange<S>(
-        currentState: _state,
-        nextState: _state,
-      );
+      final effectiveChange = change ??
+          GraftChange<S>(
+            currentState: _state,
+            nextState: _state,
+            previousTracked: _state.baselineSnapshot,
+            nextTracked: List<Object?>.of(_state.tracked, growable: false),
+            dirtyMask: _state.dirtyMask,
+          );
 
-      observer?.onChange(this, change);
+      observer?.onChange(this, effectiveChange);
       _notifier.forceNotify();
     } finally {
       _isNotifying = false;
+    }
+  }
+
+  /// Atomically mutates state using [recipe] and triggers fine-grained slot diffing.
+  ///
+  /// Combines the zero-boilerplate fluency of cascade syntax (`mutate((s) => s..name = 'Bob');`)
+  /// with automated state snapshots for [GraftObserver], audit trails, and time-travel testing.
+  @nonVirtual
+  void mutate(void Function(S state) recipe) => produce(recipe);
+
+  /// Applies [recipe] mutations to produce a new state snapshot.
+  ///
+  /// Combines the zero-boilerplate fluency of cascade syntax (`produce((s) => s..name = 'Bob');`)
+  /// with automated state snapshots for [GraftObserver], audit trails, and time-travel testing.
+  @nonVirtual
+  void produce(void Function(S draft) recipe) {
+    if (_isDisposed) {
+      if (kDebugMode) {
+        debugPrint(
+          'Warning: Cannot call produce on a disposed Graft ($runtimeType).',
+        );
+      }
+      return;
+    }
+
+    final previousTracked = List<Object?>.of(_state.tracked, growable: false);
+    final previousState = _state.copy() as S;
+    recipe(_state);
+
+    final mask = _state.diffChanges();
+    if (mask != 0) {
+      final change = GraftChange<S>(
+        currentState: previousState,
+        nextState: _state,
+        previousTracked: previousTracked,
+        nextTracked: List<Object?>.of(_state.tracked, growable: false),
+        dirtyMask: mask,
+      );
+
+      notifyMask(mask, change: change);
     }
   }
 
@@ -188,6 +247,7 @@ abstract class Graft<S extends GraftState> {
   /// - If [newState] is equal to current [state] (via `operator ==`), this is a no-op.
   /// - If this [Graft] is disposed, this operation is ignored.
   @protected
+  @nonVirtual
   void emit(S newState) {
     if (_isDisposed) {
       if (kDebugMode) {
@@ -209,6 +269,9 @@ abstract class Graft<S extends GraftState> {
     final change = GraftChange<S>(
       currentState: previousState,
       nextState: newState,
+      previousTracked: List<Object?>.of(previousState.tracked, growable: false),
+      nextTracked: List<Object?>.of(newState.tracked, growable: false),
+      dirtyMask: -1,
     );
 
     observer?.onChange(this, change);
@@ -230,8 +293,44 @@ abstract class Graft<S extends GraftState> {
   /// }
   /// ```
   @protected
+  @nonVirtual
   void addError(Object error, [StackTrace? stackTrace]) {
     observer?.onError(this, error, stackTrace ?? StackTrace.current);
+  }
+
+  /// Executes an asynchronous [task], managing loading and error state transitions via [onUpdate].
+  ///
+  /// ### Example:
+  /// ```dart
+  /// await runAsync<User>(
+  ///   task: () => api.fetchUser(),
+  ///   onUpdate: (asyncState) => produce((s) => s.user = asyncState),
+  /// );
+  /// ```
+  @nonVirtual
+  Future<T?> runAsync<T>({
+    required Future<T> Function() task,
+    required void Function(GraftAsync<T> result) onUpdate,
+  }) async {
+    if (_isDisposed) return null;
+    onUpdate(const GraftAsync.loading());
+    notify();
+
+    try {
+      final result = await task();
+      if (!_isDisposed) {
+        onUpdate(GraftAsync.data(result));
+        notify();
+      }
+      return result;
+    } catch (error, stackTrace) {
+      if (!_isDisposed) {
+        onUpdate(GraftAsync.error(error, stackTrace));
+        addError(error, stackTrace);
+        notify();
+      }
+      return null;
+    }
   }
 
   /// Disposes this [Graft], releasing all listeners and internal resources.

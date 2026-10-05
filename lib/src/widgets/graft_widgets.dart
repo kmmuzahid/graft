@@ -3,34 +3,36 @@ import '../core/graft.dart';
 import '../core/graft_state.dart';
 import '../core/value_graft.dart';
 import 'child_slot_engine.dart';
-import 'graft_boundary.dart';
+import 'multi_graft_scope.dart';
 
 /// Extension on [Graft<S>] providing high-performance reactive Flutter widget builders.
 extension GraftWidgetsX<S extends GraftState> on Graft<S> {
-  /// Creates a Depth-$N$ rebuild boundary that isolates a subtree from its parent containers.
+  /// Combines this [Graft] with another [Graft] into a single unified rebuild boundary.
   ///
-  /// Ancestor containers (scaffolds, cards, flex containers) will never rebuild when this
-  /// boundary's content updates.
-  ///
-  /// ### Example:
-  /// ```dart
-  /// Container(
-  ///   padding: const EdgeInsets.all(16),
-  ///   child: Container(
-  ///     child: graft.boundary(() => Text(state.name)), // 👈 Shield
-  ///   ),
-  /// )
-  /// ```
-  Widget boundary(
-    Widget Function() builder, {
+  /// Rebuilds only when either state updates, and surgical diffing eliminates clean passes.
+  Widget combine<S2 extends GraftState>(
+    Graft<S2> other,
+    Widget Function(S s1, S2 s2) builder, {
     Key? key,
-    int? field,
   }) {
-    return GraftBoundary<S>(
-      builder,
+    return GraftMultiSlotScope(
       key: key,
-      graft: this,
-      field: field,
+      grafts: [this, other],
+      builder: () => builder(state, other.state),
+    );
+  }
+
+  /// Combines this [Graft] with two other [Graft] instances into a single unified rebuild boundary.
+  Widget combine2<S2 extends GraftState, S3 extends GraftState>(
+    Graft<S2> second,
+    Graft<S3> third,
+    Widget Function(S s1, S2 s2, S3 s3) builder, {
+    Key? key,
+  }) {
+    return GraftMultiSlotScope(
+      key: key,
+      grafts: [this, second, third],
+      builder: () => builder(state, second.state, third.state),
     );
   }
 
@@ -105,6 +107,10 @@ extension GraftWidgetsX<S extends GraftState> on Graft<S> {
     );
   }
 
+  /// Callable syntax shortcut allowing `graft((s) => Text(s.name))` as the ultra-clean reactive entry point!
+  Widget call(Widget Function(S state) builder, {Key? key}) =>
+      slot(builder: builder, key: key);
+
   // ===========================================================================
   // 2. MULTI-SLOTS (LIST OF WIDGETS + REQUIRED LAYOUT)
   // ===========================================================================
@@ -134,25 +140,7 @@ extension GraftWidgetsX<S extends GraftState> on Graft<S> {
   ///     Text(s.email),
   ///   ],
   /// )
-  ///
-  /// // 2. Horizontal Row:
-  /// graft.slots(
-  ///   layout: (children) => Row(children: children),
-  ///   children: (s) => [
-  ///     const Icon(Icons.star),
-  ///     Text('${s.rating}'),
-  ///     Text('(${s.reviewCount})'),
-  ///   ],
-  /// )
   /// ```
-  /// ⚠️ **How Slot Diffing Works:**
-  /// - `const` children: **0 rebuilds** for any widget in Flutter via pointer identity.
-  /// - Built-in primitives (`Text`, `Icon`, `SizedBox`, `Padding`, `Container`, `ColoredBox`, `Align`):
-  ///   automatically deep-diffed.
-  /// - If a slot contains arbitrary 3rd-party widgets or widgets with callbacks (`onTap: () => ...`),
-  ///   use **`graft.compute`** to guarantee 0-rebuild data-driven isolation.
-  /// - Do **NOT** wrap children inside `graft.slots` with `graft.slot(...)`!
-  ///   Every item in the list is **already** an isolated diffing slot automatically.
   Widget slots({
     required Widget Function(List<Widget> children) layout,
     required List<Widget> Function(S state) children,
@@ -166,6 +154,54 @@ extension GraftWidgetsX<S extends GraftState> on Graft<S> {
       childrenBuilder: children,
     );
   }
+
+  /// Creates a fine-grained reactive [Column] whose children diff independently with 0 rebuilds.
+  Widget column({
+    required List<Widget> Function(S state) children,
+    MainAxisAlignment mainAxisAlignment = MainAxisAlignment.start,
+    CrossAxisAlignment crossAxisAlignment = CrossAxisAlignment.center,
+    MainAxisSize mainAxisSize = MainAxisSize.max,
+    VerticalDirection verticalDirection = VerticalDirection.down,
+    TextDirection? textDirection,
+    TextBaseline? textBaseline,
+    Key? key,
+  }) => slots(
+    key: key,
+    layout: (c) => Column(
+      mainAxisAlignment: mainAxisAlignment,
+      crossAxisAlignment: crossAxisAlignment,
+      mainAxisSize: mainAxisSize,
+      verticalDirection: verticalDirection,
+      textDirection: textDirection,
+      textBaseline: textBaseline,
+      children: c,
+    ),
+    children: children,
+  );
+
+  /// Creates a fine-grained reactive [Row] whose children diff independently with 0 rebuilds.
+  Widget row({
+    required List<Widget> Function(S state) children,
+    MainAxisAlignment mainAxisAlignment = MainAxisAlignment.start,
+    CrossAxisAlignment crossAxisAlignment = CrossAxisAlignment.center,
+    MainAxisSize mainAxisSize = MainAxisSize.max,
+    VerticalDirection verticalDirection = VerticalDirection.down,
+    TextDirection? textDirection,
+    TextBaseline? textBaseline,
+    Key? key,
+  }) => slots(
+    key: key,
+    layout: (c) => Row(
+      mainAxisAlignment: mainAxisAlignment,
+      crossAxisAlignment: crossAxisAlignment,
+      mainAxisSize: mainAxisSize,
+      verticalDirection: verticalDirection,
+      textDirection: textDirection,
+      textBaseline: textBaseline,
+      children: c,
+    ),
+    children: children,
+  );
 
   // ===========================================================================
   // 3. COMPUTED DERIVED STATE (PRE-FLIGHT VALUE CHECK)
@@ -459,4 +495,75 @@ extension ValueGraftWidgetsX<T> on ValueGraft<T> {
     );
   }
 }
+
+// =============================================================================
+// MULTI-GRAFT COMBINATOR EXTENSIONS (Dart 3 Record Syntax)
+// =============================================================================
+
+/// Modern Dart 3 Record extension for pairing 2 Grafts into a single surgical boundary.
+///
+/// ### Example:
+/// ```dart
+/// (userGraft, themeGraft).graft((user, theme) => Row(
+///   children: [
+///     Icon(theme.icon, color: theme.primaryColor),
+///     Text('User: ${user.name}'),
+///   ],
+/// ))
+/// ```
+extension GraftRecord2X<S1 extends GraftState, S2 extends GraftState>
+    on (Graft<S1>, Graft<S2>) {
+  /// Renders a single rebuild boundary combining both Grafts.
+  Widget graft(Widget Function(S1 s1, S2 s2) builder, {Key? key}) {
+    return GraftMultiSlotScope(
+      key: key,
+      grafts: [$1, $2],
+      builder: () => builder($1.state, $2.state),
+    );
+  }
+
+  /// Callable syntax shortcut: `(userGraft, themeGraft)((user, theme) => ...)`
+  Widget call(Widget Function(S1 s1, S2 s2) builder, {Key? key}) =>
+      graft(builder, key: key);
+}
+
+/// Modern Dart 3 Record extension for combining 3 Grafts into a single surgical boundary.
+extension GraftRecord3X<S1 extends GraftState, S2 extends GraftState,
+    S3 extends GraftState> on (Graft<S1>, Graft<S2>, Graft<S3>) {
+  /// Renders a single rebuild boundary combining all 3 Grafts.
+  Widget graft(Widget Function(S1 s1, S2 s2, S3 s3) builder, {Key? key}) {
+    return GraftMultiSlotScope(
+      key: key,
+      grafts: [$1, $2, $3],
+      builder: () => builder($1.state, $2.state, $3.state),
+    );
+  }
+
+  /// Callable syntax shortcut: `(graftA, graftB, graftC)((a, b, c) => ...)`
+  Widget call(Widget Function(S1 s1, S2 s2, S3 s3) builder, {Key? key}) =>
+      graft(builder, key: key);
+}
+
+/// Modern Dart 3 Record extension for combining 4 Grafts into a single surgical boundary.
+extension GraftRecord4X<
+    S1 extends GraftState,
+    S2 extends GraftState,
+    S3 extends GraftState,
+    S4 extends GraftState> on (Graft<S1>, Graft<S2>, Graft<S3>, Graft<S4>) {
+  /// Renders a single rebuild boundary combining all 4 Grafts.
+  Widget graft(Widget Function(S1 s1, S2 s2, S3 s3, S4 s4) builder,
+      {Key? key}) {
+    return GraftMultiSlotScope(
+      key: key,
+      grafts: [$1, $2, $3, $4],
+      builder: () => builder($1.state, $2.state, $3.state, $4.state),
+    );
+  }
+
+  /// Callable syntax shortcut: `(graftA, graftB, graftC, graftD)((a, b, c, d) => ...)`
+  Widget call(Widget Function(S1 s1, S2 s2, S3 s3, S4 s4) builder,
+          {Key? key}) =>
+      graft(builder, key: key);
+}
+
 

@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import '../core/graft.dart';
 import '../di/graft_registry.dart';
 import '../route/graft_route_tracker.dart';
+import '../widgets/graft_scope.dart';
 
 /// Extension on [BuildContext] providing ergonomic Graft lookups and route-stack lifecycle management.
 ///
@@ -17,6 +18,8 @@ extension GraftContextX on BuildContext {
   /// ### Why use `context.use<T>()`?
   /// - **Route Stack Sharing:** If an ancestor screen in the navigation stack already created [T],
   ///   this screen **borrows** the existing instance.
+  /// - **Subtree Scoping (`GraftScope`):** If within a [GraftScope] (e.g. `GoRouter` shell route,
+  ///   nested tab, or modal dialog), resolves from the active scope.
   /// - **Automatic Ownership & Disposal:** The first screen that calls `context.use<T>()` becomes
   ///   the **Owner**. When that owner screen pops off the navigation stack, [T] is automatically disposed.
   ///   Borrower screens can push and pop freely without disposing the owner's instance.
@@ -41,6 +44,12 @@ extension GraftContextX on BuildContext {
       return GraftRegistry.getOrCreateSingleton<T>();
     }
 
+    // 1. Check local GraftScope ancestor (GoRouter shell routes, tabs, modal sheets)
+    final scoped = GraftScope.maybeOf<T>(this);
+    if (scoped != null) {
+      return scoped;
+    }
+
     final route = ModalRoute.of(this) ?? GraftRouteTracker.currentRoute;
 
     if (route != null) {
@@ -52,14 +61,27 @@ extension GraftContextX on BuildContext {
 
     final newInstance = factory != null ? factory() : GraftRegistry.create<T>();
 
+    // If inside a GraftScope, register for disposal with the scope
+    final scopeState = findAncestorStateOfType<GraftScopeState>();
+    if (scopeState != null) {
+      scopeState.register<T>(newInstance);
+      return newInstance;
+    }
+
     if (route != null) {
       GraftRouteTracker.registerOwned<T>(route, newInstance);
+      // Auto-attaches to standard Flutter Route.popped: cleans up even without GraftRouteObserver!
+      route.popped.then((_) {
+        if (!newInstance.isDisposed) {
+          newInstance.dispose();
+        }
+      });
     }
 
     return newInstance;
   }
 
-  /// Force-creates a brand-new, isolated [Graft] of type [T] owned exclusively by the current route.
+  /// Force-creates a brand-new, isolated [Graft] of type [T] owned exclusively by the current route or scope.
   ///
   /// ### Why use `context.create<T>()`?
   /// - Use this when you specifically do **NOT** want to inherit or borrow an active instance from
@@ -72,7 +94,7 @@ extension GraftContextX on BuildContext {
   /// ### Example:
   /// ```dart
   /// // Creates a brand new, isolated ProfileGraft instance:
-  /// final graft = context.create<ProfileGraft>();
+  /// final graft = context.create(ProfileGraft.new);
   /// ```
   T create<T extends Graft>([T Function()? factory]) {
     // If registered with isNewCreate: false, new creations are disabled; return singleton
@@ -80,11 +102,23 @@ extension GraftContextX on BuildContext {
       return GraftRegistry.getOrCreateSingleton<T>();
     }
 
-    final route = ModalRoute.of(this) ?? GraftRouteTracker.currentRoute;
     final newInstance = factory != null ? factory() : GraftRegistry.create<T>();
 
+    // 1. Register with local GraftScope if present
+    final scopeState = findAncestorStateOfType<GraftScopeState>();
+    if (scopeState != null) {
+      scopeState.register<T>(newInstance);
+      return newInstance;
+    }
+
+    final route = ModalRoute.of(this) ?? GraftRouteTracker.currentRoute;
     if (route != null) {
       GraftRouteTracker.registerOwned<T>(route, newInstance);
+      route.popped.then((_) {
+        if (!newInstance.isDisposed) {
+          newInstance.dispose();
+        }
+      });
     }
 
     return newInstance;

@@ -569,14 +569,7 @@ class _GraftMultiChildDiffEngineState<S extends GraftState>
       // 1. Static check
       if (slot.isStatic) continue;
 
-      // 2. 1-cycle CPU bitmask check if boundFieldIndex is learned
-      if (slot.boundFieldIndex != null &&
-          dirtyMask != -1 &&
-          (dirtyMask & (1 << slot.boundFieldIndex!)) == 0) {
-        continue; // Clean bit! 0 Element rebuilds!
-      }
-
-      // 3. Pointer identity check (< 1 ns)
+      // 2. Pointer identity check (< 1 ns)
       if (identical(oldWidget, newWidget)) continue;
 
       // 4. Content equivalence check (fingerprint + primitive differ)
@@ -592,11 +585,14 @@ class _GraftMultiChildDiffEngineState<S extends GraftState>
       slot.notifier.value = newWidget;
       Graft.observer?.onSlotRebuild(widget.graft, i, newWidget);
 
-      // Self-optimize: if a single bit was dirty, learn the mapping
-      if (slot.boundFieldIndex == null &&
-          dirtyMask > 0 &&
-          (dirtyMask & (dirtyMask - 1)) == 0) {
-        slot.boundFieldIndex = (dirtyMask.toRadixString(2).length - 1);
+      // Self-optimize: accumulate dirty fields into the slot's dependency bitmask
+      if (dirtyMask > 0) {
+        final isSingleField = (dirtyMask & (dirtyMask - 1)) == 0;
+        if (isSingleField) {
+          slot.fieldDependenciesMask |= dirtyMask;
+        } else if (slot.fieldDependenciesMask == 0) {
+          slot.fieldDependenciesMask = dirtyMask;
+        }
       }
     }
   }
