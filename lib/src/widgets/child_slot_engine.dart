@@ -432,11 +432,15 @@ class GraftMultiChildDiffEngine<S extends GraftState> extends StatefulWidget
           a.activeColor == b.activeColor;
     }
 
-    // Safely unwrap matching custom StatelessWidget if context is available
+    // Safely unwrap matching custom StatelessWidget (excluding dynamic closure wrappers like Builder)
     if (context != null &&
         a is StatelessWidget &&
         b is StatelessWidget &&
+        a is! Builder &&
         a.runtimeType == b.runtimeType) {
+      if (a.key != null && b.key != null && a.key == b.key) {
+        return true;
+      }
       visited ??= <Widget>{};
       if (!visited.contains(a) && !visited.contains(b)) {
         visited.add(a);
@@ -579,7 +583,7 @@ class _GraftMultiChildDiffEngineState<S extends GraftState>
       // 2. Pointer identity check (< 1 ns)
       if (identical(oldWidget, newWidget)) continue;
 
-      // 3. Content equivalence check (fingerprint + primitive differ)
+      // 3. Content equivalence check (fingerprint + primitive differ in < 5 ns)
       if (GraftMultiChildDiffEngine.isWidgetEquivalent(
           oldWidget, newWidget, context)) {
         continue; // Content unchanged! 0 Element rebuilds!

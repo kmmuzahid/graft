@@ -232,6 +232,19 @@ abstract class Graft<S extends GraftState> {
   ///   task: () => api.fetchUser(),
   ///   onUpdate: (asyncState) => state..user = asyncState..update(),
   /// );
+  int _currentAsyncTaskId = 0;
+
+  /// Executes an asynchronous [task], managing loading and error state transitions via [onUpdate].
+  ///
+  /// Transparently discards stale in-flight responses if a newer task is started before this one completes,
+  /// preventing out-of-order state overwrites during rapid user interactions.
+  ///
+  /// ### Example:
+  /// ```dart
+  /// await runAsync<User>(
+  ///   task: () => api.fetchUser(),
+  ///   onUpdate: (asyncState) => state..user = asyncState..update(),
+  /// );
   /// ```
   @nonVirtual
   Future<T?> runAsync<T>({
@@ -239,18 +252,21 @@ abstract class Graft<S extends GraftState> {
     required void Function(GraftAsync<T> result) onUpdate,
   }) async {
     if (_isDisposed) return null;
+    final taskId = ++_currentAsyncTaskId;
     onUpdate(const GraftAsync.loading());
     notify();
 
     try {
       final result = await task();
-      if (!_isDisposed) {
+      // 🛡️ RACE CONDITION GUARD: Discard stale response if a newer task was launched
+      if (!_isDisposed && taskId == _currentAsyncTaskId) {
         onUpdate(GraftAsync.data(result));
         notify();
+        return result;
       }
-      return result;
+      return null;
     } catch (e, st) {
-      if (!_isDisposed) {
+      if (!_isDisposed && taskId == _currentAsyncTaskId) {
         onUpdate(GraftAsync.error(e, st));
         notify();
         addError(e, st);

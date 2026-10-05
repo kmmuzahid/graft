@@ -111,6 +111,12 @@ class GraftRouteTracker {
 
     for (int i = startIndex; i >= 0; i--) {
       final ancestorRoute = _routeStack[i];
+      // Only inherit from ancestor routes that belong to the same Navigator:
+      if (currentRoute.navigator != null &&
+          ancestorRoute.navigator != null &&
+          ancestorRoute.navigator != currentRoute.navigator) {
+        continue;
+      }
       final ancestorInstances = _routeInstances[ancestorRoute];
       if (ancestorInstances != null && ancestorInstances.containsKey(T)) {
         final existing = ancestorInstances[T] as T;
