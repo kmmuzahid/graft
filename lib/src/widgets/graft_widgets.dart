@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import '../core/graft.dart';
+import '../core/graft_async.dart';
 import '../core/graft_state.dart';
 import '../core/value_graft.dart';
 import 'child_slot_engine.dart';
@@ -81,6 +82,41 @@ extension GraftWidgetsX<S extends GraftState> on Graft<S> {
   /// Callable syntax shortcut allowing `graft((s) => Text(s.name))` as the ultra-clean reactive entry point!
   Widget call(Widget Function(S state) builder, {Key? key}) =>
       slot(builder: builder, key: key);
+
+  /// Creates an isolated reactive slot that declaratively pattern-matches on a [GraftAsync] state.
+  ///
+  /// Rebuilds surgically only when the selected [GraftAsync] transition occurs (e.g. loading to data).
+  ///
+  /// ### Example:
+  /// ```dart
+  /// graft.async(
+  ///   (s) => s.userProfile,
+  ///   data: (profile) => ProfileCard(profile),
+  ///   loading: () => const ShimmerCard(),
+  ///   error: (err, st) => ErrorBanner(error: err),
+  /// )
+  /// ```
+  Widget async<T>({
+    required GraftAsync<T> Function(S state) selector,
+    required Widget Function(T data) data,
+    required Widget Function() loading,
+    required Widget Function(Object error, StackTrace? stackTrace) error,
+    Widget Function()? idle,
+    Key? key,
+  }) {
+    return slot(
+      key: key,
+      builder: (s) {
+        final asyncVal = selector(s);
+        return asyncVal.when(
+          idle: idle,
+          loading: loading,
+          data: data,
+          error: error,
+        );
+      },
+    );
+  }
 
   // ===========================================================================
   // 2. MULTI-SLOTS (LIST OF WIDGETS + REQUIRED LAYOUT)

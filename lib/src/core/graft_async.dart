@@ -39,6 +39,20 @@ sealed class GraftAsync<T> {
         AsyncError(:final error) => error,
         _ => null,
       };
+
+  /// Pattern-matches the current async state and returns the result of the matching handler.
+  R when<R>({
+    required R Function(T data) data,
+    required R Function() loading,
+    required R Function(Object error, StackTrace? stackTrace) error,
+    R Function()? idle,
+  }) =>
+      switch (this) {
+        AsyncIdle() => (idle != null ? idle() : loading()),
+        AsyncLoading() => loading(),
+        AsyncData(:final data) => data(data),
+        AsyncError(:final error, :final stackTrace) => error(error, stackTrace),
+      };
 }
 
 /// Idle or initial async state.

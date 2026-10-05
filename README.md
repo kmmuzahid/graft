@@ -8,7 +8,7 @@
 [![Flutter 3.10+](https://img.shields.io/badge/Flutter-3.10+-02569B.svg?logo=flutter)](https://flutter.dev)
 
 > [!IMPORTANT]
-> ### 🚀 Graft is in Public Alpha (`0.1.2-alpha.2`) — Let's Have a Ride!
+> ### 🚀 Graft is in Public Alpha (`0.1.2-alpha.3`) — Let's Have a Ride!
 > Graft is actively evolving in its initial alpha release. It is **not yet declared production-ready**.
 > We warmly invite the Flutter developer community to take it for a spin: test it in your projects, push its slot diffing and route scoping to the limits, and help us make it even better!
 > 
@@ -41,6 +41,8 @@ Graft rejects this compromise. It is engineered around 6 foundational pillars:
 ┌────────────────────────────────────────────────────────────────────────┐
 │                      DEVELOPER CALL (ZERO BOILERPLATE)                 │
 │         state..address.city = 'Berlin'..tasks.add(item)..update()      │
+│                                  OR                                    │
+│             produce((s) => s..address.city = 'Munich')                 │
 └───────────────────────────────────┬────────────────────────────────────┘
                                     │
                                     ▼
@@ -58,6 +60,7 @@ Graft rejects this compromise. It is engineered around 6 foundational pillars:
 │         └─────────────────────────┼────────────────────────┘           │
 │                                   ▼                                    │
 │            Compute 64-bit Integer dirtyMask in CPU registers           │
+│            (Fast in-place cascade OR Copy-on-Write produce)            │
 │                                   │                                    │
 │                                   ▼                                    │
 │                       notifyMask(dirtyMask)                            │
@@ -65,18 +68,22 @@ Graft rejects this compromise. It is engineered around 6 foundational pillars:
                                     │
                                     ▼
 ┌────────────────────────────────────────────────────────────────────────┐
-│              UI SLOT RECONCILIATION & CONTEXT DECOUPLING               │
+│              SELF-HEALING SLOT RECONCILIATION PIPELINE                 │
 │                 GraftMultiChildDiffEngine / GraftBoundary              │
 │                                   │                                    │
-│                 ┌─────────────────┴─────────────────┐                  │
-│                 ▼                                   ▼                  │
-│     [ NoSubscriptionContext ]             [ Slot Content Equivalence ] │
-│  Safely inspects custom widgets       Evaluates fine-grained updates   │
-│  without Theme / MediaQuery leaks     Fingerprint + diff in < 5 ns     │
-│                 │                                   │                  │
-│                 └─────────────────┬─────────────────┘                  │
-│                                   ▼                                    │
-│                 Surgical Leaf Update (ValueNotifier.value)             │
+│            Does dirtyMask intersect slot's learnedDependencies?        │
+│                    ┌──────────────┴──────────────┐                     │
+│                   YES                            NO                    │
+│                    │                             │                     │
+│           [⚡ 1-CPU Fast Path]         [🔬 2-ns Fingerprint Check]     │
+│           Immediate leaf rebuild       Evaluate slot hash              │
+│           notifier.value = newWidget;            │                     │
+│                                      ┌───────────┴───────────┐         │
+│                                     MATCH                DIFFERENT     │
+│                                      │                       │         │
+│                                 [0 Rebuild]       [💥 SELF-HEAL MASK]  │
+│                                 Bypassed clean    • Leaf rebuild!      │
+│                                                   • learned |= dirty   │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -94,23 +101,20 @@ Navigator / UI                 Graft Tracker & Context           Graft Controlle
       │   dialog.use<UserGraft>() ───────►│   Anchors ownership to Route A!  │                               │                           │
       │   Dismiss Dialog ────────────────►│   Dialog closes, Graft remains!  │                               │                           │
       │                                   │                                  │                               │                           │
-      │── 2. AMBIENT AUTO-DISCOVERY & ISOLATED CONTEXT INSPECTION ───────────│───────────────────────────────│───────────────────────────│
-      │                                   │                                  │◄── Reads state property ──────┤ (via GraftScopeTracker)   │
-      │                                   │                                  │◄── NoSubscriptionContext ─────┤ (Zero Theme/Media leaks)  │
-      │                                   │                                  │◄── Subscribes mask listener ──┤ (Multi-field bitwise union)
-      │                                   │                                  │                               │                           │
-      │── 3. SYNCHRONOUS IN-PLACE MUTATION & RECURSIVE SNAPSHOT DIFFING ─────│───────────────────────────────│───────────────────────────│
+      │── 2. ATOMIC CASCADE MUTATION & SELF-HEALING OPTIMIZATION ────────────│───────────────────────────────│───────────────────────────│
       │── state..city = 'Berlin'..update()┼─────────────────────────────────►│                               │                           │
       │                                   │                                  │── diffChanges() vs baseline   │                           │
-      │                                   │                                  │   Deep sub-props / list check │                           │
       │                                   │                                  │   Compute dirtyMask bitset    │                           │
       │                                   │                                  │── notifyMask(dirtyMask) ─────►│                           │
-      │                                   │                                  │                               ├── [Clean Slot (mask == 0)]│
+      │                                   │                                  │                               ├── [Known Clean (mask=0)]  │
       │                                   │                                  │                               │   ⚡ 1-cycle bypass (0 bld)│
-      │                                   │                                  │                               └── [Dirty Slot (mask != 0)]│
-      │                                   │                                  │                                   🔄 Leaf rebuild only!   │
+      │                                   │                                  │                               ├── [Known Dirty (mask!=0)] │
+      │                                   │                                  │                               │   🔄 Surgical leaf rebuild│
+      │                                   │                                  │                               └── [Unlearned Field]       │
+      │                                   │                                  │                                   🔬 Fingerprint check    │
+      │                                   │                                  │                                   🩹 Self-heal mask union │
       │                                   │                                  │                                                           │
-      │── 4. ASYNC CONCURRENCY & STALE RESPONSE GUARD ───────────────────────│───────────────────────────────│───────────────────────────│
+      │── 3. ASYNC CONCURRENCY & DECLARATIVE BINDING (runAsync) ─────────────│───────────────────────────────│───────────────────────────│
       │── Keystroke 1 ("da") ─────────────┼─────────────────────────────────►│── runAsync() [Task #1] ───────┼──────────────────────────►│
       │── Keystroke 2 ("dart") ───────────┼─────────────────────────────────►│── runAsync() [Task #2] ───────┼──────────────────────────►│
       │                                   │                                  │                               │◄── Task #1 finishes late ─│
@@ -119,7 +123,7 @@ Navigator / UI                 Graft Tracker & Context           Graft Controlle
       │                                   │                                  │   TaskId #2 == current (#2)   │    (FRESH: ACCEPTED)      │
       │                                   │                                  │── emit(data: resultDart) ────►│── Update leaf results ────►│
       │                                   │                                  │                               │                           │
-      │── 5. ROUTE POP & AUTOMATIC LEAK-FREE DISPOSAL ───────────────────────│───────────────────────────────│───────────────────────────│
+      │── 4. POP ROUTE & AUTOMATIC LEAK-FREE DISPOSAL ───────────────────────│───────────────────────────────│───────────────────────────│
       │── Navigator pops Route A ────────►│                                  │                               │                           │
       │                                   │── Route A.popped fired ─────────►│── userGraft.dispose()         │                           │
       │                                   │   Clean registry entry           │   🧹 Auto-disposed cleanly!   │                           │

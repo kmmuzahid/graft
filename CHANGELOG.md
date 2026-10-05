@@ -3,6 +3,21 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## 0.1.2-alpha.3
+
+### ⚡ Declarative Async Pattern-Matching & Structural Fingerprint Expansion
+- **Declarative Async Pattern-Matching (`graft.async` & `GraftAsync.when`)**:
+  - Added `.when<R>()` pattern-matching method to sealed `GraftAsync<T>` hierarchy for type-safe, exhaustive handling of `idle`, `loading`, `data`, and `error` states.
+  - Introduced `graft.async<T>()` widget extension on `Graft<S>`, enabling fine-grained, isolated slot rendering bound to asynchronous state transitions with zero selector boilerplate.
+  - Verified in `test/graft_async_widget_test.dart`.
+- **Extended Layout Primitive Fingerprinting (`SlotMetadata.computeFingerprint`)**:
+  - Expanded sub-nanosecond integer hashing in `SlotMetadata` to deeply fingerprint common layout primitives: `SizedBox`, `Padding`, `ColoredBox`, `Align`, and `Opacity`.
+  - Enables instant 1-cycle bypass (< 5 ns) for structural layout containers during slot reconciliation passes.
+- **Self-Healing Adaptive Bitmask Test Harness**:
+  - Added comprehensive test suite `test/self_healing_bitmask_test.dart` covering multi-slot layouts, rapid single-field and multi-field mutation bursts, and verified zero-rebuild isolation for unmutated slots.
+- **Architecture & Lifecycle Documentation**:
+  - Updated runtime lifecycle flow and slot diffing diagrams in `README.md` to document the unified `runAsync` binding and self-healing bitmask reconciliation pipeline.
+
 ---
 
 ## 0.1.2-alpha.2
