@@ -3,38 +3,9 @@ import '../core/graft.dart';
 import '../core/graft_state.dart';
 import '../core/value_graft.dart';
 import 'child_slot_engine.dart';
-import 'multi_graft_scope.dart';
 
 /// Extension on [Graft<S>] providing high-performance reactive Flutter widget builders.
 extension GraftWidgetsX<S extends GraftState> on Graft<S> {
-  /// Combines this [Graft] with another [Graft] into a single unified rebuild boundary.
-  ///
-  /// Rebuilds only when either state updates, and surgical diffing eliminates clean passes.
-  Widget combine<S2 extends GraftState>(
-    Graft<S2> other,
-    Widget Function(S s1, S2 s2) builder, {
-    Key? key,
-  }) {
-    return GraftMultiSlotScope(
-      key: key,
-      grafts: [this, other],
-      builder: () => builder(state, other.state),
-    );
-  }
-
-  /// Combines this [Graft] with two other [Graft] instances into a single unified rebuild boundary.
-  Widget combine2<S2 extends GraftState, S3 extends GraftState>(
-    Graft<S2> second,
-    Graft<S3> third,
-    Widget Function(S s1, S2 s2, S3 s3) builder, {
-    Key? key,
-  }) {
-    return GraftMultiSlotScope(
-      key: key,
-      grafts: [this, second, third],
-      builder: () => builder(state, second.state, third.state),
-    );
-  }
 
   // ===========================================================================
   // 1. SINGLE SLOT (ONE WIDGET)
@@ -496,74 +467,5 @@ extension ValueGraftWidgetsX<T> on ValueGraft<T> {
   }
 }
 
-// =============================================================================
-// MULTI-GRAFT COMBINATOR EXTENSIONS (Dart 3 Record Syntax)
-// =============================================================================
-
-/// Modern Dart 3 Record extension for pairing 2 Grafts into a single surgical boundary.
-///
-/// ### Example:
-/// ```dart
-/// (userGraft, themeGraft).graft((user, theme) => Row(
-///   children: [
-///     Icon(theme.icon, color: theme.primaryColor),
-///     Text('User: ${user.name}'),
-///   ],
-/// ))
-/// ```
-extension GraftRecord2X<S1 extends GraftState, S2 extends GraftState>
-    on (Graft<S1>, Graft<S2>) {
-  /// Renders a single rebuild boundary combining both Grafts.
-  Widget graft(Widget Function(S1 s1, S2 s2) builder, {Key? key}) {
-    return GraftMultiSlotScope(
-      key: key,
-      grafts: [$1, $2],
-      builder: () => builder($1.state, $2.state),
-    );
-  }
-
-  /// Callable syntax shortcut: `(userGraft, themeGraft)((user, theme) => ...)`
-  Widget call(Widget Function(S1 s1, S2 s2) builder, {Key? key}) =>
-      graft(builder, key: key);
-}
-
-/// Modern Dart 3 Record extension for combining 3 Grafts into a single surgical boundary.
-extension GraftRecord3X<S1 extends GraftState, S2 extends GraftState,
-    S3 extends GraftState> on (Graft<S1>, Graft<S2>, Graft<S3>) {
-  /// Renders a single rebuild boundary combining all 3 Grafts.
-  Widget graft(Widget Function(S1 s1, S2 s2, S3 s3) builder, {Key? key}) {
-    return GraftMultiSlotScope(
-      key: key,
-      grafts: [$1, $2, $3],
-      builder: () => builder($1.state, $2.state, $3.state),
-    );
-  }
-
-  /// Callable syntax shortcut: `(graftA, graftB, graftC)((a, b, c) => ...)`
-  Widget call(Widget Function(S1 s1, S2 s2, S3 s3) builder, {Key? key}) =>
-      graft(builder, key: key);
-}
-
-/// Modern Dart 3 Record extension for combining 4 Grafts into a single surgical boundary.
-extension GraftRecord4X<
-    S1 extends GraftState,
-    S2 extends GraftState,
-    S3 extends GraftState,
-    S4 extends GraftState> on (Graft<S1>, Graft<S2>, Graft<S3>, Graft<S4>) {
-  /// Renders a single rebuild boundary combining all 4 Grafts.
-  Widget graft(Widget Function(S1 s1, S2 s2, S3 s3, S4 s4) builder,
-      {Key? key}) {
-    return GraftMultiSlotScope(
-      key: key,
-      grafts: [$1, $2, $3, $4],
-      builder: () => builder($1.state, $2.state, $3.state, $4.state),
-    );
-  }
-
-  /// Callable syntax shortcut: `(graftA, graftB, graftC, graftD)((a, b, c, d) => ...)`
-  Widget call(Widget Function(S1 s1, S2 s2, S3 s3, S4 s4) builder,
-          {Key? key}) =>
-      graft(builder, key: key);
-}
 
 

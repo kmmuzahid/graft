@@ -26,9 +26,9 @@ void main() {
     test('Mask listeners add, remove, and disposed protection', () {
       final graft = LifecycleGraft();
       int maskCalls = 0;
-      int lastMask = 0;
+      GraftMask lastMask = GraftMask.empty;
 
-      void listener(int mask) {
+      void listener(GraftMask mask) {
         maskCalls++;
         lastMask = mask;
       }
@@ -37,7 +37,7 @@ void main() {
 
       graft.setText('first');
       expect(maskCalls, 1);
-      expect(lastMask, 1);
+      expect(lastMask.isBitSet(0), isTrue);
 
       // Remove listener
       graft.removeMaskListener(listener);
@@ -50,7 +50,7 @@ void main() {
 
       // Subsequent actions must be no-ops without throwing
       graft.addMaskListener(listener);
-      graft.notifyMask(1);
+      graft.notifyMask(GraftMask.fromIndex(0));
       expect(maskCalls, 1);
     });
 

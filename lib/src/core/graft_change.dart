@@ -1,28 +1,17 @@
+import 'graft_mask.dart';
+
 /// Represents a state transition in a [Graft].
 ///
 /// ### Why use GraftChange?
 /// Whenever a [Graft] state transitions or updates, a [GraftChange] is dispatched
 /// to [GraftObserver.onChange]. It captures a point-in-time snapshot of the transition,
-/// containing the previous [currentState], updated [nextState], automated field-level
-/// snapshots ([previousTracked] and [nextTracked]), and the 64-bit integer [dirtyMask].
+/// containing the previous [currentState], updated [nextState], automated property-level
+/// snapshots ([previousProps] and [nextProps]), and the [dirtyMask] ([GraftMask]).
 ///
 /// Use this in:
 /// - Custom logging and telemetry pipelines
 /// - Time-travel debugging or state history tracking
 /// - Remote analytics and crash diagnostic breadcrumbs
-///
-/// ### Example:
-/// ```dart
-/// class MyObserver extends GraftObserver {
-///   @override
-///   void onChange(dynamic graft, GraftChange change) {
-///     print('${graft.runtimeType} changed:');
-///     print('  Before: ${change.previousTracked}');
-///     print('  After:  ${change.nextTracked}');
-///     print('  Dirty mask: 0x${change.dirtyMask.toRadixString(16)}');
-///   }
-/// }
-/// ```
 class GraftChange<S> {
   /// The state before the transition.
   final S currentState;
@@ -30,22 +19,32 @@ class GraftChange<S> {
   /// The state after the transition.
   final S nextState;
 
-  /// Automated snapshot of [GraftState.tracked] fields immediately before mutation.
-  final List<Object?> previousTracked;
+  /// Automated snapshot of [GraftState.props] immediately before mutation.
+  final List<Object?> previousProps;
 
-  /// Automated snapshot of [GraftState.tracked] fields immediately after mutation.
-  final List<Object?> nextTracked;
+  /// Automated snapshot of [GraftState.props] immediately after mutation.
+  final List<Object?> nextProps;
 
-  /// The 64-bit integer dirty bitmask indicating which field indices were modified.
-  final int dirtyMask;
+  /// The unbounded [GraftMask] bitset indicating which property indices were modified.
+  final GraftMask dirtyMask;
+
+  /// Backward-compatible alias for [previousProps].
+  @Deprecated('Use previousProps instead.')
+  List<Object?> get previousTracked => previousProps;
+
+  /// Backward-compatible alias for [nextProps].
+  @Deprecated('Use nextProps instead.')
+  List<Object?> get nextTracked => nextProps;
 
   /// Creates a [GraftChange] describing a transition from [currentState] to [nextState].
   const GraftChange({
     required this.currentState,
     required this.nextState,
-    this.previousTracked = const [],
-    this.nextTracked = const [],
-    this.dirtyMask = -1,
+    this.previousProps = const [],
+    this.nextProps = const [],
+    this.dirtyMask = GraftMask.allDirty,
+    @Deprecated('Use previousProps instead.') List<Object?>? previousTracked,
+    @Deprecated('Use nextProps instead.') List<Object?>? nextTracked,
   });
 
   @override
@@ -63,5 +62,5 @@ class GraftChange<S> {
 
   @override
   String toString() =>
-      'GraftChange(current: $currentState, next: $nextState, previousTracked: $previousTracked, nextTracked: $nextTracked, dirtyMask: 0x${dirtyMask.toRadixString(16)})';
+      'GraftChange(current: $currentState, next: $nextState, previousProps: $previousProps, nextProps: $nextProps, dirtyMask: $dirtyMask)';
 }

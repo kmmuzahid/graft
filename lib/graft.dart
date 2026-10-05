@@ -34,14 +34,16 @@ export 'src/context/graft_context.dart';
 export 'src/core/graft.dart';
 export 'src/core/graft_async.dart';
 export 'src/core/graft_change.dart';
+export 'src/core/graft_mask.dart';
 export 'src/core/graft_observer.dart';
+export 'src/core/graft_scope_tracker.dart';
 export 'src/core/graft_state.dart';
 export 'src/core/value_graft.dart';
 export 'src/di/graft_registry.dart';
 export 'src/route/graft_route_tracker.dart';
 export 'src/widgets/child_slot_engine.dart'
     show GraftEquivalent, GraftMultiChildDiffEngine, GraftScopeGuard;
+export 'src/widgets/graft_boundary.dart';
 export 'src/widgets/graft_scope.dart' show GraftScope;
 export 'src/widgets/graft_widgets.dart';
-export 'src/widgets/multi_graft_scope.dart' show GraftMultiSlotScope;
 

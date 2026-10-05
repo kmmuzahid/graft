@@ -8,7 +8,7 @@
 [![Flutter 3.10+](https://img.shields.io/badge/Flutter-3.10+-02569B.svg?logo=flutter)](https://flutter.dev)
 
 > [!IMPORTANT]
-> ### 🚀 Graft is in Public Alpha (`0.1.1-alpha.1`) — Let's Have a Ride!
+> ### 🚀 Graft is in Public Alpha (`0.1.2-alpha.1`) — Let's Have a Ride!
 > Graft is actively evolving in its initial alpha release. It is **not yet declared production-ready**.
 > We warmly invite the Flutter developer community to take it for a spin: test it in your projects, push its slot diffing and route scoping to the limits, and help us make it even better!
 > 
@@ -25,52 +25,79 @@ State management in Flutter has historically forced developers to choose between
 Graft rejects this compromise. It is engineered around 6 foundational pillars:
 
 1. **Zero-Wrapper Domain State:** State models are pure Dart classes extending `GraftState`. No `Signal<T>`, no `.obs`, no `.value`, and strictly zero code generation (`build_runner` is never required).
-2. **Declarative UI Purity:** Multi-child layouts (`Column`, `Row`, `Wrap`) are declared as pure, natural lists (`children: (s) => [ ... ]`). No per-item selector tokens, no `.watch()`, and no manual widget wrappers.
-3. **Hardware-Aligned Bitmask Diffing:** State field modifications are mapped into a 64-bit integer dirty bitmask evaluated in CPU registers with 0 GC heap allocations during diff passes.
-4. **Self-Optimizing Adaptive Runtime:** Each child slot retains lightweight `SlotMetadata` that dynamically learns correlating domain field indices during mutation bursts, escalating from structural inspection to 1-cycle CPU bitwise checks (`(dirtyMask & (1 << boundFieldIndex)) == 0`).
-5. **Depth-$N$ Surgical Rebuilds (`graft((s) => ...)`):** An isolated rebuild boundary that allows deeply nested leaf widgets to update while insulating all intermediate parent containers (`Card`, `Container`, `Padding`) from rebuilding.
+2. **Mandatory `props` Contract:** Domain properties are declared via `List<Object?> get props;`, an abstract compiler-enforced contract eliminating forgotten fields and ensuring 100% snapshot integrity.
+3. **Unbounded Hardware-Aligned `GraftMask`:** State field modifications are mapped into an unbounded, 32-bit chunked word-based bitset (`GraftMask`). It diffs $\le 64$ fields in CPU registers and effortlessly scales to 128, 500, or 1000+ fields with 100% web JS compatibility and 0 GC heap allocations.
+4. **Synchronous In-Place Mutation & Reset:** Direct synchronous updates via `state..field = val..update()` and complete baseline resets via `state.reset()`. No async coalescing delays, no fragmented `emit()` / `mutate()` / `produce()`.
+5. **Two-Wrapper Architecture:**
+   - **`GraftBoundary`**: High-level subtree rebuild barrier featuring **Ambient Auto-Discovery** (zero manual lists via `GraftScopeTracker`) and **Backward Adaptive Learning**.
+   - **`graft((s) => ...)`**: Fine-grained surgical leaf slot with Depth-$N$ parent rebuild insulation.
 6. **Automatic Route-Aware Lifecycle:** Controllers automatically inherit down predecessor routes and cleanly self-dispose when their owning route is popped from the Navigator stack.
 
 ---
 
 ## 🏗️ Architecture
 
-```mermaid
-flowchart TD
-    subgraph Domain ["1. Domain Mutation Layer"]
-        A["state..name = 'Bob'..update()"]
-    end
+```text
+┌────────────────────────────────────────────────────────┐
+│            1. Synchronous Domain Mutation              │
+│       state..field = 'value'..update() / reset()       │
+└───────────────────────────┬────────────────────────────┘
+                            │ (In-place baseline comparison)
+                            ▼
+┌────────────────────────────────────────────────────────┐
+│             2. Unbounded GraftMask Engine              │
+│      diffChanges() -> Fast CPU Register Bitset         │
+│     (32-bit chunked words, unbounded field scaling)    │
+└──────────────┬──────────────────────────┬──────────────┘
+               │                          │
+               ▼                          ▼
+ ┌───────────────────────────┐  ┌───────────────────────────┐
+ │ Wrapper 1: GraftBoundary  │  │ Wrapper 2: graft((s)=>...)│
+ │   - Subtree Rebuild Wall  │  │   - Surgical Leaf Slot    │
+ │   - Ambient Auto-Discovery│  │   - Content Fingerprinting│
+ │   - Backward Field Learn  │  │   - Depth-N Insulation    │
+ └─────────────┬─────────────┘  └─────────────┬─────────────┘
+               │ (0 Rebuilds)                 │ (1-Cycle Leaf Rebuild)
+               ▼                              ▼
+ ┌───────────────────────────┐  ┌───────────────────────────┐
+ │ Heavy Parent Containers   │  │ Isolated Leaf Element     │
+ │ (Card, Padding: 0 builds) │  │ (Text, Icon: updated)     │
+ └───────────────────────────┘  └───────────────────────────┘
+```
 
-    subgraph Core ["2. Hardware Bitmask Engine"]
-        B["diffChanges()"]
-        C["In-Place Snapshot Comparison (0 GC Allocations)"]
-        D["64-Bit Integer Dirty Mask (e.g. 0b00000001)"]
-        A --> B --> C --> D
-    end
+---
 
-    subgraph DiffEngine ["3. Self-Optimizing Child Slot Engine"]
-        E["notifyMask(dirtyMask)"]
-        F{"Slot Metadata Evaluation"}
-        G1["Static/Const Slot? -> Permanently Skipped (0 Cycles)"]
-        G2["Learned Bit Clean? (mask & (1 << field)) == 0 -> Bypassed (1 Cycle)"]
-        G3["Identical Pointer? -> Bypassed (< 1 ns)"]
-        G4["Content Fingerprint Match? -> Bypassed (< 5 ns)"]
-        G5["Dirty Slot Identified -> Update Slot ValueNotifier"]
-        D --> E --> F
-        F --> G1
-        F --> G2
-        F --> G3
-        F --> G4
-        F --> G5
-    end
+## 🔄 Sequence: Ambient Auto-Discovery & Backward Learning
 
-    subgraph ElementTree ["4. Flutter Element Tree"]
-        H["Intermediate Parent Containers: 0 Rebuilds"]
-        I["Surgical Leaf Element: Rebuilt in Isolation"]
-        G5 --> I
-        G1 -.-> H
-        G2 -.-> H
-    end
+```text
+Developer                 GraftState / Graft             GraftBoundary               Leaf Element
+    │                             │                            │                          │
+    │  1. Initial Build Phase     │                            │                          │
+    │  ───────────────────────    │                            │                          │
+    │                             │    Ambient Discovery       │                          │
+    │                             │ ◄───────────────────────── │                          │
+    │                             │    (reads .state)          │                          │
+    │                             │                            │                          │
+    │                             │    Auto-Subscribes Mask    │                          │
+    │                             │ ◄───────────────────────── │                          │
+    │                             │                            │                          │
+    │  2. In-Place Mutation       │                            │                          │
+    │  ───────────────────────    │                            │                          │
+    │  state..name = 'Bob'..update()                           │                          │
+    │ ──────────────────────────► │                            │                          │
+    │                             │  notifyMask(dirtyMask)     │                          │
+    │                             │ ─────────────────────────► │                          │
+    │                             │                            │                          │
+    │                             │    Learned Mask Check:     │                          │
+    │                             │    dirtyMask.intersects()? │                          │
+    │                             │                            ├──┐ (if clean)            │
+    │                             │                            │  │ BYPASS COMPLETELY     │
+    │                             │                            │◄─┘ (0 builds, 0 allocs)  │
+    │                             │                            │                          │
+    │                             │                            │ (if bound field dirty)   │
+    │                             │                            │ Rebuilds isolated slot   │
+    │                             │                            │ ───────────────────────► │
+    │                             │                            │                          │ (Parent: 0 builds!)
 ```
 
 ---
@@ -230,7 +257,7 @@ class ProfileState extends GraftState {
   String? error;
 
   @override
-  List<Object?> get tracked => [name, isLoading, error];
+  List<Object?> get props => [name, isLoading, error];
 }
 
 class ProfileGraft extends Graft<ProfileState> {
@@ -245,29 +272,40 @@ class ProfileGraft extends Graft<ProfileState> {
       state..error = e.toString()..isLoading = false..update();
     }
   }
+
+  void reset() {
+    state.reset(); // Restores baseline and updates UI synchronously
+  }
 }
 ```
 
-### Pattern B: Sealed Class Domain States
-For apps preferring discrete states:
+### Pattern B: First-Class `GraftAsync` & `runAsync`
+Eliminates boilerplate try/catch and loading flags with pattern matching:
 ```dart
-sealed class AuthState extends GraftState {}
-class AuthInitial extends AuthState {}
-class AuthLoading extends AuthState {}
-class AuthSuccess extends AuthState { final User user; AuthSuccess(this.user); }
-class AuthFailure extends AuthState { final String message; AuthFailure(this.message); }
+class AuthState extends GraftState {
+  GraftAsync<User> auth = const GraftAsync.initial();
+
+  @override
+  List<Object?> get props => [auth];
+
+  @override
+  void onReset() {
+    auth = const GraftAsync.initial();
+  }
+}
 
 class AuthGraft extends Graft<AuthState> {
-  AuthGraft() : super(AuthInitial());
+  AuthGraft() : super(AuthState());
 
   Future<void> login(String email, String password) async {
-    emit(AuthLoading());
-    try {
-      final user = await api.login(email, password);
-      emit(AuthSuccess(user));
-    } catch (e) {
-      emit(AuthFailure(e.toString()));
-    }
+    await runAsync(
+      future: () => api.login(email, password),
+      assign: (result) => state..auth = result..update(),
+    );
+  }
+
+  void logout() {
+    state.reset(); // Calls onReset() and updates UI synchronously
   }
 }
 ```
@@ -275,12 +313,12 @@ class AuthGraft extends Graft<AuthState> {
 UI consumes this with standard Dart pattern matching:
 ```dart
 graft.slot(
-  builder: (state) => switch (state) {
-    AuthLoading() => const CircularProgressIndicator(),
-    AuthFailure(:final message) => Text('Error: $message'),
-    AuthSuccess(:final user) => Text('Welcome, ${user.name}'),
-    _ => const LoginForm(),
-  },
+  builder: (state) => state.auth.when(
+    initial: () => const LoginForm(),
+    loading: () => const CircularProgressIndicator(),
+    data: (user) => Text('Welcome, ${user.name}'),
+    error: (e, _) => Text('Error: $e'),
+  ),
 )
 ```
 
@@ -320,7 +358,7 @@ class UserState extends GraftState {
   bool isVerified = false;
 
   @override
-  List<Object?> get tracked => [name, email, isVerified];
+  List<Object?> get props => [name, email, isVerified];
 }
 
 class UserGraft extends Graft<UserState> {
@@ -329,7 +367,7 @@ class UserGraft extends Graft<UserState> {
   void updateName(String newName) {
     state
       ..name = newName
-      ..update(); // Synchronous 64-bit bitmask diff & leaf notification
+      ..update(); // Synchronous hardware bitmask diff & leaf notification
   }
 
   void updateEmail(String newEmail) {
@@ -342,6 +380,10 @@ class UserGraft extends Graft<UserState> {
     state
       ..isVerified = !state.isVerified
       ..update();
+  }
+
+  void reset() {
+    state.reset(); // Restores baseline and updates UI synchronously
   }
 }
 ```
@@ -447,6 +489,101 @@ graft.builder<Task>(
   items: s.tasks,
   itemBuilder: (task, index) => TaskTile(task: task),
 )
+```
+
+### 6. `GraftBoundary(builder: (context) => ...)` (Subtree Rebuild Firewall & Multi-Graft Auto-Discovery)
+`GraftBoundary` acts as an Element-level rebuild firewall. When placed inside `graft.slots` or any layout, it ambiently auto-discovers all Grafts read inside its builder (via `GraftScopeTracker`), learns field dependency bitmasks backwards, and completely insulates the outer parent widget tree from rebuilding.
+
+#### 📦 Real-World Example: Nested inside `graft.slots`
+```dart
+graft.slots(
+  layout: (children) => Column(children: children),
+  children: (s) => [
+    // -----------------------------------------------------------------
+    // Slot 0: Static Header (Non-const! Diff engine achieves 0 rebuilds)
+    // -----------------------------------------------------------------
+    Text('Dashboard Header'), // ✅ 0 rebuilds (even WITHOUT const! Content fingerprint matches in < 5 ns)
+
+    // -----------------------------------------------------------------
+    // Slot 1: Container with state text (Rebuilds ONLY when s.title changes)
+    // -----------------------------------------------------------------
+    Container(
+      padding: const EdgeInsets.all(8),
+      child: Text('Section: ${s.title}'), // 🎯 Rebuilds ONLY if s.title changes
+    ),
+
+    // -----------------------------------------------------------------
+    // Slot 2: Expensive container wrapping GraftBoundary
+    // -----------------------------------------------------------------
+    HeavyPaintContainer(
+      child: GraftBoundary(
+        builder: (context) {
+          // ✨ FEATURE: Ambiently reads multiple Grafts (userGraft, themeGraft)
+          // without manual lists. Even while accessing state properties here,
+          // HeavyPaintContainer and all parent widgets ABOVE this boundary NEVER rebuild!
+          return Row(
+            children: [
+              Text('User: ${userGraft.state.name}'),
+              const SizedBox(width: 8),
+              Text('Theme: ${themeGraft.state.accentColor}'),
+            ],
+          );
+        },
+      ),
+    ),
+
+    // -----------------------------------------------------------------
+    // Slot 3: Static Footer (Non-const! 0 rebuilds)
+    // -----------------------------------------------------------------
+    Text('Dashboard Footer'), // ✅ 0 rebuilds (even WITHOUT const!)
+  ],
+)
+```
+
+#### 🔍 Rebuild Breakdown: Exactly What Rebuilds vs What Does NOT Rebuild
+
+| State Mutation Event | `graft.slots` Parent & Other Slots (`Text`, `Container`) | `HeavyPaintContainer` (Above Boundary) | Inside `GraftBoundary` (`Row`, `Text`) |
+| :--- | :---: | :---: | :---: |
+| **`userGraft.state..name = 'Bob'..update()`** | **0 Rebuilds** (all other slots untouched) | **0 Rebuilds** (completely insulated) | 🔄 **1 Rebuild** (only the subtree inside boundary updates) |
+| **`themeGraft.state..accentColor = red..update()`** | **0 Rebuilds** (all other slots untouched) | **0 Rebuilds** (completely insulated) | 🔄 **1 Rebuild** (boundary updates theme text) |
+| **`userGraft.state..email = 'new'..update()`** *(Unused field!)* | **0 Rebuilds** | **0 Rebuilds** | **0 Rebuilds** (**Backward Adaptive Learning** detects boundary never accessed `email`) |
+| **`s..title = 'Analytics'..update()`** | 🔄 **Slot 1 (`Container`) Rebuilds**; Slots 0, 2, 3 have **0 rebuilds** | **0 Rebuilds** | **0 Rebuilds** (`GraftBoundary` is untouched) |
+
+#### 🛡️ Feature Deep Dive: Downward Rebuild Insulation
+
+In standard state management approaches (Provider, Riverpod, BLoC), reading state inside a widget often causes intermediate parent containers to re-execute their `build()` methods. `GraftBoundary` eliminates this by anchoring rebuilds strictly at the Flutter Element level:
+
+```text
+graft.slots Element (DashboardGraft)
+  ├── Slot 0 Element: Text('Dashboard Header')        ──> 0 Rebuilds
+  ├── Slot 1 Element: Container(Text('Section: ...')) ──> Rebuilds only when s.title changes
+  ├── Slot 2 Element: HeavyPaintContainer             ──> 0 REBUILDS (PERMANENTLY INSULATED!)
+  │     └── GraftBoundary Element                     ──> 0 Rebuilds
+  │           └── ValueListenableBuilder Element      ──> ONLY THIS SUBTREE REBUILDS!
+  │                 └── Row Element
+  │                       ├── Text('User: Bob')
+  │                       └── Text('Theme: purple')
+  └── Slot 3 Element: Text('Dashboard Footer')        ──> 0 Rebuilds
+```
+
+1. **Downwards Dirty Propagation:** Flutter elements only rebuild *downwards* into their children—dirtying a child element never marks its parent dirty. When state updates, `GraftBoundary` triggers an internal `ValueListenableBuilder`. `HeavyPaintContainer` above it is **never marked dirty**.
+2. **0 Re-Paints & 0 Re-Layouts:** Because `HeavyPaintContainer`'s element is never dirtied, Flutter's render pipeline skips re-painting or re-layout for heavy outer shells.
+3. **Parent Slot Immunity:** When the parent `dashboardGraft` updates, `graft.slots` checks equivalence. Since `GraftBoundary` implements `GraftEquivalent`, `HeavyPaintContainer` is not replaced, maintaining 0 rebuilds across parent state passes.
+
+
+### 7. In-Place State Reset: `state.reset()`
+Reverts domain state to its initial baseline values or invokes `onReset()`, immediately dispatching a surgical diff update to the UI with 0 GC allocations:
+```dart
+class CounterState extends GraftState {
+  int count = 0;
+  @override
+  List<Object?> get props => [count];
+  @override
+  void onReset() => count = 0;
+}
+
+// In controller or UI:
+state.reset(); // Restores baseline synchronously and notifies UI
 ```
 
 ---

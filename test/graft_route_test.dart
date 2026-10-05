@@ -7,6 +7,9 @@ class TestState extends GraftState {
   TestState({this.count = 0});
 
   @override
+  List<Object?> get props => [count];
+
+  @override
   bool operator ==(Object other) =>
       identical(this, other) || other is TestState && count == other.count;
 

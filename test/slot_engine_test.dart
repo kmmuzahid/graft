@@ -15,28 +15,36 @@ class ProfileState extends GraftState {
     this.isLoading = false,
   });
 
-  ProfileState copyWith({
-    String? name,
-    String? email,
-    bool? isVerified,
-    bool? isLoading,
-  }) {
-    return ProfileState(
-      name: name ?? this.name,
-      email: email ?? this.email,
-      isVerified: isVerified ?? this.isVerified,
-      isLoading: isLoading ?? this.isLoading,
-    );
-  }
+  @override
+  List<Object?> get props => [name, email, isVerified, isLoading];
 }
 
 class ProfileGraft extends Graft<ProfileState> {
   ProfileGraft() : super(ProfileState());
 
-  void updateName(String newName) => emit(state.copyWith(name: newName));
-  void updateEmail(String newEmail) => emit(state.copyWith(email: newEmail));
-  void toggleVerified() => emit(state.copyWith(isVerified: !state.isVerified));
-  void setLoading(bool loading) => emit(state.copyWith(isLoading: loading));
+  void updateName(String newName) {
+    state
+      ..name = newName
+      ..update();
+  }
+
+  void updateEmail(String newEmail) {
+    state
+      ..email = newEmail
+      ..update();
+  }
+
+  void toggleVerified() {
+    state
+      ..isVerified = !state.isVerified
+      ..update();
+  }
+
+  void setLoading(bool loading) {
+    state
+      ..isLoading = loading
+      ..update();
+  }
 }
 
 class ConstHeaderWidget extends StatelessWidget {

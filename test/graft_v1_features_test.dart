@@ -19,22 +19,16 @@ class ProfileTestState extends GraftState {
 
   @override
   List<Object?> get props => [name, score, bioAsync];
-
-  @override
-  ProfileTestState copy() => ProfileTestState(
-        name: name,
-        score: score,
-        bioAsync: bioAsync,
-      );
 }
 
 class ProfileTestGraft extends Graft<ProfileTestState> {
   ProfileTestGraft() : super(ProfileTestState());
 
   void updateProfile(String newName, int newScore) {
-    produce((draft) => draft
+    state
       ..name = newName
-      ..score = newScore);
+      ..score = newScore
+      ..update();
   }
 
   Future<void> fetchBio({bool shouldFail = false}) async {
@@ -66,9 +60,9 @@ class MockObserver extends GraftObserver {
 // =============================================================================
 
 void main() {
-  group('Phase 3: Copy-on-Write (produce) and Immutability Snapshots', () {
+  group('In-Place Cascade Mutation and Property Snapshots', () {
     test(
-        'produce() dispatches GraftChange with distinct pre- and post-mutation values',
+        'state..update() dispatches GraftChange with automated pre- and post-mutation props',
         () {
       final observer = MockObserver();
       Graft.observer = observer;
@@ -84,21 +78,13 @@ void main() {
       expect(observer.changes.length, 1);
 
       final change = observer.changes.first;
-      final oldState = change.currentState as ProfileTestState;
-      final newState = change.nextState as ProfileTestState;
 
-      // Crucial: currentState has 'Alice' and nextState has 'Bob'!
-      expect(oldState.name, 'Alice',
-          reason: 'Old state snapshot must preserve pre-mutation values');
-      expect(oldState.score, 50);
-      expect(newState.name, 'Bob',
-          reason: 'New state snapshot contains updated values');
-      expect(newState.score, 100);
-
-      // Automated zero-boilerplate field tracking verification:
-      expect(change.previousTracked, ['Alice', 50, const GraftAsync<String>.idle()]);
-      expect(change.nextTracked, ['Bob', 100, const GraftAsync<String>.idle()]);
-      expect(change.dirtyMask, 3); // bits 0 and 1 modified
+      // Automated zero-boilerplate property tracking verification:
+      expect(change.previousProps, ['Alice', 50, const GraftAsync<String>.idle()]);
+      expect(change.nextProps, ['Bob', 100, const GraftAsync<String>.idle()]);
+      expect(change.dirtyMask.isBitSet(0), isTrue); // bit 0 modified (name)
+      expect(change.dirtyMask.isBitSet(1), isTrue); // bit 1 modified (score)
+      expect(change.dirtyMask.isBitSet(2), isFalse); // bit 2 unchanged (bioAsync)
 
       graft.dispose();
       Graft.observer = null;

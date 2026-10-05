@@ -29,10 +29,10 @@ void main() {
       expect(rule.code.correctionMessage, contains('Add GraftRouteTracker.observer'));
     });
 
-    test('PreferTrackedInGraftStateRule has correct code, name, and info severity', () {
-      final rule = PreferTrackedInGraftStateRule();
-      expect(rule.code.name, 'prefer_tracked_in_graft_state');
-      expect(rule.code.problemMessage, contains('does not override "tracked"'));
+    test('PreferPropsInGraftStateRule has correct code, name, and info severity', () {
+      final rule = PreferPropsInGraftStateRule();
+      expect(rule.code.name, 'prefer_props_in_graft_state');
+      expect(rule.code.problemMessage, contains('does not override "props"'));
       expect(rule.code.correctionMessage, contains('hardware bitmask'));
       // ignore: deprecated_member_use
       expect(rule.code.errorSeverity, ErrorSeverity.INFO);

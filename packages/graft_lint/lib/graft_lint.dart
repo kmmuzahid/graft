@@ -10,7 +10,7 @@ class _GraftLinter extends PluginBase {
   @override
   List<LintRule> getLintRules(CustomLintConfigs configs) => [
         AvoidNestedGraftSlotRule(),
-        PreferTrackedInGraftStateRule(),
+        PreferPropsInGraftStateRule(),
         RequireGraftRouteObserverRule(),
       ];
 }

@@ -24,6 +24,9 @@ class CyclicalWidget extends StatelessWidget {
 class DeepState extends GraftState {
   int value;
   DeepState(this.value);
+
+  @override
+  List<Object?> get props => [value];
 }
 
 class DeepGraft extends Graft<DeepState> {

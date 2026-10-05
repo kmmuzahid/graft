@@ -2,16 +2,18 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:graft/graft.dart';
 
 class TestState extends GraftState {
-  final int count;
-  final String text;
+  int count;
+  String text;
 
   TestState({this.count = 0, this.text = ''});
 
-  TestState copyWith({int? count, String? text}) {
-    return TestState(
-      count: count ?? this.count,
-      text: text ?? this.text,
-    );
+  @override
+  List<Object?> get props => [count, text];
+
+  @override
+  void onReset() {
+    count = 0;
+    text = '';
   }
 
   @override
@@ -29,9 +31,22 @@ class TestState extends GraftState {
 class TestGraft extends Graft<TestState> {
   TestGraft() : super(TestState());
 
-  void increment() => emit(state.copyWith(count: state.count + 1));
-  void setText(String text) => emit(state.copyWith(text: text));
-  void emitSame() => emit(state);
+  void increment() {
+    state
+      ..count += 1
+      ..update();
+  }
+
+  void setText(String text) {
+    state
+      ..text = text
+      ..update();
+  }
+
+  void updateSame() {
+    state.update(); // No-op diff
+  }
+
   void triggerError(String message) => addError(Exception(message));
 }
 
@@ -84,7 +99,7 @@ void main() {
       graft.dispose();
     });
 
-    test('emit updates state and notifies listener and observer', () {
+    test('update notifies listener and observer', () {
       final graft = TestGraft();
       int listenerCalls = 0;
       graft.addListener(() => listenerCalls++);
@@ -94,18 +109,18 @@ void main() {
       expect(graft.state.count, 1);
       expect(listenerCalls, 1);
       expect(observer.changeCalls, 1);
-      expect(observer.lastChange?.currentState, TestState(count: 0, text: ''));
-      expect(observer.lastChange?.nextState, TestState(count: 1, text: ''));
+      expect(observer.lastChange?.previousProps, [0, '']);
+      expect(observer.lastChange?.nextProps, [1, '']);
 
       graft.dispose();
     });
 
-    test('emitting equal state does not notify listeners or observer', () {
+    test('updating with no field changes does not notify listeners or observer', () {
       final graft = TestGraft();
       int listenerCalls = 0;
       graft.addListener(() => listenerCalls++);
 
-      graft.emitSame();
+      graft.updateSame();
 
       expect(listenerCalls, 0);
       expect(observer.changeCalls, 0);
@@ -129,12 +144,15 @@ void main() {
       expect(graft.isDisposed, true);
       expect(observer.disposeCalls, 1);
 
-      // Safe emission after dispose
+      // Safe update after dispose: listeners and observers are not notified
+      int listenerCalls = 0;
+      graft.addListener(() => listenerCalls++);
       graft.increment();
-      expect(graft.state.count, 0);
+      expect(listenerCalls, 0);
 
       // Safe notify after dispose
       graft.notify();
+      expect(listenerCalls, 0);
     });
 
     test('reentrant notify() during listener notification batches via microtask safely', () async {

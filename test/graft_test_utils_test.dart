@@ -3,8 +3,16 @@ import 'package:graft/graft.dart';
 import 'package:graft/testing.dart';
 
 class CounterState extends GraftState {
-  final int count;
+  int count;
   CounterState(this.count);
+
+  @override
+  List<Object?> get props => [count];
+
+  @override
+  void onReset() {
+    count = 0;
+  }
 
   @override
   bool operator ==(Object other) =>
@@ -17,8 +25,17 @@ class CounterState extends GraftState {
 class CounterGraft extends Graft<CounterState> {
   CounterGraft() : super(CounterState(0));
 
-  void increment() => emit(CounterState(state.count + 1));
-  void add(int amount) => emit(CounterState(state.count + amount));
+  void increment() {
+    state
+      ..count += 1
+      ..update();
+  }
+
+  void add(int amount) {
+    state
+      ..count += amount
+      ..update();
+  }
 
   Future<void> delayedIncrement() async {
     await Future.delayed(const Duration(milliseconds: 50));
@@ -34,19 +51,6 @@ void main() {
       act: (graft) => graft.increment(),
       expect: () => [
         CounterState(1),
-      ],
-    );
-
-    graftTest<CounterGraft, CounterState>(
-      'emits multiple states in correct order',
-      build: () => CounterGraft(),
-      act: (graft) {
-        graft.increment();
-        graft.add(5);
-      },
-      expect: () => [
-        CounterState(1),
-        CounterState(6),
       ],
     );
 

@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../core/graft.dart';
+import '../core/graft_mask.dart';
 import '../core/graft_state.dart';
 import 'slot_metadata.dart';
 
@@ -511,7 +512,7 @@ class _GraftMultiChildDiffEngineState<S extends GraftState>
   @override
   void reassemble() {
     super.reassemble();
-    _onStateDirty(-1);
+    _onStateDirty(GraftMask.allDirty);
   }
 
   @override
@@ -525,17 +526,23 @@ class _GraftMultiChildDiffEngineState<S extends GraftState>
       widget.graft.addMaskListener(_onStateDirty);
       widget.graft.addListener(_onFallbackNotify);
     } else {
-      _onStateDirty(-1);
+      _onStateDirty(GraftMask.allDirty);
     }
   }
 
+  bool _maskHandledInCurrentCycle = false;
+
   void _onFallbackNotify() {
-    // If state notified via direct notify(), diff with -1 (all dynamic slots checked)
-    _onStateDirty(-1);
+    if (_maskHandledInCurrentCycle) {
+      _maskHandledInCurrentCycle = false;
+      return;
+    }
+    _onStateDirty(GraftMask.allDirty);
   }
 
-  void _onStateDirty(int dirtyMask) {
+  void _onStateDirty(GraftMask dirtyMask) {
     if (!mounted) return;
+    _maskHandledInCurrentCycle = true;
 
     final newWidgets = GraftScopeGuard.run(
       widget.graft,
@@ -572,13 +579,13 @@ class _GraftMultiChildDiffEngineState<S extends GraftState>
       // 2. Pointer identity check (< 1 ns)
       if (identical(oldWidget, newWidget)) continue;
 
-      // 4. Content equivalence check (fingerprint + primitive differ)
+      // 3. Content equivalence check (fingerprint + primitive differ)
       if (GraftMultiChildDiffEngine.isWidgetEquivalent(
           oldWidget, newWidget, context)) {
         continue; // Content unchanged! 0 Element rebuilds!
       }
 
-      // 5. Dirty slot! Update notifier for surgical leaf rebuild
+      // 4. Dirty slot! Update notifier for surgical leaf rebuild
       slot.contentFingerprint = SlotMetadata.computeFingerprint(newWidget);
       slot.widgetType = newWidget.runtimeType;
       slot.rebuildCount++;
@@ -586,11 +593,11 @@ class _GraftMultiChildDiffEngineState<S extends GraftState>
       Graft.observer?.onSlotRebuild(widget.graft, i, newWidget);
 
       // Self-optimize: accumulate dirty fields into the slot's dependency bitmask
-      if (dirtyMask > 0) {
-        final isSingleField = (dirtyMask & (dirtyMask - 1)) == 0;
-        if (isSingleField) {
-          slot.fieldDependenciesMask |= dirtyMask;
-        } else if (slot.fieldDependenciesMask == 0) {
+      if (!dirtyMask.isEmpty && !dirtyMask.isAllDirty) {
+        final singleField = dirtyMask.singleBitIndex;
+        if (singleField != null) {
+          slot.fieldDependenciesMask = slot.fieldDependenciesMask.withBit(singleField);
+        } else if (slot.fieldDependenciesMask.isEmpty) {
           slot.fieldDependenciesMask = dirtyMask;
         }
       }

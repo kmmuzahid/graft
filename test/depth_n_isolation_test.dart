@@ -14,22 +14,28 @@ class BoundaryUserState extends GraftState {
   });
 
   @override
-  List<Object?> get tracked => [name, role, counter];
+  List<Object?> get props => [name, role, counter];
 }
 
 class BoundaryUserGraft extends Graft<BoundaryUserState> {
   BoundaryUserGraft() : super(BoundaryUserState());
 
   void updateName(String name) {
-    mutate((s) => s..name = name);
+    state
+      ..name = name
+      ..update();
   }
 
   void updateRole(String role) {
-    mutate((s) => s..role = role);
+    state
+      ..role = role
+      ..update();
   }
 
   void increment() {
-    mutate((s) => s..counter += 1);
+    state
+      ..counter += 1
+      ..update();
   }
 }
 

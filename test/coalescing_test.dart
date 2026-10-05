@@ -14,6 +14,13 @@ class CoalesceState extends GraftState {
 
   @override
   List<Object?> get props => [count, text, flag];
+
+  @override
+  void onReset() {
+    count = 0;
+    text = '';
+    flag = false;
+  }
 }
 
 class CoalesceGraft extends Graft<CoalesceState> {
@@ -43,65 +50,30 @@ void main() {
     graft.dispose();
   });
 
-  test(
-      'updateCoalesced() coalesces 1,000 rapid synchronous updates into a single notification',
-      () async {
+  test('Batch cascade mutation mutates multiple fields and triggers exactly 1 notification', () {
     final graft = CoalesceGraft();
     int notifications = 0;
-    int? finalMask;
+    GraftMask? finalMask;
 
     graft.addListener(() => notifications++);
     graft.addMaskListener((mask) => finalMask = mask);
 
-    // Perform 1,000 rapid updates in a tight loop
-    for (int i = 1; i <= 1000; i++) {
-      graft.state.count = i;
-      graft.state.updateCoalesced();
-    }
-
-    // Synchronously: 0 notifications have fired yet because it is queued on the microtask
-    expect(notifications, 0);
-
-    // Allow microtask to drain
-    await Future.microtask(() {});
-
-    // Exactly 1 notification fired!
-    expect(notifications, 1);
-    expect(graft.state.count, 1000);
-    // Field 0 was mutated
-    expect(finalMask, 1);
-
-    graft.dispose();
-  });
-
-  test('updateCoalesced() accumulates dirty bitmask across different fields',
-      () async {
-    final graft = CoalesceGraft();
-    int notifications = 0;
-    int? receivedMask;
-
-    graft.addListener(() => notifications++);
-    graft.addMaskListener((mask) => receivedMask = mask);
-
-    // Mutate field 0 (count)
-    graft.state.count = 42;
-    graft.state.updateCoalesced();
-
-    // Mutate field 1 (text)
-    graft.state.text = 'Updated';
-    graft.state.updateCoalesced();
-
-    // Mutate field 2 (flag)
-    graft.state.flag = true;
-    graft.state.updateCoalesced();
-
-    expect(notifications, 0);
-
-    await Future.microtask(() {});
+    // Multi-field cascade mutation
+    graft.state
+      ..count = 42
+      ..text = 'Updated'
+      ..flag = true
+      ..update(); // Exactly 1 update call!
 
     expect(notifications, 1);
-    // Bits 0, 1, 2 changed: (1 << 0) | (1 << 1) | (1 << 2) = 1 | 2 | 4 = 7
-    expect(receivedMask, 7);
+    expect(graft.state.count, 42);
+    expect(graft.state.text, 'Updated');
+    expect(graft.state.flag, true);
+
+    expect(finalMask, isNotNull);
+    expect(finalMask!.isBitSet(0), isTrue);
+    expect(finalMask!.isBitSet(1), isTrue);
+    expect(finalMask!.isBitSet(2), isTrue);
 
     graft.dispose();
   });

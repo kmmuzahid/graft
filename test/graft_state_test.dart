@@ -12,6 +12,9 @@ class TestProfileState extends GraftState {
     this.age = 0,
     this.isLoading = false,
   });
+
+  @override
+  List<Object?> get props => [name, age, isLoading];
 }
 
 class TestProfileGraft extends Graft<TestProfileState> {

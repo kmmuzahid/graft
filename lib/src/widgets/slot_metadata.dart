@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import '../core/graft_mask.dart';
 
 /// Retained structural metadata for each child slot in `graft.slots`.
 ///
@@ -18,23 +19,18 @@ class SlotMetadata {
   /// Fast integer content fingerprint for sub-nanosecond comparisons.
   int contentFingerprint;
 
-  /// The cumulative learned field bitmask in the state's `dirtyMask` this slot correlates to.
-  /// When learned, allows 1-cycle CPU bitwise evaluation: `(dirtyMask & fieldDependenciesMask) != 0`.
-  int fieldDependenciesMask;
+  /// The cumulative learned property bitmask in the state's `dirtyMask` this slot correlates to.
+  /// When learned, allows 1-cycle CPU bitwise evaluation: `dirtyMask.intersects(fieldDependenciesMask)`.
+  GraftMask fieldDependenciesMask;
 
   /// Returns the single bound field index if exactly one field is bound, or null if unmapped / multi-bound.
-  int? get boundFieldIndex {
-    if (fieldDependenciesMask > 0 && (fieldDependenciesMask & (fieldDependenciesMask - 1)) == 0) {
-      return fieldDependenciesMask.bitLength - 1;
-    }
-    return null;
-  }
+  int? get boundFieldIndex => fieldDependenciesMask.singleBitIndex;
 
   set boundFieldIndex(int? index) {
     if (index == null) {
-      fieldDependenciesMask = 0;
+      fieldDependenciesMask = GraftMask.empty;
     } else {
-      fieldDependenciesMask |= (1 << index);
+      fieldDependenciesMask = fieldDependenciesMask.withBit(index);
     }
   }
 
@@ -51,18 +47,18 @@ class SlotMetadata {
     required this.contentFingerprint,
     required Widget initialWidget,
     int? boundFieldIndex,
-    int fieldDependenciesMask = 0,
+    GraftMask fieldDependenciesMask = GraftMask.empty,
   })  : fieldDependenciesMask = boundFieldIndex != null
-            ? (1 << boundFieldIndex)
+            ? GraftMask.fromIndex(boundFieldIndex)
             : fieldDependenciesMask,
         notifier = ValueNotifier<Widget>(initialWidget);
 
   /// Fast evaluation of whether this slot needs to rebuild given [dirtyMask].
   @pragma('vm:prefer-inline')
-  bool isDirty(int dirtyMask) {
+  bool isDirty(GraftMask dirtyMask) {
     if (isStatic) return false;
-    if (dirtyMask == -1 || fieldDependenciesMask == 0) return true; // All dirty on first build or unmapped
-    return (dirtyMask & fieldDependenciesMask) != 0;
+    if (dirtyMask.isAllDirty || fieldDependenciesMask.isEmpty) return true; // All dirty on first build or unmapped
+    return dirtyMask.intersects(fieldDependenciesMask);
   }
 
   /// Disposes this slot's internal notifier.

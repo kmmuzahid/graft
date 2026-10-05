@@ -7,7 +7,10 @@ class MockGraft extends Graft<MockState> {
   MockGraft() : super(MockState());
 }
 
-class MockState extends GraftState {}
+class MockState extends GraftState {
+  @override
+  List<Object?> get props => const [];
+}
 
 class AnotherGraft extends Graft<MockState> {
   AnotherGraft() : super(MockState());

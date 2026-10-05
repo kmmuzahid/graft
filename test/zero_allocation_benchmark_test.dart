@@ -32,8 +32,8 @@ void main() {
     final state = graft.state;
 
     // Verify baseline was captured during bindGraft
-    expect(state.diffChanges(), 0,
-        reason: 'Initial diff with no mutations must be 0 (clean)');
+    expect(state.diffChanges(), GraftMask.empty,
+        reason: 'Initial diff with no mutations must be empty (clean)');
 
     final stopwatch = Stopwatch()..start();
 
@@ -45,18 +45,18 @@ void main() {
       if (i % 2 == 0) {
         state.balance = 50000.0 + i + 1;
         final mask = state.diffChanges();
-        expect(mask, 1 << 2,
+        expect(mask, GraftMask.fromIndex(2),
             reason: 'Field index 2 (balance) must be marked dirty');
       } else {
         state.tier = (i % 5) + 10;
         final mask = state.diffChanges();
-        expect(mask, 1 << 4,
+        expect(mask, GraftMask.fromIndex(4),
             reason: 'Field index 4 (tier) must be marked dirty');
       }
 
-      // Immediate subsequent diff without mutations must be 0
+      // Immediate subsequent diff without mutations must be empty
       final cleanMask = state.diffChanges();
-      expect(cleanMask, 0, reason: 'Immediate clean diff must return 0 mask');
+      expect(cleanMask, GraftMask.empty, reason: 'Immediate clean diff must return empty mask');
     }
 
     stopwatch.stop();

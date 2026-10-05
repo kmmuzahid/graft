@@ -11,6 +11,9 @@ class GraftValue<T> extends GraftState {
   GraftValue(this.value);
 
   @override
+  List<Object?> get props => [value];
+
+  @override
   String toString() => value.toString();
 }
 

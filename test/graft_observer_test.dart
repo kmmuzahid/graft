@@ -6,14 +6,29 @@ import 'package:graft/graft.dart';
 class CounterState extends GraftState {
   int count;
   CounterState(this.count);
+
+  @override
+  List<Object?> get props => [count];
+
+  @override
+  void onReset() {
+    count = 0;
+  }
 }
 
 class CounterGraft extends Graft<CounterState> {
   CounterGraft() : super(CounterState(0));
 
   void increment() {
-    state.count++;
-    state.update();
+    state
+      ..count += 1
+      ..update();
+  }
+
+  void setCount(int val) {
+    state
+      ..count = val
+      ..update();
   }
 
   void triggerError(Object error) {
@@ -111,15 +126,15 @@ void main() {
       expect(change1.toString(), contains('GraftChange(current:'));
     });
 
-    test('Graft core state setter, listenable, and disposed notify warnings', () {
+    test('Graft core listenable and disposed notify warnings', () {
       final graft = CounterGraft();
 
       // listenable
       expect(graft.listenable, isA<ValueListenable<CounterState>>());
       expect(graft.listenable.value.count, 0);
 
-      // state setter
-      graft.state = CounterState(10);
+      // state update
+      graft.setCount(10);
       expect(graft.state.count, 10);
 
       // listener add and remove

@@ -13,18 +13,28 @@ class AutoCounterState extends GraftState {
   AutoCounterState({this.count = 0, this.title = 'Counter'});
 
   @override
-  List<Object?> get tracked => [count, title];
+  List<Object?> get props => [count, title];
+
+  @override
+  void onReset() {
+    count = 0;
+    title = 'Counter';
+  }
 }
 
 class AutoCounterGraft extends Graft<AutoCounterState> {
   AutoCounterGraft() : super(AutoCounterState());
 
   void increment() {
-    mutate((s) => s..count += 1);
+    state
+      ..count += 1
+      ..update();
   }
 
   void rename(String newTitle) {
-    mutate((s) => s..title = newTitle);
+    state
+      ..title = newTitle
+      ..update();
   }
 }
 
@@ -44,22 +54,23 @@ void main() {
   });
 
   group('Automation & API Reduction Verifications', () {
-    test('mutate() atomically updates state and dispatches mask notifications',
+    test('state..update() synchronously updates state and dispatches mask notifications',
         () {
       final graft = AutoCounterGraft();
-      int maskNotified = 0;
+      GraftMask? maskNotified;
       graft.addMaskListener((mask) => maskNotified = mask);
 
       graft.increment();
 
       expect(graft.state.count, 1);
-      // count is index 0 -> (1 << 0) = 1
-      expect(maskNotified, 1);
+      // count is index 0 -> isBitSet(0)
+      expect(maskNotified, isNotNull);
+      expect(maskNotified!.isBitSet(0), isTrue);
 
       graft.rename('New Title');
       expect(graft.state.title, 'New Title');
-      // title is index 1 -> (1 << 1) = 2
-      expect(maskNotified, 2);
+      // title is index 1 -> isBitSet(1)
+      expect(maskNotified!.isBitSet(1), isTrue);
 
       graft.dispose();
     });

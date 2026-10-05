@@ -5,19 +5,19 @@ import 'package:analyzer/error/error.dart' show ErrorSeverity;
 import 'package:analyzer/error/listener.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
-/// Linter rule that encourages overriding `tracked` in subclasses of `GraftState`.
+/// Linter rule that encourages overriding `props` in subclasses of `GraftState`.
 ///
-/// Overriding `List<Object?> get tracked => [...]` allows Graft to compute
-/// a 64-bit dirty bitmask in CPU registers and achieve 0 GC heap allocations during diff passes.
-class PreferTrackedInGraftStateRule extends DartLintRule {
-  PreferTrackedInGraftStateRule() : super(code: _code);
+/// Overriding `List<Object?> get props => [...]` allows Graft to compute
+/// an unbounded dirty bitmask in CPU registers and achieve 0 GC heap allocations during diff passes.
+class PreferPropsInGraftStateRule extends DartLintRule {
+  PreferPropsInGraftStateRule() : super(code: _code);
 
   static const _code = LintCode(
-    name: 'prefer_tracked_in_graft_state',
+    name: 'prefer_props_in_graft_state',
     problemMessage:
-        'Class "{0}" extends GraftState with domain fields but does not override "tracked".',
+        'Class "{0}" extends GraftState with domain fields but does not override "props".',
     correctionMessage:
-        'Override "List<Object?> get tracked => [...];" to enable 1-cycle hardware bitmask diffing and 0 GC heap allocations.',
+        'Override "List<Object?> get props => [...];" to enable 1-cycle hardware bitmask diffing and 0 GC heap allocations.',
     errorSeverity: ErrorSeverity.INFO,
   );
 
@@ -41,14 +41,19 @@ class PreferTrackedInGraftStateRule extends DartLintRule {
 
       if (!hasInstanceFields) return;
 
-      // Check if class overrides getter 'tracked'
-      final hasTrackedGetter = node.members
+      // Check if class overrides getter 'props' or legacy 'tracked'
+      final hasPropsGetter = node.members
           .whereType<MethodDeclaration>()
-          .any((m) => m.isGetter && m.name.lexeme == 'tracked');
+          .any((m) => m.isGetter && (m.name.lexeme == 'props' || m.name.lexeme == 'tracked'));
 
-      if (!hasTrackedGetter) {
+      if (!hasPropsGetter) {
         reporter.atToken(node.name, _code, arguments: [node.name.lexeme]);
       }
     });
   }
 }
+
+/// Backward compatibility alias for [PreferPropsInGraftStateRule].
+@Deprecated('Use PreferPropsInGraftStateRule instead.')
+typedef PreferTrackedInGraftStateRule = PreferPropsInGraftStateRule;
+

@@ -19,7 +19,7 @@ class UserState extends GraftState {
   });
 
   @override
-  List<Object?> get tracked => [name, email, isVerified, notificationCount];
+  List<Object?> get props => [name, email, isVerified, notificationCount];
 }
 
 // =============================================================================
@@ -30,19 +30,27 @@ class UserGraft extends Graft<UserState> {
   UserGraft() : super(UserState());
 
   void updateName(String newName) {
-    mutate((s) => s..name = newName);
+    state
+      ..name = newName
+      ..update();
   }
 
   void updateEmail(String newEmail) {
-    mutate((s) => s..email = newEmail);
+    state
+      ..email = newEmail
+      ..update();
   }
 
   void toggleVerified() {
-    mutate((s) => s..isVerified = !state.isVerified);
+    state
+      ..isVerified = !state.isVerified
+      ..update();
   }
 
   void incrementNotifications() {
-    mutate((s) => s..notificationCount += 1);
+    state
+      ..notificationCount += 1
+      ..update();
   }
 
   /// Batched Multi-Property Update:
@@ -54,12 +62,12 @@ class UserGraft extends Graft<UserState> {
     required bool isVerified,
     required int notifications,
   }) {
-    mutate((s) => s
+    state
       ..name = name
       ..email = email
       ..isVerified = isVerified
-      ..notificationCount =
-          notifications); // 💥 All 4 fields updated in 1 single atomic pass!
+      ..notificationCount = notifications
+      ..update(); // 💥 All 4 fields updated in 1 single atomic pass!
   }
 }
 
@@ -77,6 +85,9 @@ class TaskItem {
 class TaskListState extends GraftState {
   List<TaskItem> tasks;
   TaskListState({required this.tasks});
+
+  @override
+  List<Object?> get props => [tasks];
 }
 
 class TaskListGraft extends Graft<TaskListState> {
@@ -149,6 +160,9 @@ class ProductCatalogState extends GraftState {
   bool isLoading;
 
   ProductCatalogState({this.products = const [], this.isLoading = true});
+
+  @override
+  List<Object?> get props => [products, isLoading];
 }
 
 class ProductCatalogGraft extends Graft<ProductCatalogState> {
@@ -195,6 +209,14 @@ class ProductCatalogGraft extends Graft<ProductCatalogState> {
 class LiveCounterState extends GraftState {
   int count;
   LiveCounterState({this.count = 0});
+
+  @override
+  List<Object?> get props => [count];
+
+  @override
+  void onReset() {
+    count = 0;
+  }
 }
 
 class LiveCounterGraft extends Graft<LiveCounterState> {
@@ -209,12 +231,6 @@ class LiveCounterGraft extends Graft<LiveCounterState> {
   void decrement() {
     state
       ..count -= 1
-      ..update();
-  }
-
-  void reset() {
-    state
-      ..count = 0
       ..update();
   }
 }
@@ -269,6 +285,7 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     // Auto-instantiates and borrows across the navigation stack:
     final graft = context.use(UserGraft.new);
+    final counter = context.use(LiveCounterGraft.new);
 
     return Scaffold(
       appBar: AppBar(
@@ -437,26 +454,31 @@ class HomeScreen extends StatelessWidget {
             const Divider(),
 
             // =================================================================
-            // 3. Depth-N Rebuild Isolation via graft((s) => ...)
+            // 3. GraftBoundary: Ambient Auto-Discovery & Insulation
             // =================================================================
             const _SectionHeader(
-              title: '3. Depth-N Rebuild Isolation via graft((s) => ...)',
+              title: '3. GraftBoundary: Multi-Graft Auto-Discovery & Insulation',
               subtitle:
-                  'Isolates intermediate parent containers so only the surgical leaf rebuilds.',
+                  'Ambiently auto-discovers multiple Grafts with zero manual lists and full rebuild insulation: GraftBoundary(builder: (context) => ...)',
             ),
             const SizedBox(height: 8),
 
             _HeavyShellContainer(
-              child: graft(
-                (s) => Row(
+              child: GraftBoundary(
+                builder: (context) => Row(
                   children: [
-                    const Icon(Icons.shield_outlined, color: Colors.deepPurple),
+                    const Icon(Icons.hub_outlined, color: Colors.deepPurple),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Leaf inside graft((s) => ...): ${s.name}',
+                        'User: ${graft.state.name}  •  Count: ${counter.state.count}',
                         style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.add_circle, color: Colors.deepPurple),
+                      tooltip: 'Increment Counter from Multi-Graft Boundary',
+                      onPressed: () => counter.increment(),
                     ),
                   ],
                 ),

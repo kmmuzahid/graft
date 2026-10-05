@@ -3,18 +3,20 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:graft/graft.dart';
 
 class BenchmarkState extends GraftState {
-  final int counter;
+  int counter;
   BenchmarkState(this.counter);
 
-  BenchmarkState copyWith({int? counter}) =>
-      BenchmarkState(counter ?? this.counter);
+  @override
+  List<Object?> get props => [counter];
 }
 
 class BenchmarkGraft extends Graft<BenchmarkState> {
   BenchmarkGraft() : super(BenchmarkState(0));
 
   void increment() {
-    emit(state.copyWith(counter: state.counter + 1));
+    state
+      ..counter += 1
+      ..update();
   }
 }
 

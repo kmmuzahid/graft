@@ -162,11 +162,11 @@ void main() {
             as dynamic;
     final slotTable = engineState.slotTable as List<SlotMetadata>;
 
-    // Slot 0 depends on bit 0 (firstName) and bit 1 (lastName) -> (1 << 0) | (1 << 1) = 1 | 2 = 3
-    expect(slotTable[0].fieldDependenciesMask, 3,
+    // Slot 0 depends on bit 0 (firstName) and bit 1 (lastName) -> GraftMask with bits 0 and 1
+    expect(slotTable[0].fieldDependenciesMask, GraftMask.fromIndex(0).withBit(1),
         reason: 'Slot 0 must accumulate bits 0 and 1');
-    // Slot 1 depends on bit 2 (score) -> (1 << 2) = 4
-    expect(slotTable[1].fieldDependenciesMask, 4,
+    // Slot 1 depends on bit 2 (score) -> GraftMask with bit 2
+    expect(slotTable[1].fieldDependenciesMask, GraftMask.fromIndex(2),
         reason: 'Slot 1 must have bit 2');
     expect(slotTable[1].boundFieldIndex, 2,
         reason: 'Single-field slot reports boundFieldIndex == 2');
