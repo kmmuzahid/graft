@@ -26,7 +26,7 @@
 ///    Isolate reactive subtrees down to the leaf Element without selector boilerplate:
 ///    - `graft((s) => Text(s.name))`: Callable syntax shortcut for single-child slots.
 ///    - `graft.slot(...)`: Isolated slot for any widget with automatic content equivalence.
-///    - `graft.column(...)` & `graft.row(...)`: Multi-child layouts with 0-rebuild slot diffing.
+///    - `graft.slots(...)`: Multi-child layouts with 0-rebuild slot diffing.
 ///    - `GraftAsync<T>`: First-class pattern-matching for asynchronous operations.
 library;
 

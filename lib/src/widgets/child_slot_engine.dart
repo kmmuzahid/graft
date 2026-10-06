@@ -44,7 +44,7 @@ abstract interface class GraftEquivalent {
 /// - Content equivalent children: **0 rebuilds** (evaluated via [isWidgetEquivalent]).
 /// - Only slots with modified content trigger a rebuild in Flutter's render pipeline.
 ///
-/// Powering methods like `graft.column(...)`, `graft.row(...)`, `graft.stack(...)`, and `graft.wrap(...)`.
+/// Powering multi-child slot diffing via `graft.slots(...)`.
 class GraftMultiChildDiffEngine<S extends GraftState> extends StatefulWidget
     implements GraftEquivalent {
   /// The [Graft] controller providing state updates.

@@ -13,10 +13,10 @@ This example demonstrates how to use the **Graft** state management library in a
    - `context.create<UserGraft>()`: Creates isolated instance.
    - `GraftRouteObserver`: Automatically cleans up instances when the owner screen pops.
 6. **Fine-Grained Slot Diffing**:
-   - `graft.column((s) => [ ... ])` with const widgets and dynamic slots.
-   - `graft.listTile(...)` with independent slot rebuilds.
-   - `graft.card(...)` and `graft.padding(...)`.
-   - `graft.select(...)` for granular sub-property listeners.
+   - `graft((s) => Widget)` for surgical single-leaf slot isolation.
+   - `graft.slots(layout: ..., children: (s) => [ ... ])` for multi-child layouts.
+   - `graft.async(...)` for declarative loading/data/error states.
+   - `graft.compute(...)` for derived selector calculations.
 
 ## Running the Example:
 

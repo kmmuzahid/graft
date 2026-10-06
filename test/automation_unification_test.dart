@@ -99,15 +99,15 @@ void main() {
       graft.dispose();
     });
 
-    testWidgets(
-        'graft.column and graft.row multi-child layout helpers diff cleanly',
+    testWidgets('graft.slots multi-child layout diffs cleanly',
         (tester) async {
       final graft = AutoCounterGraft();
 
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: graft.column(
+            body: graft.slots(
+              layout: (children) => Column(children: children),
               children: (s) => [
                 Text('Title: ${s.title}'),
                 Text('Count: ${s.count}'),

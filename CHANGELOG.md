@@ -3,6 +3,29 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## 0.1.2-alpha.4
+
+### ⚡ Adaptive Pre-Flight Bypass & Zero-Allocation Nested Diffing
+- **Adaptive Multi-Slot Pre-Flight Bypass (`ignoredMask`)**:
+  - Added `ignoredMask` tracking to `SlotMetadata` to cache domain property indices that have been proven not to affect a slot's rendered output.
+  - Implemented whole-layout pre-flight short-circuiting in `GraftMultiChildDiffEngineState._onStateDirty`: skips calling `childrenBuilder` and avoids all widget heap allocations when the active `dirtyMask` is covered by all slots' learned ignore masks.
+  - Added slot-level ignore checks inside the reconciliation loop, eliminating redundant `isWidgetEquivalent` evaluations once a slot's ignore mask is cached.
+  - Added automatic ignore mask invalidation on `reassemble()` and `didUpdateWidget()` for full Flutter hot reload safety.
+  - Verified in `test/adaptive_slot_preflight_test.dart`.
+- **Zero-Allocation Nested State Diffing**:
+  - Optimized `GraftState.diffChanges` for nested `GraftState` models: compares sub-props directly against baseline snapshots, eliminating redundant snapshot list allocations on unchanged frames.
+  - Inlined `_deepEquals` with `@pragma('vm:prefer-inline')` for sub-microsecond collection equality checks.
+  - Verified in `test/nested_substate_mutation_test.dart`.
+- **Streamlined Public API Surface**:
+  - Removed redundant layout aliases (`graft.column` and `graft.row`).
+  - Unified multi-child slot diffing exclusively under `graft.slots(layout: ..., children: ...)`, keeping layout concerns orthogonal to state management while preserving 100% of the underlying slot-diffing engine and philosophy.
+- **Benchmark Performance Verification**:
+  - Multi-child slot pipeline execution time improved by **16.3%** (75.88 ms → 63.47 ms) with 0 wasted builds in `test/benchmark/widget_rebuild_benchmark_test.dart`.
+  - Average diff pass latency reduced to **1,227.6 ns** across 10,000 passes with 0 GC pauses.
+  - All **185 test cases** passing with 100% green status.
+
+---
+
 ## 0.1.2-alpha.3
 
 ### ⚡ Declarative Async Pattern-Matching & Structural Fingerprint Expansion

@@ -3,7 +3,7 @@ description: >-
   Self-optimizing state management engine for Flutter: clean domain architecture
   of BLoC, micro-rebuild precision of Signals, and register-level diffing speed
   of a hardware bitmask.
-version: 0.1.2-alpha.3
+version: 0.1.2-alpha.4
 homepage: https://github.com/kmmuzahid/graft
 repository: https://github.com/kmmuzahid/graft
 issue_tracker: https://github.com/kmmuzahid/graft/issues

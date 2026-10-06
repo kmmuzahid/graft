@@ -24,7 +24,7 @@ class _GraftNotifier<T> extends ValueNotifier<T> {
 /// ### Why use Graft?
 /// - **Zero Boilerplate:** No `copyWith()`, no `Equatable`, no `build_runner`.
 /// - **Fluent Mutation:** Update state via `state..field = value..update();`.
-/// - **0-Rebuild Slot Diffing:** In `graft.column(...)`, only slots with changed data rebuild.
+/// - **0-Rebuild Slot Diffing:** In `graft.slots(...)`, only slots with changed data rebuild.
 /// - **Automatic Route Disposal:** Disposed when the screen that created it pops.
 ///
 /// ### Example:

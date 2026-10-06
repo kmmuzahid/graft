@@ -124,7 +124,8 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: accountGraft.column(
+            body: accountGraft.slots(
+              layout: (children) => Column(children: children),
               children: (s) => [
                 const Text('Header Banner'),
                 s.isLoggedIn

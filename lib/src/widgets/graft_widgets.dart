@@ -165,54 +165,6 @@ extension GraftWidgetsX<S extends GraftState> on Graft<S> {
     );
   }
 
-  /// Creates a fine-grained reactive [Column] whose children diff independently with 0 rebuilds.
-  Widget column({
-    required List<Widget> Function(S state) children,
-    MainAxisAlignment mainAxisAlignment = MainAxisAlignment.start,
-    CrossAxisAlignment crossAxisAlignment = CrossAxisAlignment.center,
-    MainAxisSize mainAxisSize = MainAxisSize.max,
-    VerticalDirection verticalDirection = VerticalDirection.down,
-    TextDirection? textDirection,
-    TextBaseline? textBaseline,
-    Key? key,
-  }) => slots(
-    key: key,
-    layout: (c) => Column(
-      mainAxisAlignment: mainAxisAlignment,
-      crossAxisAlignment: crossAxisAlignment,
-      mainAxisSize: mainAxisSize,
-      verticalDirection: verticalDirection,
-      textDirection: textDirection,
-      textBaseline: textBaseline,
-      children: c,
-    ),
-    children: children,
-  );
-
-  /// Creates a fine-grained reactive [Row] whose children diff independently with 0 rebuilds.
-  Widget row({
-    required List<Widget> Function(S state) children,
-    MainAxisAlignment mainAxisAlignment = MainAxisAlignment.start,
-    CrossAxisAlignment crossAxisAlignment = CrossAxisAlignment.center,
-    MainAxisSize mainAxisSize = MainAxisSize.max,
-    VerticalDirection verticalDirection = VerticalDirection.down,
-    TextDirection? textDirection,
-    TextBaseline? textBaseline,
-    Key? key,
-  }) => slots(
-    key: key,
-    layout: (c) => Row(
-      mainAxisAlignment: mainAxisAlignment,
-      crossAxisAlignment: crossAxisAlignment,
-      mainAxisSize: mainAxisSize,
-      verticalDirection: verticalDirection,
-      textDirection: textDirection,
-      textBaseline: textBaseline,
-      children: c,
-    ),
-    children: children,
-  );
-
   // ===========================================================================
   // 3. COMPUTED DERIVED STATE (PRE-FLIGHT VALUE CHECK)
   // ===========================================================================

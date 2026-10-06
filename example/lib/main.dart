@@ -168,6 +168,8 @@ class ProductCatalogState extends GraftState {
 class ProductCatalogGraft extends Graft<ProductCatalogState> {
   ProductCatalogGraft() : super(ProductCatalogState());
 
+  
+
   /// Asynchronous, non-blocking initialization:
   /// Simulates fetching items from an API or database in the background.
   Future<void> init() async {
@@ -286,6 +288,7 @@ class HomeScreen extends StatelessWidget {
     // Auto-instantiates and borrows across the navigation stack:
     final graft = context.use(UserGraft.new);
     final counter = context.use(LiveCounterGraft.new);
+     
 
     return Scaffold(
       appBar: AppBar(
