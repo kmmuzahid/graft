@@ -96,7 +96,7 @@ Universal layout diffing (`Column`, `Row`, `Wrap`, `Stack`, `Flex`). Each child 
 graft.slots(
   layout: (children) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: children),
   children: (s) => [
-    const ProfileHeader(), // 0 rebuilds (const pointer match)
+    ProfileHeader(), // 0 rebuilds (even though it is not const)
     Text('Name: ${s.name}'), // 0 rebuilds when name is unchanged
     Text('Email: ${s.email}'), // 0 rebuilds when email is unchanged
     if (s.points > 100) const VipBadge(), // Dynamic branch
@@ -117,6 +117,8 @@ dashboardGraft.slots(
     Text('Section: ${s.title}'), // Slot 1: Diffed by dashboardGraft
 
     // 🛡️ Heavy layout container wrapping a multi-controller GraftBoundary:
+    //backward tree will not rebuild of GraftBoundary even though it is in the same graft.slots
+    //this is the power of graft
     HeavyContainer(
       child: GraftBoundary(
         builder: (context) {
@@ -257,7 +259,7 @@ When used inside layout containers or complex multi-child `graft.slots(...)`, it
 dashboardGraft.slots(
   layout: (children) => Column(children: children),
   children: (s) => [
-    const HeaderBanner(), // 0 rebuilds (const pointer match)
+    HeaderBanner(), // 0 rebuilds (even though it is not const)
     Text('Section: ${s.title}'), // Slot 1: Diffed by dashboardGraft
 
     // 🛡️ Heavy layout container wrapping a multi-controller GraftBoundary:
