@@ -109,10 +109,6 @@ class GraftMultiChildDiffEngine<S extends GraftState> extends StatefulWidget
     // Direct object equality if overridden
     if (a == b) return true;
 
-    // Fast content fingerprint check (< 1 ns)
-    if (SlotMetadata.computeFingerprint(a) == SlotMetadata.computeFingerprint(b)) {
-      return true;
-    }
 
     // Text widget comparison
     if (a is Text && b is Text) {
@@ -771,6 +767,8 @@ class GraftSingleSlotScope<S extends GraftState> extends StatefulWidget
 
 class _GraftSingleSlotScopeState<S extends GraftState> extends State<GraftSingleSlotScope<S>> {
   late final ValueNotifier<Widget> _slotNotifier;
+  GraftMask _learnedMask = GraftMask.empty;
+  bool _maskHandled = false;
 
   @override
   void initState() {
@@ -782,11 +780,26 @@ class _GraftSingleSlotScopeState<S extends GraftState> extends State<GraftSingle
         () => widget.builder(widget.graft.state),
       ),
     );
-    widget.graft.addListener(_onStateChanged);
+    widget.graft.addMaskListener(_onMaskDirty);
+    widget.graft.addListener(_onFallbackNotify);
   }
 
-  void _onStateChanged() {
+  void _onFallbackNotify() {
+    if (_maskHandled) {
+      _maskHandled = false;
+      return;
+    }
+    _onMaskDirty(GraftMask.allDirty);
+  }
+
+  void _onMaskDirty(GraftMask dirtyMask) {
     if (!mounted) return;
+    _maskHandled = true;
+
+    if (_learnedMask.isNotEmpty && !dirtyMask.isAllDirty && !dirtyMask.intersects(_learnedMask)) {
+      return;
+    }
+
     final oldWidget = _slotNotifier.value;
     final newWidget = GraftScopeGuard.run(
       widget.graft,
@@ -795,7 +808,20 @@ class _GraftSingleSlotScopeState<S extends GraftState> extends State<GraftSingle
     );
 
     if (identical(oldWidget, newWidget)) return;
-    if (GraftMultiChildDiffEngine.isWidgetEquivalent(oldWidget, newWidget, context)) return;
+    if (GraftMultiChildDiffEngine.isWidgetEquivalent(oldWidget, newWidget, context)) {
+      return;
+    }
+
+    if (!dirtyMask.isEmpty && !dirtyMask.isAllDirty) {
+      final single = dirtyMask.singleBitIndex;
+      if (single != null) {
+        _learnedMask = _learnedMask.withBit(single);
+      } else if (_learnedMask.isEmpty) {
+        _learnedMask = dirtyMask;
+      } else {
+        _learnedMask = _learnedMask.union(dirtyMask);
+      }
+    }
 
     _slotNotifier.value = newWidget;
     Graft.observer?.onSlotRebuild(widget.graft, 0, newWidget);
@@ -804,28 +830,33 @@ class _GraftSingleSlotScopeState<S extends GraftState> extends State<GraftSingle
   @override
   void reassemble() {
     super.reassemble();
-    _onStateChanged();
+    _learnedMask = GraftMask.empty;
+    _onMaskDirty(GraftMask.allDirty);
   }
 
   @override
   void didUpdateWidget(covariant GraftSingleSlotScope<S> oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.graft != widget.graft) {
-      oldWidget.graft.removeListener(_onStateChanged);
+      oldWidget.graft.removeMaskListener(_onMaskDirty);
+      oldWidget.graft.removeListener(_onFallbackNotify);
+      _learnedMask = GraftMask.empty;
       _slotNotifier.value = GraftScopeGuard.run(
         widget.graft,
         'graft.slot',
         () => widget.builder(widget.graft.state),
       );
-      widget.graft.addListener(_onStateChanged);
+      widget.graft.addMaskListener(_onMaskDirty);
+      widget.graft.addListener(_onFallbackNotify);
     } else {
-      _onStateChanged();
+      _onMaskDirty(GraftMask.allDirty);
     }
   }
 
   @override
   void dispose() {
-    widget.graft.removeListener(_onStateChanged);
+    widget.graft.removeMaskListener(_onMaskDirty);
+    widget.graft.removeListener(_onFallbackNotify);
     _slotNotifier.dispose();
     super.dispose();
   }

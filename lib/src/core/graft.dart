@@ -253,25 +253,32 @@ abstract class Graft<S extends GraftState> {
   }) async {
     if (_isDisposed) return null;
     final taskId = ++_currentAsyncTaskId;
-    onUpdate(const GraftAsync.loading());
-    notify();
+    var notified = false;
+    void trackingListener() => notified = true;
+    addListener(trackingListener);
 
     try {
+      onUpdate(const GraftAsync.loading());
+      if (!notified) notify();
+      notified = false;
+
       final result = await task();
       // 🛡️ RACE CONDITION GUARD: Discard stale response if a newer task was launched
       if (!_isDisposed && taskId == _currentAsyncTaskId) {
         onUpdate(GraftAsync.data(result));
-        notify();
+        if (!notified) notify();
         return result;
       }
       return null;
     } catch (e, st) {
       if (!_isDisposed && taskId == _currentAsyncTaskId) {
         onUpdate(GraftAsync.error(e, st));
-        notify();
+        if (!notified) notify();
         addError(e, st);
       }
       return null;
+    } finally {
+      removeListener(trackingListener);
     }
   }
 

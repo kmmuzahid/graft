@@ -94,19 +94,13 @@ abstract class GraftState {
       );
     }
     if (value is List) {
-      return List<Object?>.generate(
-        value.length,
-        (i) => _snapshotValue(value[i]),
-        growable: false,
-      );
+      return List<Object?>.of(value, growable: false);
     }
     if (value is Set) {
-      return value.map(_snapshotValue).toSet();
+      return Set<Object?>.of(value);
     }
     if (value is Map) {
-      return Map<Object?, Object?>.fromEntries(
-        value.entries.map((e) => MapEntry(e.key, _snapshotValue(e.value))),
-      );
+      return Map<Object?, Object?>.of(value);
     }
     return value;
   }
@@ -118,7 +112,7 @@ abstract class GraftState {
       final len = a.length;
       if (len != b.length) return false;
       for (int i = 0; i < len; i++) {
-        if (!_deepEquals(a[i], b[i])) return false;
+        if (!identical(a[i], b[i]) && a[i] != b[i]) return false;
       }
       return true;
     }
@@ -178,24 +172,22 @@ abstract class GraftState {
         final currentSubSnapshot = _snapshotValue(c);
         isDirty = !_deepEquals(p, currentSubSnapshot);
       }
-      // 2. Fast pointer identity first (1 CPU cycle for primitives and unmutated references)
+      // 2. Fast pointer identity check first (1 CPU instruction for primitives and unmutated references)
       else if (!identical(p, c)) {
         if (p is List && c is List) {
-          final currentListSnapshot = _snapshotValue(c);
-          isDirty = p.length != c.length || !_deepEquals(p, currentListSnapshot);
+          isDirty = p.length != c.length || !_deepEquals(p, c);
         } else if (p is Set && c is Set) {
-          final currentSetSnapshot = _snapshotValue(c);
-          isDirty = p.length != c.length || !_deepEquals(p, currentSetSnapshot);
+          isDirty = p.length != c.length || !_deepEquals(p, c);
         } else if (p is Map && c is Map) {
-          final currentMapSnapshot = _snapshotValue(c);
-          isDirty = p.length != c.length || !_deepEquals(p, currentMapSnapshot);
+          isDirty = p.length != c.length || !_deepEquals(p, c);
         } else {
           isDirty = (p != c);
         }
+      } else if (c is List) {
+        // In-place mutation on same list instance: length change or shallow compare against snapshot
+        isDirty = (p is List && p.length != c.length) || !_deepEquals(p, c);
       } else if (c is Iterable || c is Map) {
-        // Fallback for mutable collection reference without prior snapshot
-        final currentSnapshot = _snapshotValue(c);
-        isDirty = !_deepEquals(p, currentSnapshot);
+        isDirty = !_deepEquals(p, c);
       }
 
       if (isDirty) {
@@ -224,26 +216,21 @@ abstract class GraftState {
   void onReset() {}
 
   void _flush() {
-    final previousProps = _baseline != null
-        ? List<Object?>.generate(
-            _baseline!.length,
-            (i) => _snapshotValue(_baseline![i]),
-            growable: false,
-          )
+    final previousProps = (Graft.observer != null && _baseline != null)
+        ? List<Object?>.of(_baseline!)
         : const <Object?>[];
     final mask = diffChanges();
     if (!mask.isEmpty) {
-      final change = GraftChange<dynamic>(
-        currentState: this,
-        nextState: this,
-        previousProps: previousProps,
-        nextProps: List<Object?>.generate(
-          props.length,
-          (i) => _snapshotValue(props[i]),
-          growable: false,
-        ),
-        dirtyMask: mask,
-      );
+      GraftChange<dynamic>? change;
+      if (Graft.observer != null) {
+        change = GraftChange<dynamic>(
+          currentState: this,
+          nextState: this,
+          previousProps: previousProps,
+          nextProps: List<Object?>.of(props),
+          dirtyMask: mask,
+        );
+      }
       _graft?.notifyMask(mask, change: change);
     }
   }
