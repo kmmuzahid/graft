@@ -517,6 +517,9 @@ class _GraftMultiChildDiffEngineState<S extends GraftState>
   @override
   void reassemble() {
     super.reassemble();
+    for (final slot in _slotTable) {
+      slot.ignoredMask = GraftMask.empty;
+    }
     _onStateDirty(GraftMask.allDirty);
   }
 
@@ -531,6 +534,9 @@ class _GraftMultiChildDiffEngineState<S extends GraftState>
       widget.graft.addMaskListener(_onStateDirty);
       widget.graft.addListener(_onFallbackNotify);
     } else {
+      for (final slot in _slotTable) {
+        slot.ignoredMask = GraftMask.empty;
+      }
       _onStateDirty(GraftMask.allDirty);
     }
   }
@@ -548,6 +554,22 @@ class _GraftMultiChildDiffEngineState<S extends GraftState>
   void _onStateDirty(GraftMask dirtyMask) {
     if (!mounted) return;
     _maskHandledInCurrentCycle = true;
+
+    // ⚡ Pre-flight filter: If all slots have learned ignore masks covering this dirtyMask,
+    // bypass the layout reconciliation entirely! (0 childrenBuilder calls, 0 allocations, 0 ns)
+    if (!dirtyMask.isAllDirty && !dirtyMask.isEmpty && _slotTable.isNotEmpty) {
+      bool canSkipAll = true;
+      for (int i = 0; i < _slotTable.length; i++) {
+        final slot = _slotTable[i];
+        if (slot.isStatic) continue;
+        if (slot.ignoredMask.isNotEmpty && dirtyMask.isSubsetOf(slot.ignoredMask)) {
+          continue;
+        }
+        canSkipAll = false;
+        break;
+      }
+      if (canSkipAll) return;
+    }
 
     final newWidgets = GraftScopeGuard.run(
       widget.graft,
@@ -575,22 +597,37 @@ class _GraftMultiChildDiffEngineState<S extends GraftState>
     // In-place self-optimizing adaptive mutation loop
     for (int i = 0; i < newWidgets.length; i++) {
       final slot = _slotTable[i];
-      final oldWidget = slot.notifier.value;
-      final newWidget = newWidgets[i];
 
       // 1. Static check
       if (slot.isStatic) continue;
 
-      // 2. Pointer identity check (< 1 ns)
+      // 2. Pre-flight slot ignore check: slot has proven it does not depend on dirtyMask
+      if (!dirtyMask.isAllDirty && slot.ignoredMask.isNotEmpty && dirtyMask.isSubsetOf(slot.ignoredMask)) {
+        continue; // 0 diffing, content unchanged!
+      }
+
+      final oldWidget = slot.notifier.value;
+      final newWidget = newWidgets[i];
+
+      // 3. Pointer identity check (< 1 ns)
       if (identical(oldWidget, newWidget)) continue;
 
-      // 3. Content equivalence check (fingerprint + primitive differ in < 5 ns)
+      // 4. Content equivalence check (fingerprint + primitive differ in < 5 ns)
       if (GraftMultiChildDiffEngine.isWidgetEquivalent(
           oldWidget, newWidget, context)) {
+        // Content unchanged! Learn that this slot does NOT depend on dirtyMask:
+        if (!dirtyMask.isEmpty && !dirtyMask.isAllDirty) {
+          final single = dirtyMask.singleBitIndex;
+          if (single != null) {
+            slot.ignoredMask = slot.ignoredMask.withBit(single);
+          } else {
+            slot.ignoredMask = slot.ignoredMask.union(dirtyMask);
+          }
+        }
         continue; // Content unchanged! 0 Element rebuilds!
       }
 
-      // 4. Dirty slot! Update notifier for surgical leaf rebuild
+      // 5. Dirty slot! Update notifier for surgical leaf rebuild
       slot.contentFingerprint = SlotMetadata.computeFingerprint(newWidget);
       slot.widgetType = newWidget.runtimeType;
       slot.rebuildCount++;

@@ -105,6 +105,7 @@ abstract class GraftState {
     return value;
   }
 
+  @pragma('vm:prefer-inline')
   static bool _deepEquals(Object? a, Object? b) {
     if (identical(a, b)) return true;
     if (a == null || b == null) return a == b;
@@ -182,8 +183,18 @@ abstract class GraftState {
           isDirty = !_deepEquals(p, c);
         }
       } else if (c is GraftState) {
-        final currentSubSnapshot = _snapshotValue(c);
-        isDirty = !_deepEquals(p, currentSubSnapshot);
+        final subProps = c.props;
+        if (p is List && p.length == subProps.length) {
+          isDirty = false;
+          for (int j = 0; j < p.length; j++) {
+            if (!_deepEquals(p[j], subProps[j])) {
+              isDirty = true;
+              break;
+            }
+          }
+        } else {
+          isDirty = true;
+        }
       } else if (p is List && c is List) {
         isDirty = p.length != c.length || !_deepEquals(p, c);
       } else if (p is Set && c is Set) {

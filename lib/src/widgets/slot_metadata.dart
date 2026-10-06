@@ -23,6 +23,9 @@ class SlotMetadata {
   /// When learned, allows 1-cycle CPU bitwise evaluation: `dirtyMask.intersects(fieldDependenciesMask)`.
   GraftMask fieldDependenciesMask;
 
+  /// Bitmask of fields that have been verified NOT to affect this slot.
+  GraftMask ignoredMask;
+
   /// Returns the single bound field index if exactly one field is bound, or null if unmapped / multi-bound.
   int? get boundFieldIndex => fieldDependenciesMask.singleBitIndex;
 
@@ -48,6 +51,7 @@ class SlotMetadata {
     required Widget initialWidget,
     int? boundFieldIndex,
     GraftMask fieldDependenciesMask = GraftMask.empty,
+    this.ignoredMask = GraftMask.empty,
   })  : fieldDependenciesMask = boundFieldIndex != null
             ? GraftMask.fromIndex(boundFieldIndex)
             : fieldDependenciesMask,
@@ -57,7 +61,9 @@ class SlotMetadata {
   @pragma('vm:prefer-inline')
   bool isDirty(GraftMask dirtyMask) {
     if (isStatic) return false;
-    if (dirtyMask.isAllDirty || fieldDependenciesMask.isEmpty) return true; // All dirty on first build or unmapped
+    if (dirtyMask.isAllDirty) return true;
+    if (ignoredMask.isNotEmpty && dirtyMask.isSubsetOf(ignoredMask)) return false;
+    if (fieldDependenciesMask.isEmpty) return true; // All dirty on first build or unmapped
     return dirtyMask.intersects(fieldDependenciesMask);
   }
 
