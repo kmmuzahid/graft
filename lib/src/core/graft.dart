@@ -148,9 +148,13 @@ abstract class Graft<S extends GraftState> {
   @nonVirtual
   void notifyMask(GraftMask dirtyMask, {GraftChange<dynamic>? change}) {
     if (_isDisposed) return;
-    final listeners = List<void Function(GraftMask dirtyMask)>.from(_maskListeners);
-    for (final listener in listeners) {
-      listener(dirtyMask);
+    if (_maskListeners.isNotEmpty) {
+      final len = _maskListeners.length;
+      for (int i = 0; i < len; i++) {
+        if (i < _maskListeners.length) {
+          _maskListeners[i](dirtyMask);
+        }
+      }
     }
     notify(change: change);
   }
@@ -185,16 +189,17 @@ abstract class Graft<S extends GraftState> {
 
     _isNotifying = true;
     try {
-      final effectiveChange = change ??
-          GraftChange<S>(
-            currentState: _state,
-            nextState: _state,
-            previousProps: _state.baselineSnapshot,
-            nextProps: List<Object?>.of(_state.props, growable: false),
-            dirtyMask: _state.dirtyMask,
-          );
-
-      observer?.onChange(this, effectiveChange);
+      if (observer != null) {
+        final effectiveChange = change ??
+            GraftChange<S>(
+              currentState: _state,
+              nextState: _state,
+              previousProps: _state.baselineSnapshot,
+              nextProps: List<Object?>.of(_state.props, growable: false),
+              dirtyMask: _state.dirtyMask,
+            );
+        observer?.onChange(this, effectiveChange);
+      }
       _notifier.forceNotify();
     } finally {
       _isNotifying = false;

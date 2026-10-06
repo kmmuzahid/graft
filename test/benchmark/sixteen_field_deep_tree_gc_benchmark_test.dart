@@ -258,6 +258,7 @@ void main() {
       }
       signalsSw.stop();
       final signalsUs = signalsSw.elapsedMicroseconds;
+      expect(signalsFires, isPositive);
       disposeEffect();
 
       // 5. GETX: 16 individual obs
@@ -280,11 +281,11 @@ void main() {
 ================================================================================
   Framework             Total Time (ms)  Per Mutation (ns)  State Heap Allocations
 --------------------------------------------------------------------------------
-  GetX (16 obs)               4.12 ms          206.0 ns             0
-  BLoC (16-field copyWith)   12.38 ms          619.0 ns        20,000 State Objects
-  Graft (16-field in-place)  19.65 ms          982.5 ns             0 (ZERO GC)
-  Riverpod (16-field copy)   26.41 ms        1,320.5 ns        20,000 State Objects
-  Signals (16 signals)       27.15 ms        1,357.5 ns             0
+  GetX (16 obs)           ${(getxUs / 1000.0).toStringAsFixed(2).padLeft(8)} ms  ${(getxUs * 1000.0 / mutationIterations).toStringAsFixed(1).padLeft(12)} ns             0
+  Graft (16-field in-place)${(graftUs / 1000.0).toStringAsFixed(2).padLeft(7)} ms  ${(graftUs * 1000.0 / mutationIterations).toStringAsFixed(1).padLeft(12)} ns             0 (ZERO GC) ⚡
+  BLoC (16-field copyWith)${(blocUs / 1000.0).toStringAsFixed(2).padLeft(8)} ms  ${(blocUs * 1000.0 / mutationIterations).toStringAsFixed(1).padLeft(12)} ns        20,000 State Objects
+  Riverpod (16-field copy)${(riverpodUs / 1000.0).toStringAsFixed(2).padLeft(8)} ms  ${(riverpodUs * 1000.0 / mutationIterations).toStringAsFixed(1).padLeft(12)} ns        20,000 State Objects
+  Signals (16 signals)    ${(signalsUs / 1000.0).toStringAsFixed(2).padLeft(8)} ms  ${(signalsUs * 1000.0 / mutationIterations).toStringAsFixed(1).padLeft(12)} ns             0
 ================================================================================''');
 
       expect(graft.state.balance, 5000.0 + mutationIterations);

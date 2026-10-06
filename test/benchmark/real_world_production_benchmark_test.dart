@@ -205,6 +205,7 @@ void main() {
     }
     signalsSw.stop();
     final signalsUs = signalsSw.elapsedMicroseconds;
+    expect(signalsFires, isPositive);
     disposeSignal();
 
     // -------------------------------------------------------------------------

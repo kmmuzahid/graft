@@ -167,27 +167,31 @@ abstract class GraftState {
 
       bool isDirty = false;
 
-      // 1. If current property is a nested GraftState:
-      if (c is GraftState) {
+      // 1. Ultra-fast path: identical non-collection reference (1 CPU cycle for primitives and unmutated references)
+      if (identical(p, c)) {
+        if (c is! Iterable && c is! Map) {
+          continue;
+        }
+        if (c is List) {
+          if (p is List && p.length != c.length) {
+            isDirty = true;
+          } else {
+            isDirty = !_deepEquals(p, c);
+          }
+        } else {
+          isDirty = !_deepEquals(p, c);
+        }
+      } else if (c is GraftState) {
         final currentSubSnapshot = _snapshotValue(c);
         isDirty = !_deepEquals(p, currentSubSnapshot);
-      }
-      // 2. Fast pointer identity check first (1 CPU instruction for primitives and unmutated references)
-      else if (!identical(p, c)) {
-        if (p is List && c is List) {
-          isDirty = p.length != c.length || !_deepEquals(p, c);
-        } else if (p is Set && c is Set) {
-          isDirty = p.length != c.length || !_deepEquals(p, c);
-        } else if (p is Map && c is Map) {
-          isDirty = p.length != c.length || !_deepEquals(p, c);
-        } else {
-          isDirty = (p != c);
-        }
-      } else if (c is List) {
-        // In-place mutation on same list instance: length change or shallow compare against snapshot
-        isDirty = (p is List && p.length != c.length) || !_deepEquals(p, c);
-      } else if (c is Iterable || c is Map) {
-        isDirty = !_deepEquals(p, c);
+      } else if (p is List && c is List) {
+        isDirty = p.length != c.length || !_deepEquals(p, c);
+      } else if (p is Set && c is Set) {
+        isDirty = p.length != c.length || !_deepEquals(p, c);
+      } else if (p is Map && c is Map) {
+        isDirty = p.length != c.length || !_deepEquals(p, c);
+      } else {
+        isDirty = (p != c);
       }
 
       if (isDirty) {

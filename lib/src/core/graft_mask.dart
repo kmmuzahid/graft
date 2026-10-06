@@ -139,6 +139,25 @@ class GraftMask {
     return false;
   }
 
+  /// Whether this mask is a subset of [other] (all bits in this mask are also set in [other]).
+  @pragma('vm:prefer-inline')
+  bool isSubsetOf(GraftMask other) {
+    if (other._allDirty) return true;
+    if (_allDirty) return false;
+    if ((_w0 & ~other._w0) != 0) return false;
+    if ((_w1 & ~other._w1) != 0) return false;
+    final aExtra = _extraWords;
+    final bExtra = other._extraWords;
+    if (aExtra != null) {
+      final bLen = bExtra?.length ?? 0;
+      for (int i = 0; i < aExtra.length; i++) {
+        final bVal = (i < bLen) ? bExtra![i] : 0;
+        if ((aExtra[i] & ~bVal) != 0) return false;
+      }
+    }
+    return true;
+  }
+
   /// Computes the bitwise union (`this | other`).
   GraftMask union(GraftMask other) {
     if (_allDirty || other._allDirty) return allDirty;

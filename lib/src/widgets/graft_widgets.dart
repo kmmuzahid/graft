@@ -70,12 +70,14 @@ extension GraftWidgetsX<S extends GraftState> on Graft<S> {
   Widget slot({
     required Widget Function(S state) builder,
     Key? key,
+    String caller = 'graft.slot',
   }) {
-    GraftScopeGuard.verifyNotActive(this, 'graft.slot');
+    GraftScopeGuard.verifyNotActive(this, caller);
     return GraftSingleSlotScope<S>(
       key: key,
       graft: this,
       builder: builder,
+      caller: caller,
     );
   }
 
@@ -106,6 +108,7 @@ extension GraftWidgetsX<S extends GraftState> on Graft<S> {
   }) {
     return slot(
       key: key,
+      caller: 'graft.async',
       builder: (s) {
         final asyncVal = selector(s);
         return asyncVal.when(

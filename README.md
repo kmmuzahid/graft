@@ -226,7 +226,78 @@ graft.slots(
 
 ## 🔬 Reproducible Hardware-Aligned Benchmarks
 
-All benchmark metrics in Graft are backed by reproducible test suites checked directly into the repository.
+All benchmark metrics in Graft are backed by reproducible test suites checked directly into the repository in [`test/benchmark/`](test/benchmark).
+
+### 🏆 Cross-Framework Benchmarks: Graft vs BLoC vs Riverpod vs Signals vs GetX
+
+Tested on Flutter 3.47.6 / Dart 3.13.5 (macOS ARM64):
+
+| Benchmark Scenario | 🥇 1st Place | 🥈 2nd Place | 3rd Place | 4th Place | 5th Place |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Diamond Dependency DAG** (5k updates) | BLoC (1.89 ms) | **Graft (4.19 ms) ⚡** | Signals (15.97 ms) | Riverpod (54.62 ms) | GetX (5,000 glitches ⚠️) |
+| **Deep Reactive Chain** (10 lvl, 5k updates)| BLoC (2.14 ms) | **Graft (4.42 ms) ⚡** | GetX (6.45 ms) | Signals (29.77 ms) | Riverpod (150.06 ms) |
+| **Multi-Field Batching** (2k batches) | BLoC (0.56 ms) | **Graft (3.68 ms) ⚡** | Riverpod (5.16 ms) | Signals (10.06 ms) | GetX (0% batched ⚠️) |
+| **Real 5-Field Domain Model** (10k ops) | GetX (2.42 ms) | **Graft (4.73 ms) ⚡** | BLoC (5.07 ms) | Riverpod (10.28 ms)| Signals (17.33 ms) |
+| **Fine-Grained (50 Nodes)** (5k ops) | GetX (2.42 ms) | **Graft (7.19 ms) ⚡** | Signals (10.73 ms) | BLoC (25.10 ms) | Riverpod (30.70 ms) |
+| **16-Field Enterprise GC Churn** (20k ops) | GetX (0 GC) | **Graft (0 GC) ⚡** | Signals (0 GC) | BLoC (20k objs ⚠️) | Riverpod (20k objs ⚠️) |
+| **60-Frame Widget Tree Rebuilds** | GetX (0 wasted) | **Graft (0 wasted) ⚡** | Signals (0 wasted) | Riverpod (0 wasted)| Vanilla (540 wasted ⚠️)|
+
+#### A. The Reactive Diamond Dependency & Glitch-Free Test (`test/benchmark/reactive_diamond_and_dag_benchmark_test.dart`)
+Root node `A` branches to `B` and `C`, which both merge into `D`. Measures topological propagation consistency.
+
+| Framework | Total Time (ms) | Evals of D | Glitches Detected | Consistency Status | Rank |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **BLoC** | **1.89 ms** | 5,000 | 0 | 100% Glitch-Free | 🥇 1st |
+| **Graft** | **4.19 ms** | 5,000 | **0** | **100% Glitch-Free** ⚡ | 🥈 **2nd** |
+| **GetX** | **5.45 ms** | 10,000 | **5,000 Glitches** | ⚠️ **FAILED (Inconsistent)** | 5th |
+| **Signals** | **15.97 ms** | 5,001 | 0 | 100% Glitch-Free (DAG) | 3rd |
+| **Riverpod** | **54.62 ms** | 5,001 | 0 | 100% Glitch-Free (Graph) | 4th |
+
+#### B. Deep Reactive Computed Chain (`test/benchmark/reactive_deep_chain_benchmark_test.dart`)
+10 consecutive computed derived levels (`L1 -> L2 -> ... -> L10`) evaluated over 5,000 updates.
+
+| Framework | Total Time (ms) | Latency / Update | Propagation Model | Rank |
+| :--- | :--- | :--- | :--- | :--- |
+| **BLoC** | **2.14 ms** | 0.43 µs | Synchronous event pipeline | 🥇 1st |
+| **Graft** | **4.42 ms** | **0.88 µs** | **In-place computed propagation** ⚡ | 🥈 **2nd** |
+| **GetX** | **6.45 ms** | 1.29 µs | Reactive callbacks | 🥉 3rd |
+| **Signals** | **29.77 ms** | 5.95 µs | Dynamic DAG traversal | 4th |
+| **Riverpod** | **150.06 ms** | 30.01 µs | ProviderContainer graph | 5th |
+
+#### C. Transactional Multi-Field Batching (`test/benchmark/reactive_batching_benchmark_test.dart`)
+2,000 transactions modifying 5 fields simultaneously (10,000 total mutations).
+
+| Framework | Total Time (ms) | Notifications Fired | Batching Mechanism | Efficiency | Rank |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **BLoC** | **0.56 ms** | 2,000 | Event-based emit | 100% Batched | 🥇 1st |
+| **Graft** | **3.68 ms** | 2,000 | **Automatic Fluent Cascade** ⚡ | **100% Batched** | 🥈 **2nd** |
+| **Riverpod** | **5.16 ms** | 2,000 | StateNotifier copyWith | 100% Batched | 🥉 3rd |
+| **Signals** | **10.06 ms** | 2,000 | Manual `batch(() { ... })` | 100% Batched | 4th |
+| **GetX** | **2.50 ms** | 10,000 | Individual `obs` assignments | ⚠️ **0% Batched (5x fires)** | 5th |
+
+#### D. 16-Field Enterprise GC Churn (`test/benchmark/sixteen_field_deep_tree_gc_benchmark_test.dart`)
+20,000 rapid mutations across a 16-field domain model measuring memory allocation pressure and GC pauses.
+
+| Framework | Total Time (ms) | Heap Allocations Generated | GC Churn Status |
+| :--- | :--- | :--- | :--- |
+| **GetX** | **6.24 ms** | **0 Objects** | Clean |
+| **Graft** | **13.46 ms** | **0 Objects (ZERO GC)** ⚡ | **Clean (In-Place Mutation)** |
+| **Signals** | **24.95 ms** | **0 Objects** | Clean |
+| **BLoC** | **5.60 ms** | **20,000 State Objects** | ⚠️ High Heap Allocation |
+| **Riverpod** | **25.79 ms** | **20,000 State Objects** | ⚠️ High Heap Allocation |
+
+#### E. Fine-Grained 50-Node Reactivity (`test/benchmark/fine_grained_reactivity_benchmark_test.dart`)
+50 independent state fields observed by 50 independent consumer nodes across 5,000 targeted mutations.
+
+| Framework | Total Time (ms) | Consumer Dispatches | Check Mechanism | Rank |
+| :--- | :--- | :--- | :--- | :--- |
+| **GetX** | **2.42 ms** | 5,000 | Direct callback list | 🥇 1st |
+| **Graft** | **7.19 ms** | 5,000 | **1-Cycle Hardware Bitmask (`_w0 & mask`)** ⚡ | 🥈 **2nd** |
+| **Signals** | **10.73 ms** | 5,000 | Node subscriber list | 🥉 3rd |
+| **BLoC** | **25.10 ms** | 5,000 | 250,000 selector closures (50x/emit) | 4th |
+| **Riverpod** | **30.70 ms** | 5,000 | 250,050 selector closures (50x/emit) | 5th |
+
+---
 
 ### 1. In-Place Bitmask Diffing (`test/zero_allocation_benchmark_test.dart`)
 Measuring 10,000 state mutations across 20,000 diff passes in the Dart test runner:
@@ -725,15 +796,15 @@ Graft is validated by a comprehensive suite of unit, widget, and hardware benchm
 
 ```bash
 fvm flutter test
-# 00:09 +164: All tests passed!
+# 00:24 +181: All tests passed!
 ```
 
 ```bash
-fvm flutter analyze
+fvm dart analyze
 # No issues found!
 ```
 
-### 📋 Test Suite Breakdown (164 / 164 Tests Passing)
+### 📋 Test Suite Breakdown (181 / 181 Tests Passing)
 
 | Architectural Domain | Test Suite Files | What Is Verified |
 | :--- | :--- | :--- |
@@ -741,8 +812,8 @@ fvm flutter analyze
 | **Rebuild Firewall & Diff Engine** | `test/context_isolation_leak_test.dart`<br>`test/deterministic_slot_bitmask_test.dart`<br>`test/bitmask_preflight_test.dart`<br>`test/safe_ast_context_test.dart`<br>`test/depth_n_isolation_test.dart`<br>`test/slot_engine_test.dart`<br>`test/slot_engine_deep_diff_test.dart`<br>`test/multi_field_slot_test.dart`<br>`test/disordering_test.dart`<br>`test/dynamic_branch_test.dart` | `NoSubscriptionContext` preventing `Theme`/`MediaQuery` dependency leaks during AST diffing, multi-field bitmask union accumulation, 1-cycle bitmask pre-flight bypass, safe AST widget diffing without out-of-band builds, Depth-$N$ parent container insulation, dynamic if/else branching, and multi-field bitmask accumulation. |
 | **Auto-Discovery & Tickers** | `test/graft_boundary_test.dart`<br>`test/multi_graft_combinator_test.dart`<br>`test/animation_isolation_test.dart` | Ambient auto-discovery across multiple controllers, backward adaptive learning, 60fps/120fps continuous animation isolation, and ticker lifecycle safety. |
 | **Routing & Lifecycle** | `test/dialog_popup_lifecycle_test.dart`<br>`test/graft_route_test.dart`<br>`test/graft_route_extended_test.dart`<br>`test/nested_route_isolation_test.dart`<br>`test/lifecycle_test.dart` | `context.use<T>()` route-stack borrowing, transient `PopupRoute` dialog and bottom sheet safety with `resolveOwnerRoute` anchoring, parallel navigator isolation (bottom navigation tabs & GoRouter `StatefulShellRoute`), and automatic leak-free disposal on host `route.popped`. |
-| **Async Concurrency** | `test/async_concurrency_race_test.dart`<br>`test/coalescing_test.dart` | Internal task token guard (`_currentAsyncTaskId`), automatic dropping of out-of-order stale responses, and synchronous microtask reentrancy coalescing. |
-| **Benchmarks & Tooling** | `test/zero_allocation_benchmark_test.dart`<br>`test/benchmark/column_rebuild_benchmark_test.dart`<br>`test/large_list_benchmark_test.dart`<br>`test/graft_test_utils_test.dart`<br>`test/graft_observer_test.dart` | Sub-microsecond diff passes, 90.0% rebuild reduction in columns, 10,000-item virtualized list surgical diffing, and pure Dart `graftTest` harness. |
+| **Async Concurrency & Slots** | `test/async_concurrency_race_test.dart`<br>`test/coalescing_test.dart`<br>`test/graft_async_widget_test.dart` | Internal task token guard (`_currentAsyncTaskId`), automatic dropping of out-of-order stale responses, declarative pattern-matched `graft.async` slots, and synchronous microtask reentrancy coalescing. |
+| **Comparative Benchmarks & Tooling** | `test/benchmark/reactive_diamond_and_dag_benchmark_test.dart`<br>`test/benchmark/reactive_deep_chain_benchmark_test.dart`<br>`test/benchmark/reactive_batching_benchmark_test.dart`<br>`test/benchmark/fine_grained_reactivity_benchmark_test.dart`<br>`test/benchmark/sixteen_field_deep_tree_gc_benchmark_test.dart`<br>`test/benchmark/real_world_production_benchmark_test.dart`<br>`test/benchmark/widget_rebuild_benchmark_test.dart`<br>`test/zero_allocation_benchmark_test.dart`<br>`test/benchmark/column_rebuild_benchmark_test.dart`<br>`test/large_list_benchmark_test.dart` | Cross-framework comparison against BLoC, Riverpod, Signals, and GetX (Diamond DAG, deep chains, multi-field cascade batching, fine-grained 50-node reactivity, 16-field 0-GC churn, 60-frame widget rebuilds, 10,000-item virtualized list diffing). |
 
 ---
 
