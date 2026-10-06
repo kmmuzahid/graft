@@ -50,8 +50,8 @@ sealed class GraftAsync<T> {
       switch (this) {
         AsyncIdle() => (idle != null ? idle() : loading()),
         AsyncLoading() => loading(),
-        AsyncData(:final data) => data(data),
-        AsyncError(:final error, :final stackTrace) => error(error, stackTrace),
+        AsyncData(data: final val) => data(val),
+        AsyncError(error: final err, :final stackTrace) => error(err, stackTrace),
       };
 }
 
