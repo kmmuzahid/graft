@@ -10,7 +10,7 @@ import 'benchmark_models.dart';
 class LifecycleGraftState extends GraftState {
   int count = 0;
   @override
-  List<Object?> get props => [count];
+  List<Object?> get props => propsOf(count);
 }
 
 class LifecycleGraftController extends Graft<LifecycleGraftState> {
@@ -167,6 +167,7 @@ class ScenarioELifecycleRunner {
         expect(find.text('Count: 42'), findsOneWidget);
 
         // Simulate Hot-Reload reassemble
+        // ignore: invalid_use_of_protected_member
         tester.element(find.byType(Scaffold)).reassemble();
         await tester.pump();
 
@@ -208,6 +209,7 @@ class ScenarioELifecycleRunner {
           ),
         );
 
+        // ignore: invalid_use_of_protected_member
         tester.element(find.byType(Scaffold)).reassemble();
         await tester.pump();
 

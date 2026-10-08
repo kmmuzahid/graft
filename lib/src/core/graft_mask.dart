@@ -16,6 +16,16 @@ class GraftMask {
   final int _w1;
   final List<int>? _extraWords;
 
+  /// Pre-allocated flyweight cache for all 64 single-bit masks across word 0 and word 1.
+  /// Eliminates 100% of heap allocations for single-property mutations.
+  static final List<GraftMask> _singleBitCache = List<GraftMask>.generate(
+    64,
+    (i) => i < 32
+        ? GraftMask._(w0: 1 << i)
+        : GraftMask._(w1: 1 << (i - 32)),
+    growable: false,
+  );
+
   /// Sentinel constant representing an all-dirty state mask (e.g. initial build, full reset).
   static const GraftMask allDirty = GraftMask._(allDirty: true);
 
@@ -35,15 +45,39 @@ class GraftMask {
   /// Creates a mask with a single bit set at [index].
   factory GraftMask.fromIndex(int index) {
     if (index < 0) return empty;
+    if (index < 64) return _singleBitCache[index];
     final word = index >> 5;
     final bit = 1 << (index & 31);
-
-    if (word == 0) return GraftMask._(w0: bit);
-    if (word == 1) return GraftMask._(w1: bit);
 
     final extra = List<int>.filled(word - 1, 0);
     extra[word - 2] = bit;
     return GraftMask._(extraWords: extra);
+  }
+
+  /// Creates a [GraftMask] directly from raw CPU word registers with zero intermediate allocations.
+  @internal
+  factory GraftMask.fromWords(int w0, int w1, [List<int>? extraWords]) {
+    if (w0 == 0 && w1 == 0 && (extraWords == null || _isAllZero(extraWords))) {
+      return empty;
+    }
+    // Fast-path single bit in word 0
+    if (w1 == 0 && (extraWords == null || extraWords.isEmpty) && (w0 & (w0 - 1)) == 0) {
+      final idx = (w0 & 0xFFFFFFFF).bitLength - 1;
+      if (idx >= 0 && idx < 32) return _singleBitCache[idx];
+    }
+    // Fast-path single bit in word 1
+    if (w0 == 0 && (extraWords == null || extraWords.isEmpty) && (w1 & (w1 - 1)) == 0) {
+      final idx = (w1 & 0xFFFFFFFF).bitLength - 1;
+      if (idx >= 0 && idx < 32) return _singleBitCache[idx + 32];
+    }
+    return GraftMask._(w0: w0, w1: w1, extraWords: extraWords);
+  }
+
+  static bool _isAllZero(List<int> words) {
+    for (int i = 0; i < words.length; i++) {
+      if (words[i] != 0) return false;
+    }
+    return true;
   }
 
   /// Whether this mask represents an all-dirty state.
@@ -84,6 +118,7 @@ class GraftMask {
   /// Returns a new [GraftMask] with the bit at [index] set to 1.
   GraftMask withBit(int index) {
     if (_allDirty || index < 0) return this;
+    if (isEmpty && index < 64) return _singleBitCache[index];
     final word = index >> 5;
     final bit = 1 << (index & 31);
 

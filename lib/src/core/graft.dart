@@ -146,6 +146,7 @@ abstract class Graft<S extends GraftState> {
   /// Internal engine method: must not be called or overridden by user code.
   @internal
   @nonVirtual
+  @pragma('vm:prefer-inline')
   void notifyMask(GraftMask dirtyMask, {GraftChange<dynamic>? change}) {
     if (_isDisposed) return;
     if (_maskListeners.isNotEmpty) {
@@ -156,7 +157,20 @@ abstract class Graft<S extends GraftState> {
         }
       }
     }
-    notify(change: change);
+    if (observer != null) {
+      final effectiveChange = change ??
+          GraftChange<S>(
+            currentState: _state,
+            nextState: _state,
+            previousProps: _state.baselineSnapshot,
+            nextProps: List<Object?>.of(_state.props, growable: false),
+            dirtyMask: dirtyMask,
+          );
+      observer?.onChange(this, effectiveChange);
+    }
+    if (_notifier.hasListeners) {
+      _notifier.forceNotify();
+    }
   }
 
   /// Notifies all listeners and triggers fine-grained slot diffing for [state].
@@ -189,6 +203,14 @@ abstract class Graft<S extends GraftState> {
 
     _isNotifying = true;
     try {
+      if (_maskListeners.isNotEmpty) {
+        final len = _maskListeners.length;
+        for (int i = 0; i < len; i++) {
+          if (i < _maskListeners.length) {
+            _maskListeners[i](GraftMask.allDirty);
+          }
+        }
+      }
       if (observer != null) {
         final effectiveChange = change ??
             GraftChange<S>(
@@ -200,7 +222,9 @@ abstract class Graft<S extends GraftState> {
             );
         observer?.onChange(this, effectiveChange);
       }
-      _notifier.forceNotify();
+      if (_notifier.hasListeners) {
+        _notifier.forceNotify();
+      }
     } finally {
       _isNotifying = false;
     }

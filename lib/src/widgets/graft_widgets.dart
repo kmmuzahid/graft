@@ -153,15 +153,19 @@ extension GraftWidgetsX<S extends GraftState> on Graft<S> {
   /// ```
   Widget slots({
     required Widget Function(List<Widget> children) layout,
-    required List<Widget> Function(S state) children,
+    List<Widget> Function(S state)? children,
+    List<Widget Function(S state)>? slots,
     Key? key,
   }) {
+    assert(children != null || slots != null,
+        'Either children or slots must be provided to graft.slots');
     GraftScopeGuard.verifyNotActive(this, 'graft.slots');
     return GraftMultiChildDiffEngine<S>(
       key: key,
       graft: this,
       layoutBuilder: layout,
       childrenBuilder: children,
+      slotBuilders: slots,
     );
   }
 

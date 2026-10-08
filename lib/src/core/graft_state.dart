@@ -82,9 +82,178 @@ abstract class GraftState {
   @nonVirtual
   GraftMask get dirtyMask => _dirtyMask;
 
+  static const Object _undefined = _Sentinel();
+
+  List<Object?>? _propsBuffer;
+
+  /// High-performance zero-allocation register slot builder.
+  ///
+  /// Passes domain properties via CPU registers directly into a pre-allocated fixed buffer,
+  /// completely eliminating heap List allocations during [update] and micro-mutations.
+  ///
+  /// ### Example:
+  /// ```dart
+  /// class UserState extends GraftState {
+  ///   String name = 'Alice';
+  ///   int count = 0;
+  ///
+  ///   @override
+  ///   List<Object?> get props => propsOf(name, count);
+  /// }
+  /// ```
+  @protected
+  @pragma('vm:prefer-inline')
+  List<Object?> propsOf([
+    Object? p0 = _undefined,
+    Object? p1 = _undefined,
+    Object? p2 = _undefined,
+    Object? p3 = _undefined,
+    Object? p4 = _undefined,
+    Object? p5 = _undefined,
+    Object? p6 = _undefined,
+    Object? p7 = _undefined,
+    Object? p8 = _undefined,
+    Object? p9 = _undefined,
+    Object? p10 = _undefined,
+    Object? p11 = _undefined,
+    Object? p12 = _undefined,
+    Object? p13 = _undefined,
+    Object? p14 = _undefined,
+    Object? p15 = _undefined,
+  ]) {
+    var buf = _propsBuffer;
+    if (buf == null) {
+      int count = 0;
+      if (!identical(p0, _undefined)) {
+        count = 1;
+        if (!identical(p1, _undefined)) {
+          count = 2;
+          if (!identical(p2, _undefined)) {
+            count = 3;
+            if (!identical(p3, _undefined)) {
+              count = 4;
+              if (!identical(p4, _undefined)) {
+                count = 5;
+                if (!identical(p5, _undefined)) {
+                  count = 6;
+                  if (!identical(p6, _undefined)) {
+                    count = 7;
+                    if (!identical(p7, _undefined)) {
+                      count = 8;
+                      if (!identical(p8, _undefined)) {
+                        count = 9;
+                        if (!identical(p9, _undefined)) {
+                          count = 10;
+                          if (!identical(p10, _undefined)) {
+                            count = 11;
+                            if (!identical(p11, _undefined)) {
+                              count = 12;
+                              if (!identical(p12, _undefined)) {
+                                count = 13;
+                                if (!identical(p13, _undefined)) {
+                                  count = 14;
+                                  if (!identical(p14, _undefined)) {
+                                    count = 15;
+                                    if (!identical(p15, _undefined)) {
+                                      count = 16;
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      buf = _propsBuffer = List<Object?>.filled(count, null);
+    }
+    final len = buf.length;
+    switch (len) {
+      case 1:
+        buf[0] = p0;
+        break;
+      case 2:
+        buf[0] = p0;
+        buf[1] = p1;
+        break;
+      case 3:
+        buf[0] = p0;
+        buf[1] = p1;
+        buf[2] = p2;
+        break;
+      case 4:
+        buf[0] = p0;
+        buf[1] = p1;
+        buf[2] = p2;
+        buf[3] = p3;
+        break;
+      case 5:
+        buf[0] = p0;
+        buf[1] = p1;
+        buf[2] = p2;
+        buf[3] = p3;
+        buf[4] = p4;
+        break;
+      case 6:
+        buf[0] = p0;
+        buf[1] = p1;
+        buf[2] = p2;
+        buf[3] = p3;
+        buf[4] = p4;
+        buf[5] = p5;
+        break;
+      case 7:
+        buf[0] = p0;
+        buf[1] = p1;
+        buf[2] = p2;
+        buf[3] = p3;
+        buf[4] = p4;
+        buf[5] = p5;
+        buf[6] = p6;
+        break;
+      case 8:
+        buf[0] = p0;
+        buf[1] = p1;
+        buf[2] = p2;
+        buf[3] = p3;
+        buf[4] = p4;
+        buf[5] = p5;
+        buf[6] = p6;
+        buf[7] = p7;
+        break;
+      default:
+        if (len > 0) buf[0] = p0;
+        if (len > 1) buf[1] = p1;
+        if (len > 2) buf[2] = p2;
+        if (len > 3) buf[3] = p3;
+        if (len > 4) buf[4] = p4;
+        if (len > 5) buf[5] = p5;
+        if (len > 6) buf[6] = p6;
+        if (len > 7) buf[7] = p7;
+        if (len > 8) buf[8] = p8;
+        if (len > 9) buf[9] = p9;
+        if (len > 10) buf[10] = p10;
+        if (len > 11) buf[11] = p11;
+        if (len > 12) buf[12] = p12;
+        if (len > 13) buf[13] = p13;
+        if (len > 14) buf[14] = p14;
+        if (len > 15) buf[15] = p15;
+    }
+    return buf;
+  }
+
   @pragma('vm:prefer-inline')
   static Object? _snapshotValue(Object? value) {
-    if (value == null) return null;
+    if (value == null || value is num || value is String || value is bool || value is Enum) {
+      return value;
+    }
     if (value is GraftState) {
       final subProps = value.props;
       return List<Object?>.generate(
@@ -161,7 +330,12 @@ abstract class GraftState {
       return GraftMask.allDirty;
     }
 
-    var mask = GraftMask.empty;
+    int singleDirtyIndex = -1;
+    int dirtyCount = 0;
+    int w0 = 0;
+    int w1 = 0;
+    List<int>? extra;
+
     for (int i = 0; i < len; i++) {
       final p = prev[i];
       final c = current[i];
@@ -182,6 +356,10 @@ abstract class GraftState {
         } else {
           isDirty = !_deepEquals(p, c);
         }
+      } else if (c == null || p == null) {
+        isDirty = true;
+      } else if (c is num || c is String || c is bool || c is Enum) {
+        isDirty = (p != c);
       } else if (c is GraftState) {
         final subProps = c.props;
         if (p is List && p.length == subProps.length) {
@@ -206,10 +384,36 @@ abstract class GraftState {
       }
 
       if (isDirty) {
-        mask = mask.withBit(i);
+        dirtyCount++;
+        if (dirtyCount == 1) {
+          singleDirtyIndex = i;
+        }
+        if (i < 32) {
+          w0 |= (1 << i);
+        } else if (i < 64) {
+          w1 |= (1 << (i - 32));
+        } else {
+          final wordIdx = (i >> 5) - 2;
+          extra ??= <int>[];
+          while (extra.length <= wordIdx) {
+            extra.add(0);
+          }
+          extra[wordIdx] |= (1 << (i & 31));
+        }
         prev[i] = _snapshotValue(c);
       }
     }
+
+    if (dirtyCount == 0) {
+      _dirtyMask = GraftMask.empty;
+      return GraftMask.empty;
+    }
+    if (dirtyCount == 1 && singleDirtyIndex < 64) {
+      final mask = GraftMask.fromIndex(singleDirtyIndex);
+      _dirtyMask = mask;
+      return mask;
+    }
+    final mask = GraftMask.fromWords(w0, w1, extra);
     _dirtyMask = mask;
     return mask;
   }
@@ -249,4 +453,8 @@ abstract class GraftState {
       _graft?.notifyMask(mask, change: change);
     }
   }
+}
+
+class _Sentinel {
+  const _Sentinel();
 }

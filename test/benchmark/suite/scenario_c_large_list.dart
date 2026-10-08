@@ -79,7 +79,7 @@ class GraftListState extends GraftState {
   GraftListState(this.items);
 
   @override
-  List<Object?> get props => [items];
+  List<Object?> get props => propsOf(items);
 }
 
 class GraftListController extends Graft<GraftListState> {

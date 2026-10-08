@@ -15,7 +15,7 @@ import 'tracking_widget.dart';
 class GraftBState extends GraftState {
   int count = 0;
   @override
-  List<Object?> get props => [count];
+  List<Object?> get props => propsOf(count);
 }
 
 class GraftBController extends Graft<GraftBState> {
@@ -100,7 +100,65 @@ class ScenarioBRebuildIsolationRunner {
     tester.view.physicalSize = const Size(1200, 3000);
 
     // -------------------------------------------------------------------------
-    // 1. GRAFT (graft.slots engine)
+    // 0. GRAFT (leaf slot: graft((s) => ...))
+    // -------------------------------------------------------------------------
+    {
+      final samples = <double>[];
+      int lastDynamicBuilds = 0;
+      int lastStaticBuilds = 0;
+
+      for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
+        final ctrl = GraftBController();
+        final counter = RebuildCounter(staticCount);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Column(
+                children: [
+                  ctrl((s) => TrackingWidget(
+                    label: 'Dynamic: ${s.count}',
+                    onBuild: () => counter.dynamicBuilds++,
+                  )),
+                  for (int i = 0; i < staticCount; i++)
+                    TrackingWidget(
+                      label: 'Static $i',
+                      onBuild: () => counter.staticBuilds[i]++,
+                    ),
+                ],
+              ),
+            ),
+          ),
+        );
+
+        counter.reset();
+        final sw = Stopwatch()..start();
+        for (int f = 0; f < totalFrames; f++) {
+          ctrl.increment();
+          await tester.pump();
+        }
+        sw.stop();
+
+        if (r >= warmUpRuns) {
+          samples.add(sw.elapsedMicroseconds / 1000.0);
+          lastDynamicBuilds = counter.dynamicBuilds;
+          lastStaticBuilds = counter.totalStaticBuilds;
+        }
+      }
+
+      results.add(BenchmarkStats(
+        scenario: scenarioName,
+        framework: 'Graft (leaf slot)',
+        samplesMs: samples,
+        targetRebuilds: lastDynamicBuilds,
+        staticRebuilds: lastStaticBuilds,
+        allocatedObjects: 0,
+        notes: 'Depth-N parent rebuild insulation',
+      ));
+    }
+
+    // -------------------------------------------------------------------------
+    // 1. GRAFT (graft.slots layout engine)
     // -------------------------------------------------------------------------
     {
       final samples = <double>[];
@@ -116,13 +174,13 @@ class ScenarioBRebuildIsolationRunner {
             home: Scaffold(
               body: ctrl.slots(
                 layout: (children) => Column(children: children),
-                children: (s) => [
-                  TrackingWidget(
+                slots: [
+                  (s) => TrackingWidget(
                     label: 'Dynamic: ${s.count}',
                     onBuild: () => counter.dynamicBuilds++,
                   ),
                   for (int i = 0; i < staticCount; i++)
-                    TrackingWidget(
+                    (s) => TrackingWidget(
                       label: 'Static $i',
                       onBuild: () => counter.staticBuilds[i]++,
                     ),
