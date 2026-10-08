@@ -31,4 +31,5 @@ dev_dependencies:
   flutter_riverpod: ^2.5.1
   signals_flutter: ^5.5.0
   get: ^4.6.6
+  provider: ^6.1.5+1
 
