@@ -339,6 +339,24 @@ extension GraftWidgetsX<S extends GraftState> on Graft<S> {
       builder: (context, itm) => builder(itm),
     );
   }
+
+  /// Universal fine-grained selector slot adapter.
+  ///
+  /// Rebuilds **ONLY** when [selector] returns a new or modified value (`prev != next`).
+  ///
+  /// ### Example:
+  /// ```dart
+  /// graft.select(
+  ///   (s) => s.items[index],
+  ///   builder: (item) => Text(item.title),
+  /// )
+  /// ```
+  Widget select<T>(
+    T Function(S state) selector, {
+    required Widget Function(T value) builder,
+    Key? key,
+  }) =>
+      item<T>(selector: selector, builder: builder, key: key);
 }
 
 class _GraftComputation<S extends GraftState, R> extends StatefulWidget

@@ -37,11 +37,26 @@ class SlotMetadata {
     }
   }
 
+  /// The currently retained widget for this slot.
+  Widget currentWidget;
+
+  /// The active leaf element for this slot, allowing direct rebuild dispatch without ValueNotifier.
+  Element? element;
+
   /// The individual surgical trigger for this slot's leaf Element.
-  final ValueNotifier<Widget> notifier;
+  final SlotNotifier notifier;
 
   /// Rebuild counter for profiling and DevTools.
   int rebuildCount = 0;
+
+  /// Pre-compiled typed evaluator function for 0-reflection runtime dispatch.
+  final Widget Function(dynamic state)? evaluator;
+
+  /// Lazy evaluator closure returning the latest widget.
+  final Widget Function()? evaluate;
+
+  /// The parent Graft controller.
+  final dynamic graft;
 
   SlotMetadata({
     required this.slotIndex,
@@ -49,13 +64,25 @@ class SlotMetadata {
     required this.widgetType,
     required this.contentFingerprint,
     required Widget initialWidget,
+    this.evaluator,
+    this.evaluate,
+    this.graft,
     int? boundFieldIndex,
     GraftMask fieldDependenciesMask = GraftMask.empty,
     this.ignoredMask = GraftMask.empty,
-  })  : fieldDependenciesMask = boundFieldIndex != null
+  })  : currentWidget = initialWidget,
+        fieldDependenciesMask = boundFieldIndex != null
             ? GraftMask.fromIndex(boundFieldIndex)
             : fieldDependenciesMask,
-        notifier = ValueNotifier<Widget>(initialWidget);
+        notifier = SlotNotifier(initialWidget);
+
+  /// Updates this slot's widget and dispatches direct element rebuild.
+  @pragma('vm:prefer-inline')
+  void updateWidget(Widget newWidget) {
+    currentWidget = newWidget;
+    notifier.value = newWidget;
+    element?.markNeedsBuild();
+  }
 
   /// Fast evaluation of whether this slot needs to rebuild given [dirtyMask].
   @pragma('vm:prefer-inline')
@@ -69,6 +96,7 @@ class SlotMetadata {
 
   /// Disposes this slot's internal notifier.
   void dispose() {
+    element = null;
     notifier.dispose();
   }
 
@@ -131,3 +159,32 @@ class SlotMetadata {
     return w.hashCode;
   }
 }
+
+/// Ultra-lightweight [ValueNotifier] that tracks element attachment with zero listener overhead.
+class SlotNotifier extends ValueNotifier<Widget> {
+  SlotNotifier(super.value);
+  bool _elementAttached = false;
+  Widget? _latestValue;
+
+  /// Attaches the slot's leaf element.
+  void attachElement() => _elementAttached = true;
+
+  /// Detaches the slot's leaf element.
+  void detachElement() => _elementAttached = false;
+
+  @override
+  bool get hasListeners => _elementAttached || super.hasListeners;
+
+  @override
+  Widget get value => _latestValue ?? super.value;
+
+  @override
+  set value(Widget newValue) {
+    if (identical(value, newValue)) return;
+    _latestValue = newValue;
+    if (super.hasListeners) {
+      super.value = newValue;
+    }
+  }
+}
+

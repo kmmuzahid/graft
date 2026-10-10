@@ -454,7 +454,7 @@ class ScenarioBRebuildIsolationRunner {
         final sw = Stopwatch()..start();
         for (int f = 0; f < totalFrames; f++) {
           countSignal.value++;
-          await tester.pump(Duration.zero);
+          await tester.pump();
         }
         sw.stop();
 

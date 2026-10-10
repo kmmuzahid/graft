@@ -90,28 +90,18 @@ class GraftListController extends Graft<GraftListState> {
         )));
 
   void updateItemAt(int index, int val) {
-    final updated = state.items[index].copyWith(value: val);
-    final newList = List<ItemData>.from(state.items);
-    newList[index] = updated;
-    state
-      ..items = newList
-      ..update();
+    state.items[index] = state.items[index].copyWith(value: val);
+    state.update();
   }
 
   void insertAt(int index, ItemData item) {
-    final newList = List<ItemData>.from(state.items);
-    newList.insert(index, item);
-    state
-      ..items = newList
-      ..update();
+    state.items.insert(index, item);
+    state.update();
   }
 
   void removeAt(int index) {
-    final newList = List<ItemData>.from(state.items);
-    newList.removeAt(index);
-    state
-      ..items = newList
-      ..update();
+    state.items.removeAt(index);
+    state.update();
   }
 }
 
@@ -296,16 +286,18 @@ class ScenarioCLargeListRunner {
                 itemCount: itemCount,
                 itemExtent: 50.0,
                 itemBuilder: (context, index) {
-                  return ctrl.slot(builder: (s) {
-                    final item = s.items[index];
-                    return TrackedListTile(
-                      key: ValueKey(item.id),
-                      item: item,
-                      onBuild: () {
-                        if (index == targetIndex) targetBuilds++;
-                      },
-                    );
-                  });
+                  return ctrl.select(
+                    (s) => s.items[index],
+                    builder: (item) {
+                      return TrackedListTile(
+                        key: ValueKey(item.id),
+                        item: item,
+                        onBuild: () {
+                          if (index == targetIndex) targetBuilds++;
+                        },
+                      );
+                    },
+                  );
                 },
               ),
             ),
@@ -684,7 +676,7 @@ class ScenarioCLargeListRunner {
     // 1. Graft
     {
       final samples = <double>[];
-      for (int r = 0; r < measuredRuns; r++) {
+      for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final ctrl = GraftListController(initialCount);
         final sw = Stopwatch()..start();
         for (int i = 0; i < ops; i++) {
@@ -694,7 +686,9 @@ class ScenarioCLargeListRunner {
           ctrl.removeAt(removeIndices[i].clamp(0, ctrl.state.items.length - 1));
         }
         sw.stop();
-        samples.add(sw.elapsedMicroseconds / 1000.0);
+        if (r >= warmUpRuns) {
+          samples.add(sw.elapsedMicroseconds / 1000.0);
+        }
       }
       results.add(BenchmarkStats(
         scenario: scenarioName,
@@ -707,7 +701,7 @@ class ScenarioCLargeListRunner {
     // 2. BLoC (Cubit)
     {
       final samples = <double>[];
-      for (int r = 0; r < measuredRuns; r++) {
+      for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final cubit = BlocListCubit(initialCount);
         final sw = Stopwatch()..start();
         for (int i = 0; i < ops; i++) {
@@ -717,7 +711,9 @@ class ScenarioCLargeListRunner {
           cubit.removeAt(removeIndices[i].clamp(0, cubit.state.length - 1));
         }
         sw.stop();
-        samples.add(sw.elapsedMicroseconds / 1000.0);
+        if (r >= warmUpRuns) {
+          samples.add(sw.elapsedMicroseconds / 1000.0);
+        }
         cubit.close();
       }
       results.add(BenchmarkStats(
@@ -731,7 +727,7 @@ class ScenarioCLargeListRunner {
     // 3. Riverpod (Notifier)
     {
       final samples = <double>[];
-      for (int r = 0; r < measuredRuns; r++) {
+      for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final container = riverpod_pkg.ProviderContainer();
         final provider = riverpod_pkg.NotifierProvider<RiverpodListNotifier, List<ItemData>>(
           () => RiverpodListNotifier(initialCount),
@@ -745,7 +741,9 @@ class ScenarioCLargeListRunner {
           notifier.removeAt(removeIndices[i].clamp(0, notifier.state.length - 1));
         }
         sw.stop();
-        samples.add(sw.elapsedMicroseconds / 1000.0);
+        if (r >= warmUpRuns) {
+          samples.add(sw.elapsedMicroseconds / 1000.0);
+        }
         container.dispose();
       }
       results.add(BenchmarkStats(
@@ -759,7 +757,7 @@ class ScenarioCLargeListRunner {
     // 4. GetX (RxList)
     {
       final samples = <double>[];
-      for (int r = 0; r < measuredRuns; r++) {
+      for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final ctrl = GetXListController(initialCount);
         final sw = Stopwatch()..start();
         for (int i = 0; i < ops; i++) {
@@ -769,7 +767,9 @@ class ScenarioCLargeListRunner {
           ctrl.removeAt(removeIndices[i].clamp(0, ctrl.items.length - 1));
         }
         sw.stop();
-        samples.add(sw.elapsedMicroseconds / 1000.0);
+        if (r >= warmUpRuns) {
+          samples.add(sw.elapsedMicroseconds / 1000.0);
+        }
       }
       results.add(BenchmarkStats(
         scenario: scenarioName,
@@ -782,7 +782,7 @@ class ScenarioCLargeListRunner {
     // 5. Provider
     {
       final samples = <double>[];
-      for (int r = 0; r < measuredRuns; r++) {
+      for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final model = ProviderListModel(initialCount);
         final sw = Stopwatch()..start();
         for (int i = 0; i < ops; i++) {
@@ -792,7 +792,9 @@ class ScenarioCLargeListRunner {
           model.removeAt(removeIndices[i].clamp(0, model.items.length - 1));
         }
         sw.stop();
-        samples.add(sw.elapsedMicroseconds / 1000.0);
+        if (r >= warmUpRuns) {
+          samples.add(sw.elapsedMicroseconds / 1000.0);
+        }
         model.dispose();
       }
       results.add(BenchmarkStats(

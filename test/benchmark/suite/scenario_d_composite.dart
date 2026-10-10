@@ -242,14 +242,16 @@ class ScenarioDCompositeRunner {
     // 1. Graft
     {
       final samples = <double>[];
-      for (int r = 0; r < measuredRuns; r++) {
+      for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final ctrl = CartGraftController();
         final sw = Stopwatch()..start();
         for (int i = 0; i < 10; i++) ctrl.addToCart(i);
         for (int i = 0; i < 20; i++) ctrl.updateQuantity(i % 5, i + 1);
         for (int i = 0; i < 10; i++) ctrl.setCategory(['All', 'Electronics', 'Clothing', 'Books'][i % 4]);
         sw.stop();
-        samples.add(sw.elapsedMicroseconds / 1000.0);
+        if (r >= warmUpRuns) {
+          samples.add(sw.elapsedMicroseconds / 1000.0);
+        }
       }
       results.add(BenchmarkStats(
         scenario: scenarioName,
@@ -263,14 +265,16 @@ class ScenarioDCompositeRunner {
     // 2. BLoC (Cubit)
     {
       final samples = <double>[];
-      for (int r = 0; r < measuredRuns; r++) {
+      for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final cubit = CartBlocCubit();
         final sw = Stopwatch()..start();
         for (int i = 0; i < 10; i++) cubit.updateQuantity(i, 1);
         for (int i = 0; i < 20; i++) cubit.updateQuantity(i % 5, i + 1);
         for (int i = 0; i < 10; i++) cubit.setCategory(['All', 'Electronics', 'Clothing', 'Books'][i % 4]);
         sw.stop();
-        samples.add(sw.elapsedMicroseconds / 1000.0);
+        if (r >= warmUpRuns) {
+          samples.add(sw.elapsedMicroseconds / 1000.0);
+        }
         cubit.close();
       }
       results.add(BenchmarkStats(
@@ -285,7 +289,7 @@ class ScenarioDCompositeRunner {
     // 3. Signals
     {
       final samples = <double>[];
-      for (int r = 0; r < measuredRuns; r++) {
+      for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final selectedCat = signals_pkg.signal('All');
         final quantities = List.generate(50, (_) => signals_pkg.signal(0));
         final totalPrice = signals_pkg.computed(() {
@@ -302,7 +306,9 @@ class ScenarioDCompositeRunner {
         for (int i = 0; i < 10; i++) selectedCat.value = ['All', 'Electronics', 'Clothing', 'Books'][i % 4];
         totalPrice.value; // evaluate computed
         sw.stop();
-        samples.add(sw.elapsedMicroseconds / 1000.0);
+        if (r >= warmUpRuns) {
+          samples.add(sw.elapsedMicroseconds / 1000.0);
+        }
       }
       results.add(BenchmarkStats(
         scenario: scenarioName,
@@ -328,14 +334,16 @@ class ScenarioDCompositeRunner {
     // 1. Graft
     {
       final samples = <double>[];
-      for (int r = 0; r < measuredRuns; r++) {
+      for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final ctrl = Form12GraftController();
         final sw = Stopwatch()..start();
         for (int i = 0; i < typingEvents; i++) {
           ctrl.updateField(i % 10, (i * 10.0) % 200.0);
         }
         sw.stop();
-        samples.add(sw.elapsedMicroseconds / 1000.0);
+        if (r >= warmUpRuns) {
+          samples.add(sw.elapsedMicroseconds / 1000.0);
+        }
         expect(ctrl.state.isValid, true);
       }
       results.add(BenchmarkStats(
@@ -350,14 +358,16 @@ class ScenarioDCompositeRunner {
     // 2. BLoC (Cubit)
     {
       final samples = <double>[];
-      for (int r = 0; r < measuredRuns; r++) {
+      for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final cubit = Form12BlocCubit();
         final sw = Stopwatch()..start();
         for (int i = 0; i < typingEvents; i++) {
           cubit.updateField(i % 10, (i * 10.0) % 200.0);
         }
         sw.stop();
-        samples.add(sw.elapsedMicroseconds / 1000.0);
+        if (r >= warmUpRuns) {
+          samples.add(sw.elapsedMicroseconds / 1000.0);
+        }
         expect(cubit.state.isValid, true);
         cubit.close();
       }
@@ -373,7 +383,7 @@ class ScenarioDCompositeRunner {
     // 3. Signals
     {
       final samples = <double>[];
-      for (int r = 0; r < measuredRuns; r++) {
+      for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final fields = List.generate(10, (_) => signals_pkg.signal(0.0));
         final emailSig = signals_pkg.signal('user@example.com');
         final termsSig = signals_pkg.signal(true);
@@ -392,7 +402,9 @@ class ScenarioDCompositeRunner {
         }
         expect(isValidSig.value, true);
         sw.stop();
-        samples.add(sw.elapsedMicroseconds / 1000.0);
+        if (r >= warmUpRuns) {
+          samples.add(sw.elapsedMicroseconds / 1000.0);
+        }
       }
       results.add(BenchmarkStats(
         scenario: scenarioName,
@@ -418,7 +430,7 @@ class ScenarioDCompositeRunner {
     // 1. Graft (context.use + PopupRoute Protection)
     {
       final samples = <double>[];
-      for (int r = 0; r < measuredRuns; r++) {
+      for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final ctrl = GraftSingleController();
         final sw = Stopwatch()..start();
 
@@ -468,7 +480,9 @@ class ScenarioDCompositeRunner {
         expect(find.text('Count: 1'), findsOneWidget);
 
         sw.stop();
-        samples.add(sw.elapsedMicroseconds / 1000.0);
+        if (r >= warmUpRuns) {
+          samples.add(sw.elapsedMicroseconds / 1000.0);
+        }
         ctrl.dispose();
       }
 
@@ -483,7 +497,7 @@ class ScenarioDCompositeRunner {
     // 2. BLoC (BlocProvider value across Navigator)
     {
       final samples = <double>[];
-      for (int r = 0; r < measuredRuns; r++) {
+      for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final cubit = BlocSingleCubit();
         final sw = Stopwatch()..start();
 
@@ -525,7 +539,9 @@ class ScenarioDCompositeRunner {
         await tester.pumpAndSettle();
 
         sw.stop();
-        samples.add(sw.elapsedMicroseconds / 1000.0);
+        if (r >= warmUpRuns) {
+          samples.add(sw.elapsedMicroseconds / 1000.0);
+        }
         cubit.close();
       }
 

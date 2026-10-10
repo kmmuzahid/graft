@@ -35,6 +35,7 @@ class LifecycleProviderModel extends ChangeNotifier {
 // SCENARIO E RUNNER
 // =============================================================================
 class ScenarioELifecycleRunner {
+  static const int warmUpRuns = 3;
   static const int measuredRuns = 15;
 
   static Future<List<BenchmarkStats>> runAll(WidgetTester tester) async {
@@ -72,7 +73,7 @@ class ScenarioELifecycleRunner {
     // 1. Graft
     {
       final samples = <double>[];
-      for (int r = 0; r < measuredRuns; r++) {
+      for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         GraftRouteTracker.reset();
         GraftRegistry.reset();
         final graftObserver = GraftRouteObserver();
@@ -126,7 +127,9 @@ class ScenarioELifecycleRunner {
         expect(hostGraft!.isDisposed, true);
 
         sw.stop();
-        samples.add(sw.elapsedMicroseconds / 1000.0);
+        if (r >= warmUpRuns) {
+          samples.add(sw.elapsedMicroseconds / 1000.0);
+        }
       }
 
       results.add(BenchmarkStats(
@@ -152,7 +155,7 @@ class ScenarioELifecycleRunner {
     // 1. Graft
     {
       final samples = <double>[];
-      for (int r = 0; r < measuredRuns; r++) {
+      for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final ctrl = LifecycleGraftController();
         ctrl.state..count = 42..update();
 
@@ -178,7 +181,9 @@ class ScenarioELifecycleRunner {
         expect(find.text('Count: 43'), findsOneWidget);
 
         sw.stop();
-        samples.add(sw.elapsedMicroseconds / 1000.0);
+        if (r >= warmUpRuns) {
+          samples.add(sw.elapsedMicroseconds / 1000.0);
+        }
         ctrl.dispose();
       }
 
@@ -193,7 +198,7 @@ class ScenarioELifecycleRunner {
     // 2. BLoC
     {
       final samples = <double>[];
-      for (int r = 0; r < measuredRuns; r++) {
+      for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final cubit = LifecycleBlocCubit();
         cubit.increment(); // 1
 
@@ -219,7 +224,9 @@ class ScenarioELifecycleRunner {
         expect(find.text('Count: 2'), findsOneWidget);
 
         sw.stop();
-        samples.add(sw.elapsedMicroseconds / 1000.0);
+        if (r >= warmUpRuns) {
+          samples.add(sw.elapsedMicroseconds / 1000.0);
+        }
         cubit.close();
       }
 
@@ -245,7 +252,7 @@ class ScenarioELifecycleRunner {
     // 1. Graft: Graceful safety guard (does not crash app)
     {
       final samples = <double>[];
-      for (int r = 0; r < measuredRuns; r++) {
+      for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final ctrl = LifecycleGraftController();
         ctrl.dispose();
         final sw = Stopwatch()..start();
@@ -255,7 +262,9 @@ class ScenarioELifecycleRunner {
         expect(ctrl.isDisposed, true);
 
         sw.stop();
-        samples.add(sw.elapsedMicroseconds / 1000.0);
+        if (r >= warmUpRuns) {
+          samples.add(sw.elapsedMicroseconds / 1000.0);
+        }
       }
       results.add(BenchmarkStats(
         scenario: scenarioName,
@@ -268,7 +277,7 @@ class ScenarioELifecycleRunner {
     // 2. BLoC: Throws StateError
     {
       final samples = <double>[];
-      for (int r = 0; r < measuredRuns; r++) {
+      for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final cubit = LifecycleBlocCubit();
         await cubit.close();
         final sw = Stopwatch()..start();
@@ -283,7 +292,9 @@ class ScenarioELifecycleRunner {
         expect(threw, true);
 
         sw.stop();
-        samples.add(sw.elapsedMicroseconds / 1000.0);
+        if (r >= warmUpRuns) {
+          samples.add(sw.elapsedMicroseconds / 1000.0);
+        }
       }
       results.add(BenchmarkStats(
         scenario: scenarioName,
@@ -296,7 +307,7 @@ class ScenarioELifecycleRunner {
     // 3. Provider: Throws FlutterError
     {
       final samples = <double>[];
-      for (int r = 0; r < measuredRuns; r++) {
+      for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final model = LifecycleProviderModel();
         model.dispose();
         final sw = Stopwatch()..start();
@@ -311,7 +322,9 @@ class ScenarioELifecycleRunner {
         expect(threw, true);
 
         sw.stop();
-        samples.add(sw.elapsedMicroseconds / 1000.0);
+        if (r >= warmUpRuns) {
+          samples.add(sw.elapsedMicroseconds / 1000.0);
+        }
       }
       results.add(BenchmarkStats(
         scenario: scenarioName,

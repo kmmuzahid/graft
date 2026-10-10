@@ -397,19 +397,17 @@ class ScenarioAMicroMutationRunner {
 
     // 1. Graft
     {
-      for (int w = 0; w < warmUpRuns; w++) {
-        final ctrl = GraftSingleController();
-        for (int i = 0; i < iterations ~/ 10; i++) ctrl.increment();
-      }
       final samples = <double>[];
-      for (int r = 0; r < measuredRuns; r++) {
+      for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final ctrl = GraftSingleController();
         int fires = 0;
         ctrl.addListener(() => fires++);
         final sw = Stopwatch()..start();
         for (int i = 0; i < iterations; i++) ctrl.increment();
         sw.stop();
-        samples.add(sw.elapsedMicroseconds / 1000.0);
+        if (r >= warmUpRuns) {
+          samples.add(sw.elapsedMicroseconds / 1000.0);
+        }
         expect(ctrl.state.count, iterations);
         expect(fires, iterations);
       }
@@ -424,14 +422,8 @@ class ScenarioAMicroMutationRunner {
 
     // 2. Riverpod (Notifier - Codegen style)
     {
-      for (int w = 0; w < warmUpRuns; w++) {
-        final container = riverpod_pkg.ProviderContainer();
-        final n = container.read(riverpodSingleNotifierProvider.notifier);
-        for (int i = 0; i < iterations ~/ 10; i++) n.increment();
-        container.dispose();
-      }
       final samples = <double>[];
-      for (int r = 0; r < measuredRuns; r++) {
+      for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final container = riverpod_pkg.ProviderContainer();
         final n = container.read(riverpodSingleNotifierProvider.notifier);
         int fires = 0;
@@ -439,7 +431,9 @@ class ScenarioAMicroMutationRunner {
         final sw = Stopwatch()..start();
         for (int i = 0; i < iterations; i++) n.increment();
         sw.stop();
-        samples.add(sw.elapsedMicroseconds / 1000.0);
+        if (r >= warmUpRuns) {
+          samples.add(sw.elapsedMicroseconds / 1000.0);
+        }
         sub.close();
         container.dispose();
       }
@@ -455,7 +449,7 @@ class ScenarioAMicroMutationRunner {
     // 3. Riverpod (StateNotifier - without codegen)
     {
       final samples = <double>[];
-      for (int r = 0; r < measuredRuns; r++) {
+      for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final container = riverpod_pkg.ProviderContainer();
         final n = container.read(riverpodSingleStateNotifierProvider.notifier);
         int fires = 0;
@@ -463,7 +457,9 @@ class ScenarioAMicroMutationRunner {
         final sw = Stopwatch()..start();
         for (int i = 0; i < iterations; i++) n.increment();
         sw.stop();
-        samples.add(sw.elapsedMicroseconds / 1000.0);
+        if (r >= warmUpRuns) {
+          samples.add(sw.elapsedMicroseconds / 1000.0);
+        }
         sub.close();
         container.dispose();
       }
@@ -479,14 +475,16 @@ class ScenarioAMicroMutationRunner {
     // 4. BLoC (Cubit)
     {
       final samples = <double>[];
-      for (int r = 0; r < measuredRuns; r++) {
+      for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final cubit = BlocSingleCubit();
         int fires = 0;
         final sub = cubit.stream.listen((_) => fires++);
         final sw = Stopwatch()..start();
         for (int i = 0; i < iterations; i++) cubit.increment();
         sw.stop();
-        samples.add(sw.elapsedMicroseconds / 1000.0);
+        if (r >= warmUpRuns) {
+          samples.add(sw.elapsedMicroseconds / 1000.0);
+        }
         sub.cancel();
         cubit.close();
       }
@@ -502,7 +500,7 @@ class ScenarioAMicroMutationRunner {
     // 5. Signals
     {
       final samples = <double>[];
-      for (int r = 0; r < measuredRuns; r++) {
+      for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final s = signals_pkg.signal(0);
         int fires = 0;
         final disposeEffect = signals_pkg.effect(() {
@@ -512,7 +510,9 @@ class ScenarioAMicroMutationRunner {
         final sw = Stopwatch()..start();
         for (int i = 0; i < iterations; i++) s.value++;
         sw.stop();
-        samples.add(sw.elapsedMicroseconds / 1000.0);
+        if (r >= warmUpRuns) {
+          samples.add(sw.elapsedMicroseconds / 1000.0);
+        }
         expect(fires, greaterThan(0));
         disposeEffect();
       }
@@ -528,14 +528,16 @@ class ScenarioAMicroMutationRunner {
     // 6. GetX
     {
       final samples = <double>[];
-      for (int r = 0; r < measuredRuns; r++) {
+      for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final ctrl = GetXSingleController();
         int fires = 0;
         final worker = getx.ever(ctrl.count, (_) => fires++);
         final sw = Stopwatch()..start();
         for (int i = 0; i < iterations; i++) ctrl.increment();
         sw.stop();
-        samples.add(sw.elapsedMicroseconds / 1000.0);
+        if (r >= warmUpRuns) {
+          samples.add(sw.elapsedMicroseconds / 1000.0);
+        }
         worker.dispose();
       }
       results.add(BenchmarkStats(
@@ -550,14 +552,16 @@ class ScenarioAMicroMutationRunner {
     // 7. Provider (ChangeNotifier)
     {
       final samples = <double>[];
-      for (int r = 0; r < measuredRuns; r++) {
+      for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final model = ProviderSingleModel();
         int fires = 0;
         model.addListener(() => fires++);
         final sw = Stopwatch()..start();
         for (int i = 0; i < iterations; i++) model.increment();
         sw.stop();
-        samples.add(sw.elapsedMicroseconds / 1000.0);
+        if (r >= warmUpRuns) {
+          samples.add(sw.elapsedMicroseconds / 1000.0);
+        }
         model.dispose();
       }
       results.add(BenchmarkStats(
@@ -584,14 +588,16 @@ class ScenarioAMicroMutationRunner {
     // 1. Graft
     {
       final samples = <double>[];
-      for (int r = 0; r < measuredRuns; r++) {
+      for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final ctrl = Graft5FieldController();
         int fires = 0;
         ctrl.addListener(() => fires++);
         final sw = Stopwatch()..start();
         for (int i = 0; i < iterations; i++) ctrl.updateAll(i);
         sw.stop();
-        samples.add(sw.elapsedMicroseconds / 1000.0);
+        if (r >= warmUpRuns) {
+          samples.add(sw.elapsedMicroseconds / 1000.0);
+        }
       }
       results.add(BenchmarkStats(
         scenario: scenarioName,
@@ -605,7 +611,7 @@ class ScenarioAMicroMutationRunner {
     // 2. Riverpod (Notifier)
     {
       final samples = <double>[];
-      for (int r = 0; r < measuredRuns; r++) {
+      for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final container = riverpod_pkg.ProviderContainer();
         final n = container.read(riverpod5FieldNotifierProvider.notifier);
         int fires = 0;
@@ -613,7 +619,9 @@ class ScenarioAMicroMutationRunner {
         final sw = Stopwatch()..start();
         for (int i = 0; i < iterations; i++) n.updateAll(i);
         sw.stop();
-        samples.add(sw.elapsedMicroseconds / 1000.0);
+        if (r >= warmUpRuns) {
+          samples.add(sw.elapsedMicroseconds / 1000.0);
+        }
         sub.close();
         container.dispose();
       }
@@ -629,7 +637,7 @@ class ScenarioAMicroMutationRunner {
     // 3. Riverpod (StateNotifier)
     {
       final samples = <double>[];
-      for (int r = 0; r < measuredRuns; r++) {
+      for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final container = riverpod_pkg.ProviderContainer();
         final n = container.read(riverpod5FieldStateNotifierProvider.notifier);
         int fires = 0;
@@ -637,7 +645,9 @@ class ScenarioAMicroMutationRunner {
         final sw = Stopwatch()..start();
         for (int i = 0; i < iterations; i++) n.updateAll(i);
         sw.stop();
-        samples.add(sw.elapsedMicroseconds / 1000.0);
+        if (r >= warmUpRuns) {
+          samples.add(sw.elapsedMicroseconds / 1000.0);
+        }
         sub.close();
         container.dispose();
       }
@@ -653,14 +663,16 @@ class ScenarioAMicroMutationRunner {
     // 4. BLoC (Cubit)
     {
       final samples = <double>[];
-      for (int r = 0; r < measuredRuns; r++) {
+      for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final cubit = Bloc5FieldCubit();
         int fires = 0;
         final sub = cubit.stream.listen((_) => fires++);
         final sw = Stopwatch()..start();
         for (int i = 0; i < iterations; i++) cubit.updateAll(i);
         sw.stop();
-        samples.add(sw.elapsedMicroseconds / 1000.0);
+        if (r >= warmUpRuns) {
+          samples.add(sw.elapsedMicroseconds / 1000.0);
+        }
         sub.cancel();
         cubit.close();
       }
@@ -676,7 +688,7 @@ class ScenarioAMicroMutationRunner {
     // 5. Signals
     {
       final samples = <double>[];
-      for (int r = 0; r < measuredRuns; r++) {
+      for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final sig = Signals5Field();
         int fires = 0;
         final disposeEffect = signals_pkg.effect(() {
@@ -690,7 +702,9 @@ class ScenarioAMicroMutationRunner {
         final sw = Stopwatch()..start();
         for (int i = 0; i < iterations; i++) sig.updateAll(i);
         sw.stop();
-        samples.add(sw.elapsedMicroseconds / 1000.0);
+        if (r >= warmUpRuns) {
+          samples.add(sw.elapsedMicroseconds / 1000.0);
+        }
         expect(fires, greaterThan(0));
         disposeEffect();
       }
@@ -706,14 +720,16 @@ class ScenarioAMicroMutationRunner {
     // 6. GetX
     {
       final samples = <double>[];
-      for (int r = 0; r < measuredRuns; r++) {
+      for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final ctrl = GetX5FieldController();
         int fires = 0;
         final worker = getx.ever(ctrl.f1, (_) => fires++);
         final sw = Stopwatch()..start();
         for (int i = 0; i < iterations; i++) ctrl.updateAll(i);
         sw.stop();
-        samples.add(sw.elapsedMicroseconds / 1000.0);
+        if (r >= warmUpRuns) {
+          samples.add(sw.elapsedMicroseconds / 1000.0);
+        }
         worker.dispose();
       }
       results.add(BenchmarkStats(
@@ -728,14 +744,16 @@ class ScenarioAMicroMutationRunner {
     // 7. Provider
     {
       final samples = <double>[];
-      for (int r = 0; r < measuredRuns; r++) {
+      for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final model = Provider5FieldModel();
         int fires = 0;
         model.addListener(() => fires++);
         final sw = Stopwatch()..start();
         for (int i = 0; i < iterations; i++) model.updateAll(i);
         sw.stop();
-        samples.add(sw.elapsedMicroseconds / 1000.0);
+        if (r >= warmUpRuns) {
+          samples.add(sw.elapsedMicroseconds / 1000.0);
+        }
         model.dispose();
       }
       results.add(BenchmarkStats(
@@ -762,14 +780,16 @@ class ScenarioAMicroMutationRunner {
     // 1. Graft
     {
       final samples = <double>[];
-      for (int r = 0; r < measuredRuns; r++) {
+      for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final ctrl = GraftNestedDepth8Controller();
         int fires = 0;
         ctrl.addListener(() => fires++);
         final sw = Stopwatch()..start();
         for (int i = 0; i < iterations; i++) ctrl.updateLeaf(i);
         sw.stop();
-        samples.add(sw.elapsedMicroseconds / 1000.0);
+        if (r >= warmUpRuns) {
+          samples.add(sw.elapsedMicroseconds / 1000.0);
+        }
       }
       results.add(BenchmarkStats(
         scenario: scenarioName,
@@ -783,7 +803,7 @@ class ScenarioAMicroMutationRunner {
     // 2. Riverpod (Notifier)
     {
       final samples = <double>[];
-      for (int r = 0; r < measuredRuns; r++) {
+      for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final container = riverpod_pkg.ProviderContainer();
         final n = container.read(riverpodNestedNotifierProvider.notifier);
         int fires = 0;
@@ -791,7 +811,9 @@ class ScenarioAMicroMutationRunner {
         final sw = Stopwatch()..start();
         for (int i = 0; i < iterations; i++) n.updateLeaf(i);
         sw.stop();
-        samples.add(sw.elapsedMicroseconds / 1000.0);
+        if (r >= warmUpRuns) {
+          samples.add(sw.elapsedMicroseconds / 1000.0);
+        }
         sub.close();
         container.dispose();
       }
@@ -807,7 +829,7 @@ class ScenarioAMicroMutationRunner {
     // 3. Riverpod (StateNotifier)
     {
       final samples = <double>[];
-      for (int r = 0; r < measuredRuns; r++) {
+      for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final container = riverpod_pkg.ProviderContainer();
         final n = container.read(riverpodNestedStateNotifierProvider.notifier);
         int fires = 0;
@@ -815,7 +837,9 @@ class ScenarioAMicroMutationRunner {
         final sw = Stopwatch()..start();
         for (int i = 0; i < iterations; i++) n.updateLeaf(i);
         sw.stop();
-        samples.add(sw.elapsedMicroseconds / 1000.0);
+        if (r >= warmUpRuns) {
+          samples.add(sw.elapsedMicroseconds / 1000.0);
+        }
         sub.close();
         container.dispose();
       }
@@ -831,14 +855,16 @@ class ScenarioAMicroMutationRunner {
     // 4. BLoC (Cubit)
     {
       final samples = <double>[];
-      for (int r = 0; r < measuredRuns; r++) {
+      for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final cubit = BlocNestedCubit();
         int fires = 0;
         final sub = cubit.stream.listen((_) => fires++);
         final sw = Stopwatch()..start();
         for (int i = 0; i < iterations; i++) cubit.updateLeaf(i);
         sw.stop();
-        samples.add(sw.elapsedMicroseconds / 1000.0);
+        if (r >= warmUpRuns) {
+          samples.add(sw.elapsedMicroseconds / 1000.0);
+        }
         sub.cancel();
         cubit.close();
       }
@@ -854,7 +880,7 @@ class ScenarioAMicroMutationRunner {
     // 5. Signals
     {
       final samples = <double>[];
-      for (int r = 0; r < measuredRuns; r++) {
+      for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final sig = SignalsDepth8();
         int fires = 0;
         final disposeEffect = signals_pkg.effect(() {
@@ -864,7 +890,9 @@ class ScenarioAMicroMutationRunner {
         final sw = Stopwatch()..start();
         for (int i = 0; i < iterations; i++) sig.updateLeaf(i);
         sw.stop();
-        samples.add(sw.elapsedMicroseconds / 1000.0);
+        if (r >= warmUpRuns) {
+          samples.add(sw.elapsedMicroseconds / 1000.0);
+        }
         expect(fires, greaterThan(0));
         disposeEffect();
       }
@@ -880,14 +908,16 @@ class ScenarioAMicroMutationRunner {
     // 6. GetX
     {
       final samples = <double>[];
-      for (int r = 0; r < measuredRuns; r++) {
+      for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final ctrl = GetXDepth8Controller();
         int fires = 0;
         final worker = getx.ever(ctrl.leaf, (_) => fires++);
         final sw = Stopwatch()..start();
         for (int i = 0; i < iterations; i++) ctrl.updateLeaf(i);
         sw.stop();
-        samples.add(sw.elapsedMicroseconds / 1000.0);
+        if (r >= warmUpRuns) {
+          samples.add(sw.elapsedMicroseconds / 1000.0);
+        }
         worker.dispose();
       }
       results.add(BenchmarkStats(
@@ -902,14 +932,16 @@ class ScenarioAMicroMutationRunner {
     // 7. Provider
     {
       final samples = <double>[];
-      for (int r = 0; r < measuredRuns; r++) {
+      for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final model = ProviderDepth8Model();
         int fires = 0;
         model.addListener(() => fires++);
         final sw = Stopwatch()..start();
         for (int i = 0; i < iterations; i++) model.updateLeaf(i);
         sw.stop();
-        samples.add(sw.elapsedMicroseconds / 1000.0);
+        if (r >= warmUpRuns) {
+          samples.add(sw.elapsedMicroseconds / 1000.0);
+        }
         model.dispose();
       }
       results.add(BenchmarkStats(

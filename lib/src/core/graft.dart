@@ -7,16 +7,6 @@ import 'graft_observer.dart';
 import 'graft_scope_tracker.dart';
 import 'graft_state.dart';
 
-/// Internal notifier that allows forcing notifications even when mutating state in-place.
-class _GraftNotifier<T> extends ValueNotifier<T> {
-  _GraftNotifier(super.value);
-
-  bool get hasActiveListeners => hasListeners;
-
-  void forceNotify() {
-    notifyListeners();
-  }
-}
 
 /// Base class for reactive state management with fine-grained slot isolation.
 ///
@@ -50,7 +40,7 @@ class _GraftNotifier<T> extends ValueNotifier<T> {
 ///   }
 /// }
 /// ```
-class Graft<S extends GraftState> {
+class Graft<S extends GraftState> extends ChangeNotifier {
   /// Global observer for monitoring lifecycle transitions and errors across all [Graft] instances.
   ///
   /// Set this in `main()` to log transitions or report errors to analytics:
@@ -63,18 +53,18 @@ class Graft<S extends GraftState> {
   static GraftObserver? observer;
 
   late S _state;
-  late final _GraftNotifier<S> _notifier;
-  final List<void Function(GraftMask dirtyMask)> _maskListeners = [];
+  void Function(GraftMask dirtyMask)? _singleMaskListener;
+  List<void Function(GraftMask dirtyMask)>? _extraMaskListeners;
   bool _isDisposed = false;
   bool _pendingNotify = false;
   bool _isNotifying = false;
+  ValueListenable<S>? _listenableCache;
 
   /// Creates a new [Graft] with the given [initialState].
   ///
   /// Automatically binds [initialState] to this controller and notifies [observer].
   Graft(S initialState) {
     _state = initialState;
-    _notifier = _GraftNotifier<S>(initialState);
     initialState.bindGraft(this);
     observer?.onCreate(this);
   }
@@ -87,8 +77,11 @@ class Graft<S extends GraftState> {
   /// state..name = 'Alice'..update();
   /// ```
   @nonVirtual
+  @pragma('vm:prefer-inline')
   S get state {
-    GraftScopeTracker.current?.record(this);
+    if (GraftScopeTracker.hasActiveScope) {
+      GraftScopeTracker.current?.record(this);
+    }
     return _state;
   }
 
@@ -102,7 +95,18 @@ class Graft<S extends GraftState> {
   /// )
   /// ```
   @nonVirtual
-  ValueListenable<S> get listenable => _notifier;
+  ValueListenable<S> get listenable =>
+      _listenableCache ??= _GraftListenable<S>(this);
+
+  VoidCallback? _singleListener;
+  List<VoidCallback>? _extraListeners;
+
+  /// Whether this [Graft] has any registered listeners.
+  @override
+  bool get hasListeners =>
+      _singleListener != null ||
+      (_extraListeners != null && _extraListeners!.isNotEmpty) ||
+      super.hasListeners;
 
   /// Whether this [Graft] has been disposed.
   ///
@@ -113,18 +117,29 @@ class Graft<S extends GraftState> {
   /// Adds a [listener] callback to be notified whenever [state] updates.
   ///
   /// Remember to remove the listener using [removeListener] when no longer needed.
-  @nonVirtual
+  @override
   void addListener(VoidCallback listener) {
     if (!_isDisposed) {
-      _notifier.addListener(listener);
+      if (_singleListener == null) {
+        _singleListener = listener;
+        return;
+      }
+      (_extraListeners ??= []).add(listener);
     }
   }
 
   /// Removes a previously registered [listener].
-  @nonVirtual
+  @override
   void removeListener(VoidCallback listener) {
     if (!_isDisposed) {
-      _notifier.removeListener(listener);
+      if (identical(_singleListener, listener)) {
+        _singleListener = null;
+        if (_extraListeners != null && _extraListeners!.isNotEmpty) {
+          _singleListener = _extraListeners!.removeLast();
+        }
+        return;
+      }
+      _extraListeners?.remove(listener);
     }
   }
 
@@ -132,7 +147,11 @@ class Graft<S extends GraftState> {
   @nonVirtual
   void addMaskListener(void Function(GraftMask dirtyMask) listener) {
     if (!_isDisposed) {
-      _maskListeners.add(listener);
+      if (_singleMaskListener == null) {
+        _singleMaskListener = listener;
+        return;
+      }
+      (_extraMaskListeners ??= []).add(listener);
     }
   }
 
@@ -140,7 +159,30 @@ class Graft<S extends GraftState> {
   @nonVirtual
   void removeMaskListener(void Function(GraftMask dirtyMask) listener) {
     if (!_isDisposed) {
-      _maskListeners.remove(listener);
+      if (identical(_singleMaskListener, listener)) {
+        _singleMaskListener = null;
+        if (_extraMaskListeners != null && _extraMaskListeners!.isNotEmpty) {
+          _singleMaskListener = _extraMaskListeners!.removeLast();
+        }
+        return;
+      }
+      _extraMaskListeners?.remove(listener);
+    }
+  }
+
+  @override
+  void notifyListeners() {
+    if (_isDisposed) return;
+    final single = _singleListener;
+    if (single != null) {
+      single();
+      final extra = _extraListeners;
+      if (extra != null && extra.isNotEmpty) {
+        final len = extra.length;
+        for (int i = 0; i < len; i++) {
+          extra[i]();
+        }
+      }
     }
   }
 
@@ -151,11 +193,14 @@ class Graft<S extends GraftState> {
   @pragma('vm:prefer-inline')
   void notifyMask(GraftMask dirtyMask, {GraftChange<dynamic>? change}) {
     if (_isDisposed) return;
-    if (_maskListeners.isNotEmpty) {
-      final len = _maskListeners.length;
-      for (int i = 0; i < len; i++) {
-        if (i < _maskListeners.length) {
-          _maskListeners[i](dirtyMask);
+    final sml = _singleMaskListener;
+    if (sml != null) {
+      sml(dirtyMask);
+      final eml = _extraMaskListeners;
+      if (eml != null && eml.isNotEmpty) {
+        final mLen = eml.length;
+        for (int i = 0; i < mLen; i++) {
+          eml[i](dirtyMask);
         }
       }
     }
@@ -170,8 +215,16 @@ class Graft<S extends GraftState> {
           );
       observer?.onChange(this, effectiveChange);
     }
-    if (_notifier.hasActiveListeners) {
-      _notifier.forceNotify();
+    final single = _singleListener;
+    if (single != null) {
+      single();
+      final extra = _extraListeners;
+      if (extra != null && extra.isNotEmpty) {
+        final eLen = extra.length;
+        for (int i = 0; i < eLen; i++) {
+          extra[i]();
+        }
+      }
     }
   }
 
@@ -205,11 +258,14 @@ class Graft<S extends GraftState> {
 
     _isNotifying = true;
     try {
-      if (_maskListeners.isNotEmpty) {
-        final len = _maskListeners.length;
-        for (int i = 0; i < len; i++) {
-          if (i < _maskListeners.length) {
-            _maskListeners[i](GraftMask.allDirty);
+      final sml = _singleMaskListener;
+      if (sml != null) {
+        sml(GraftMask.allDirty);
+        final eml = _extraMaskListeners;
+        if (eml != null && eml.isNotEmpty) {
+          final len = eml.length;
+          for (int i = 0; i < len; i++) {
+            eml[i](GraftMask.allDirty);
           }
         }
       }
@@ -224,8 +280,8 @@ class Graft<S extends GraftState> {
             );
         observer?.onChange(this, effectiveChange);
       }
-      if (_notifier.hasActiveListeners) {
-        _notifier.forceNotify();
+      if (hasListeners) {
+        notifyListeners();
       }
     } finally {
       _isNotifying = false;
@@ -341,11 +397,30 @@ class Graft<S extends GraftState> {
   /// }
   /// ```
   @mustCallSuper
+  @override
   void dispose() {
     if (_isDisposed) return;
     _isDisposed = true;
-    _maskListeners.clear();
-    _notifier.dispose();
+    _singleListener = null;
+    _extraListeners?.clear();
+    _singleMaskListener = null;
+    _extraMaskListeners?.clear();
+    super.dispose();
     observer?.onDispose(this);
   }
 }
+
+class _GraftListenable<S extends GraftState> implements ValueListenable<S> {
+  final Graft<S> _graft;
+  const _GraftListenable(this._graft);
+
+  @override
+  S get value => _graft.state;
+
+  @override
+  void addListener(VoidCallback listener) => _graft.addListener(listener);
+
+  @override
+  void removeListener(VoidCallback listener) => _graft.removeListener(listener);
+}
+
