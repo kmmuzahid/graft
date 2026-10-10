@@ -384,7 +384,7 @@ abstract class GraftState {
     // ⚡ Hardware Fast-Path: Single-Property State (Counter, Toggle, Status)
     if (len == 1) {
       final p = prev[0];
-      final c = current[0];
+      final c = current is _GraftPropsSingle ? current.value : current[0];
       if (_isPropertyDirty(p, c)) {
         prev[0] = _snapshotValue(c);
         final mask = GraftMask.fromIndex(0);
@@ -603,4 +603,41 @@ final class _GraftPropsListView extends GraftProps {
   @override
   Iterator<Object?> get iterator => _list.iterator;
 }
+
+final class _GraftPropsSingle extends GraftProps {
+  final Object? value;
+  const _GraftPropsSingle(this.value);
+
+  @override
+  Object? operator [](int index) {
+    if (index != 0) throw RangeError.index(index, this);
+    return value;
+  }
+
+  @override
+  int get length => 1;
+
+  @override
+  Iterator<Object?> get iterator => _SingleIterator(value);
+}
+
+final class _SingleIterator implements Iterator<Object?> {
+  final Object? _value;
+  bool _moved = false;
+
+  _SingleIterator(this._value);
+
+  @override
+  Object? get current => _moved ? _value : null;
+
+  @override
+  bool moveNext() {
+    if (!_moved) {
+      _moved = true;
+      return true;
+    }
+    return false;
+  }
+}
+
 

@@ -173,14 +173,14 @@ class ScenarioBRebuildIsolationRunner {
           MaterialApp(
             home: Scaffold(
               body: ctrl.slots(
-                layout: (children) => Column(children: children),
+                layout: Column(children: slots),
                 slots: [
                   (s) => TrackingWidget(
                     label: 'Dynamic: ${s.count}',
                     onBuild: () => counter.dynamicBuilds++,
                   ),
                   for (int i = 0; i < staticCount; i++)
-                    (s) => TrackingWidget(
+                    TrackingWidget(
                       label: 'Static $i',
                       onBuild: () => counter.staticBuilds[i]++,
                     ),
@@ -433,8 +433,9 @@ class ScenarioBRebuildIsolationRunner {
               body: Column(
                 children: [
                   signals_pkg.Watch((context) {
+                    final val = countSignal.watch(context);
                     return TrackingWidget(
-                      label: 'Dynamic: ${countSignal.value}',
+                      label: 'Dynamic: $val',
                       onBuild: () => counter.dynamicBuilds++,
                     );
                   }),
@@ -453,7 +454,7 @@ class ScenarioBRebuildIsolationRunner {
         final sw = Stopwatch()..start();
         for (int f = 0; f < totalFrames; f++) {
           countSignal.value++;
-          await tester.pump();
+          await tester.pump(Duration.zero);
         }
         sw.stop();
 
