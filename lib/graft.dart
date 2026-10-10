@@ -42,7 +42,7 @@ export 'src/core/value_graft.dart';
 export 'src/di/graft_registry.dart';
 export 'src/route/graft_route_tracker.dart';
 export 'src/widgets/child_slot_engine.dart'
-    show GraftEquivalent, GraftMultiChildDiffEngine, GraftScopeGuard;
+    show GraftEquivalent, GraftMultiChildDiffEngine, GraftScopeGuard, slots;
 export 'src/widgets/graft_boundary.dart';
 export 'src/widgets/graft_scope.dart' show GraftScope;
 export 'src/widgets/graft_widgets.dart';

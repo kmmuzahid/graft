@@ -9,7 +9,7 @@ class AddressState extends GraftState {
   AddressState({this.city = 'London', this.zipCode = '10001'});
 
   @override
-  List<Object?> get props => [city, zipCode];
+  GraftProps get props => propsOf(city, zipCode);
 }
 
 class UserProfileState extends GraftState {
@@ -22,7 +22,7 @@ class UserProfileState extends GraftState {
   }) : address = address ?? AddressState();
 
   @override
-  List<Object?> get props => [userName, address];
+  GraftProps get props => propsOf(userName, address);
 }
 
 class UserProfileController extends Graft<UserProfileState> {
@@ -93,10 +93,10 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: controller.slots(
-              layout: (children) => Column(children: children),
-              children: (s) => [
-                TrackedTextWidget('User: ${s.userName}', onBuild: () => userBuilds++),
-                TrackedTextWidget('City: ${s.address.city}', onBuild: () => cityBuilds++),
+              layout: Column(children: slots),
+              slots: [
+                (s) => TrackedTextWidget('User: ${s.userName}', onBuild: () => userBuilds++),
+                (s) => TrackedTextWidget('City: ${s.address.city}', onBuild: () => cityBuilds++),
               ],
             ),
           ),

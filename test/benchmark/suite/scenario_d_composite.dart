@@ -40,7 +40,7 @@ class CartGraftState extends GraftState {
   double totalPrice = 0.0;
 
   @override
-  List<Object?> get props => propsOf(selectedCategory, cartQuantities, totalPrice);
+  GraftProps get props => propsOf(selectedCategory, cartQuantities, totalPrice);
 }
 
 class CartGraftController extends Graft<CartGraftState> {
@@ -133,7 +133,7 @@ class Form12GraftState extends GraftState {
   bool isValid = true;
 
   @override
-  List<Object?> get props => propsOf(values, email, termsAccepted, totalSum, isValid);
+  GraftProps get props => propsOf(values, email, termsAccepted, totalSum, isValid);
 }
 
 class Form12GraftController extends Graft<Form12GraftState> {

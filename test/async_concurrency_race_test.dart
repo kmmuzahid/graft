@@ -6,7 +6,7 @@ class SearchState extends GraftState {
   SearchState({this.searchResult = const GraftAsync.idle()});
 
   @override
-  List<Object?> get props => [searchResult];
+  GraftProps get props => propsOf(searchResult);
 }
 
 class SearchGraft extends Graft<SearchState> {

@@ -15,7 +15,7 @@ class DynamicBranchState extends GraftState {
   });
 
   @override
-  List<Object?> get props => [title, showDetails, tags.length];
+  GraftProps get props => propsOf(title, showDetails, tags.length);
 }
 
 class DynamicBranchGraft extends Graft<DynamicBranchState> {
@@ -53,22 +53,27 @@ void main() {
       'graft.slots dynamic branching: list resizing, slot table reconciliation and memory safety',
       (tester) async {
     final graft = DynamicBranchGraft();
+    bool showDetails = false;
+    int tagCount = 2;
 
-    await tester.pumpWidget(
-      MaterialApp(
+    Widget buildTree() {
+      return MaterialApp(
         home: Scaffold(
           body: graft.slots(
             layout: (children) => Column(children: children),
-            children: (s) => [
-              Text('Title: ${s.title}'),
-              if (s.showDetails) const Text('EXPANDED DETAILS BANNER'),
-              for (final tag in s.tags) Text('Tag: $tag'),
-              const Text('STATIC FOOTER'),
+            slots: [
+              (s) => Text('Title: ${s.title}'),
+              if (showDetails) (_) => const Text('EXPANDED DETAILS BANNER'),
+              for (int i = 0; i < tagCount; i++)
+                (s) => Text('Tag: ${i < s.tags.length ? s.tags[i] : ""}'),
+              (_) => const Text('STATIC FOOTER'),
             ],
           ),
         ),
-      ),
-    );
+      );
+    }
+
+    await tester.pumpWidget(buildTree());
 
     // Initial state: showDetails=false, tags=2 => Total slots = 1 (title) + 2 (tags) + 1 (footer) = 4
     expect(find.text('Title: Main Item'), findsOneWidget);
@@ -83,8 +88,9 @@ void main() {
     expect((engineState.slotTable as List<SlotMetadata>).length, 4);
 
     // 1. Expand branch: showDetails becomes true => Total slots = 5
+    showDetails = true;
     graft.toggleDetails();
-    await tester.pump();
+    await tester.pumpWidget(buildTree());
 
     expect(find.text('EXPANDED DETAILS BANNER'), findsOneWidget);
     engineState =
@@ -93,8 +99,9 @@ void main() {
     expect((engineState.slotTable as List<SlotMetadata>).length, 5);
 
     // 2. Add tag via dynamic loop => Total slots = 6
+    tagCount = 3;
     graft.addTag('Graft');
-    await tester.pump();
+    await tester.pumpWidget(buildTree());
 
     expect(find.text('Tag: Graft'), findsOneWidget);
     engineState =
@@ -109,9 +116,11 @@ void main() {
     expect(find.text('Title: Updated Master Item'), findsOneWidget);
 
     // 4. Contract branch: collapse details and remove tag => Total slots = 4
+    showDetails = false;
+    tagCount = 2;
     graft.toggleDetails();
     graft.removeTag();
-    await tester.pump();
+    await tester.pumpWidget(buildTree());
 
     expect(find.text('EXPANDED DETAILS BANNER'), findsNothing);
     expect(find.text('Tag: Graft'), findsNothing);

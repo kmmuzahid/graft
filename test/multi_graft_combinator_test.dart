@@ -13,7 +13,7 @@ class UserState extends GraftState {
   UserState({this.name = 'Alice', this.email = 'alice@example.com'});
 
   @override
-  List<Object?> get props => [name, email];
+  GraftProps get props => propsOf(name, email);
 
   @override
   void onReset() {
@@ -36,7 +36,7 @@ class ThemeState extends GraftState {
   ThemeState({this.isDark = false, this.accent = 'purple'});
 
   @override
-  List<Object?> get props => [isDark, accent];
+  GraftProps get props => propsOf(isDark, accent);
 
   @override
   void onReset() {

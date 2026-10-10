@@ -125,4 +125,53 @@ extension GraftContextX on BuildContext {
 
     return newInstance;
   }
+
+  /// Resolves two active [Graft] controllers across the navigation stack using Dart 3 records.
+  ///
+  /// ```dart
+  /// final (userGraft, cartGraft) = context.use2(UserGraft.new, CartGraft.new);
+  /// ```
+  (A, B) use2<A extends Graft, B extends Graft>([
+    A Function()? factoryA,
+    B Function()? factoryB,
+  ]) {
+    return (use<A>(factoryA), use<B>(factoryB));
+  }
+
+  /// Resolves three active [Graft] controllers across the navigation stack using Dart 3 records.
+  ///
+  /// ```dart
+  /// final (user, cart, nav) = context.use3(UserGraft.new, CartGraft.new, NavGraft.new);
+  /// ```
+  (A, B, C) use3<A extends Graft, B extends Graft, C extends Graft>([
+    A Function()? factoryA,
+    B Function()? factoryB,
+    C Function()? factoryC,
+  ]) {
+    return (use<A>(factoryA), use<B>(factoryB), use<C>(factoryC));
+  }
+
+  /// Resolves four active [Graft] controllers across the navigation stack using Dart 3 records.
+  ///
+  /// ```dart
+  /// final (user, cart, nav, settings) = context.use4(
+  ///   UserGraft.new,
+  ///   CartGraft.new,
+  ///   NavGraft.new,
+  ///   SettingsGraft.new,
+  /// );
+  /// ```
+  (A, B, C, D) use4<A extends Graft, B extends Graft, C extends Graft, D extends Graft>([
+    A Function()? factoryA,
+    B Function()? factoryB,
+    C Function()? factoryC,
+    D Function()? factoryD,
+  ]) {
+    return (
+      use<A>(factoryA),
+      use<B>(factoryB),
+      use<C>(factoryC),
+      use<D>(factoryD),
+    );
+  }
 }

@@ -11,7 +11,7 @@ import 'package:get/get.dart' as getx;
 class GraftBenchmarkState extends GraftState {
   int count = 0;
   @override
-  List<Object?> get props => [count];
+  GraftProps get props => propsOf(count);
 }
 
 class GraftBenchmarkController extends Graft<GraftBenchmarkState> {

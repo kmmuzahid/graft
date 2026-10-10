@@ -30,7 +30,7 @@ class Graft50State extends GraftState {
   void set(int i, int val) => values[i] = val;
 
   @override
-  List<Object?> get props => List.unmodifiable(values);
+  GraftProps get props => propsOfMany(values);
 }
 
 class Graft50Controller extends Graft<Graft50State> {

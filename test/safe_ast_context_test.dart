@@ -9,7 +9,7 @@ class SafeThemeState extends GraftState {
   SafeThemeState({this.title = 'Hello', this.count = 0});
 
   @override
-  List<Object?> get props => [title, count];
+  GraftProps get props => propsOf(title, count);
 }
 
 class SafeThemeGraft extends Graft<SafeThemeState> {
@@ -68,10 +68,10 @@ void main() {
               theme: activeTheme,
               home: Scaffold(
                 body: graft.slots(
-                  layout: (children) => Column(children: children),
-                  children: (s) => [
-                    ThemedCustomCard(label: s.title),
-                    Text('Count: ${s.count}'),
+                  layout: Column(children: slots),
+                  slots: [
+                    (s) => ThemedCustomCard(label: s.title),
+                    (s) => Text('Count: ${s.count}'),
                   ],
                 ),
               ),
@@ -108,10 +108,10 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: graft.slots(
-              layout: (children) => Column(children: children),
-              children: (s) => [
+              layout: Column(children: slots),
+              slots: [
                 const KeyedCustomTile(key: ValueKey('static_tile'), text: 'Static'),
-                Text('Count: ${s.count}'),
+                (s) => Text('Count: ${s.count}'),
               ],
             ),
           ),

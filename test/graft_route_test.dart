@@ -7,7 +7,7 @@ class TestState extends GraftState {
   TestState({this.count = 0});
 
   @override
-  List<Object?> get props => [count];
+  GraftProps get props => propsOf(count);
 
   @override
   bool operator ==(Object other) =>

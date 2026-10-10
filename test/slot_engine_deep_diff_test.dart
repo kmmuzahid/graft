@@ -26,7 +26,7 @@ class DeepState extends GraftState {
   DeepState(this.value);
 
   @override
-  List<Object?> get props => [value];
+  GraftProps get props => propsOf(value);
 }
 
 class DeepGraft extends Graft<DeepState> {
@@ -427,23 +427,23 @@ void main() {
               children: [
                 graft.slots(
                   layout: (children) => ListView(shrinkWrap: true, children: children),
-                  children: (s) => [Text('ListView: ${s.value}')],
+                  slots: [(s) => Text('ListView: ${s.value}')],
                 ),
                 graft.slots(
                   layout: (children) => GridView.count(shrinkWrap: true, crossAxisCount: 2, children: children),
-                  children: (s) => [Text('GridView: ${s.value}')],
+                  slots: [(s) => Text('GridView: ${s.value}')],
                 ),
                 graft.slots(
                   layout: (children) => Card(child: Column(children: children)),
-                  children: (s) => [Text('Card: ${s.value}')],
+                  slots: [(s) => Text('Card: ${s.value}')],
                 ),
                 graft.slots(
                   layout: (children) => Padding(padding: const EdgeInsets.all(4), child: Column(children: children)),
-                  children: (s) => [Text('Padding: ${s.value}')],
+                  slots: [(s) => Text('Padding: ${s.value}')],
                 ),
                 graft.slots(
                   layout: (children) => Container(child: Column(children: children)),
-                  children: (s) => [Text('Container: ${s.value}')],
+                  slots: [(s) => Text('Container: ${s.value}')],
                 ),
               ],
             ),
@@ -473,7 +473,7 @@ void main() {
                 g.slot(builder: (s) => Text('Slot: ${s.value}')),
                 g.slots(
                   layout: (children) => Column(children: children),
-                  children: (s) => [Text('Slots: ${s.value}')],
+                  slots: [(s) => Text('Slots: ${s.value}')],
                 ),
               ],
             ),
@@ -808,11 +808,11 @@ void main() {
               children: [
                 graft.slots(
                   layout: (children) => CustomWrapperWithChild(child: Column(children: children)),
-                  children: (s) => [Text('CustomWrap: ${s.value}')],
+                  slots: [(s) => Text('CustomWrap: ${s.value}')],
                 ),
                 graft.slots(
                   layout: (children) => CustomThrowingChildWidget(childWidget: Column(children: children)),
-                  children: (s) => [Text('ThrowWrap: ${s.value}')],
+                  slots: [(s) => Text('ThrowWrap: ${s.value}')],
                 ),
               ],
             ),

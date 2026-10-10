@@ -28,14 +28,6 @@ class GraftChange<S> {
   /// The unbounded [GraftMask] bitset indicating which property indices were modified.
   final GraftMask dirtyMask;
 
-  /// Backward-compatible alias for [previousProps].
-  @Deprecated('Use previousProps instead.')
-  List<Object?> get previousTracked => previousProps;
-
-  /// Backward-compatible alias for [nextProps].
-  @Deprecated('Use nextProps instead.')
-  List<Object?> get nextTracked => nextProps;
-
   /// Creates a [GraftChange] describing a transition from [currentState] to [nextState].
   const GraftChange({
     required this.currentState,
@@ -43,8 +35,6 @@ class GraftChange<S> {
     this.previousProps = const [],
     this.nextProps = const [],
     this.dirtyMask = GraftMask.allDirty,
-    @Deprecated('Use previousProps instead.') List<Object?>? previousTracked,
-    @Deprecated('Use nextProps instead.') List<Object?>? nextTracked,
   });
 
   @override

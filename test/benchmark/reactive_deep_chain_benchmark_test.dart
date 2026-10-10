@@ -37,7 +37,7 @@ class GraftChainState extends GraftState {
   int get l10 => l9 + 1;
 
   @override
-  List<Object?> get props => [a];
+  GraftProps get props => propsOf(a);
 }
 
 class GraftChainController extends Graft<GraftChainState> {

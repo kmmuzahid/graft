@@ -7,7 +7,7 @@ import 'package:custom_lint_builder/custom_lint_builder.dart';
 
 /// Linter rule that encourages overriding `props` in subclasses of `GraftState`.
 ///
-/// Overriding `List<Object?> get props => [...]` allows Graft to compute
+/// Overriding `GraftProps get props => propsOf(...)` allows Graft to compute
 /// an unbounded dirty bitmask in CPU registers and achieve 0 GC heap allocations during diff passes.
 class PreferPropsInGraftStateRule extends DartLintRule {
   PreferPropsInGraftStateRule() : super(code: _code);
@@ -17,7 +17,7 @@ class PreferPropsInGraftStateRule extends DartLintRule {
     problemMessage:
         'Class "{0}" extends GraftState with domain fields but does not override "props".',
     correctionMessage:
-        'Override "List<Object?> get props => [...];" to enable 1-cycle hardware bitmask diffing and 0 GC heap allocations.',
+        'Override "GraftProps get props => propsOf(...);" to enable 1-cycle hardware bitmask diffing and 0 GC heap allocations.',
     errorSeverity: ErrorSeverity.INFO,
   );
 
@@ -41,10 +41,10 @@ class PreferPropsInGraftStateRule extends DartLintRule {
 
       if (!hasInstanceFields) return;
 
-      // Check if class overrides getter 'props' or legacy 'tracked'
+      // Check if class overrides getter 'props'
       final hasPropsGetter = node.members
           .whereType<MethodDeclaration>()
-          .any((m) => m.isGetter && (m.name.lexeme == 'props' || m.name.lexeme == 'tracked'));
+          .any((m) => m.isGetter && m.name.lexeme == 'props');
 
       if (!hasPropsGetter) {
         reporter.atToken(node.name, _code, arguments: [node.name.lexeme]);
@@ -52,8 +52,4 @@ class PreferPropsInGraftStateRule extends DartLintRule {
     });
   }
 }
-
-/// Backward compatibility alias for [PreferPropsInGraftStateRule].
-@Deprecated('Use PreferPropsInGraftStateRule instead.')
-typedef PreferTrackedInGraftStateRule = PreferPropsInGraftStateRule;
 

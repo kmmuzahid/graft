@@ -17,7 +17,7 @@ import 'benchmark_models.dart';
 class GraftSingleState extends GraftState {
   int count = 0;
   @override
-  List<Object?> get props => propsOf(count);
+  GraftProps get props => propsOf(count);
 }
 
 class GraftSingleController extends Graft<GraftSingleState> {
@@ -75,7 +75,7 @@ class Graft5FieldState extends GraftState {
   int f5 = 0;
 
   @override
-  List<Object?> get props => propsOf(f1, f2, f3, f4, f5);
+  GraftProps get props => propsOf(f1, f2, f3, f4, f5);
 }
 
 class Graft5FieldController extends Graft<Graft5FieldState> {
@@ -191,49 +191,49 @@ class Provider5FieldModel extends ChangeNotifier {
 class GraftNode8 extends GraftState {
   int value = 0;
   @override
-  List<Object?> get props => propsOf(value);
+  GraftProps get props => propsOf(value);
 }
 
 class GraftNode7 extends GraftState {
   final child = GraftNode8();
   @override
-  List<Object?> get props => propsOf(child);
+  GraftProps get props => propsOf(child);
 }
 
 class GraftNode6 extends GraftState {
   final child = GraftNode7();
   @override
-  List<Object?> get props => propsOf(child);
+  GraftProps get props => propsOf(child);
 }
 
 class GraftNode5 extends GraftState {
   final child = GraftNode6();
   @override
-  List<Object?> get props => propsOf(child);
+  GraftProps get props => propsOf(child);
 }
 
 class GraftNode4 extends GraftState {
   final child = GraftNode5();
   @override
-  List<Object?> get props => propsOf(child);
+  GraftProps get props => propsOf(child);
 }
 
 class GraftNode3 extends GraftState {
   final child = GraftNode4();
   @override
-  List<Object?> get props => propsOf(child);
+  GraftProps get props => propsOf(child);
 }
 
 class GraftNode2 extends GraftState {
   final child = GraftNode3();
   @override
-  List<Object?> get props => propsOf(child);
+  GraftProps get props => propsOf(child);
 }
 
 class GraftNode1 extends GraftState {
   final child = GraftNode2();
   @override
-  List<Object?> get props => propsOf(child);
+  GraftProps get props => propsOf(child);
 }
 
 class GraftNestedDepth8Controller extends Graft<GraftNode1> {

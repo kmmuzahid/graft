@@ -17,7 +17,7 @@ class DisorderState extends GraftState {
   });
 
   @override
-  List<Object?> get props => [name, score, email, isVerified];
+  GraftProps get props => propsOf(name, score, email, isVerified);
 }
 
 class DisorderGraft extends Graft<DisorderState> {
@@ -90,19 +90,19 @@ void main() {
         home: Scaffold(
           body: graft.slots(
             layout: (children) => Column(children: children),
-            children: (s) => [
+            slots: [
               // Slot 0: email (field index 2)
-              TrackedSlotWidget('Email: ${s.email}',
+              (s) => TrackedSlotWidget('Email: ${s.email}',
                   onBuild: () => emailBuilds++),
               // Slot 1: name (field index 0)
-              TrackedSlotWidget('Name: ${s.name}', onBuild: () => nameBuilds++),
+              (s) => TrackedSlotWidget('Name: ${s.name}', onBuild: () => nameBuilds++),
               // Slot 2: static
-              TrackedSlotWidget('STATIC BANNER', onBuild: () => staticBuilds++),
+              (_) => TrackedSlotWidget('STATIC BANNER', onBuild: () => staticBuilds++),
               // Slot 3: score (field index 1)
-              TrackedSlotWidget('Score: ${s.score}',
+              (s) => TrackedSlotWidget('Score: ${s.score}',
                   onBuild: () => scoreBuilds++),
               // Slot 4: verified (field index 3)
-              TrackedSlotWidget('Verified: ${s.isVerified}',
+              (s) => TrackedSlotWidget('Verified: ${s.isVerified}',
                   onBuild: () => verifiedBuilds++),
             ],
           ),
@@ -201,19 +201,19 @@ void main() {
         home: Scaffold(
           body: graft.slots(
             layout: (children) => Column(children: children),
-            children: (s) => [
+            slots: [
               // Slot 0: email (field index 3 in tracked)
-              TrackedSlotWidget('Email: ${s.email}',
+              (s) => TrackedSlotWidget('Email: ${s.email}',
                   onBuild: () => emailBuilds++),
               // Slot 1: name (field index 1 in tracked)
-              TrackedSlotWidget('Name: ${s.name}', onBuild: () => nameBuilds++),
+              (s) => TrackedSlotWidget('Name: ${s.name}', onBuild: () => nameBuilds++),
               // Slot 2: static
-              TrackedSlotWidget('STATIC BANNER', onBuild: () => staticBuilds++),
+              (_) => TrackedSlotWidget('STATIC BANNER', onBuild: () => staticBuilds++),
               // Slot 3: score (field index 0 in tracked)
-              TrackedSlotWidget('Score: ${s.score}',
+              (s) => TrackedSlotWidget('Score: ${s.score}',
                   onBuild: () => scoreBuilds++),
               // Slot 4: verified (field index 2 in tracked)
-              TrackedSlotWidget('Verified: ${s.isVerified}',
+              (s) => TrackedSlotWidget('Verified: ${s.isVerified}',
                   onBuild: () => verifiedBuilds++),
             ],
           ),
@@ -293,7 +293,7 @@ class DisorderStateInverted extends GraftState {
   });
 
   @override
-  List<Object?> get props => [score, name, isVerified, email];
+  GraftProps get props => propsOf(score, name, isVerified, email);
 }
 
 class DisorderInvertedGraft extends Graft<DisorderStateInverted> {

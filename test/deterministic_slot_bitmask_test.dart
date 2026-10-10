@@ -19,7 +19,7 @@ class MultiFieldBatchState extends GraftState {
   });
 
   @override
-  List<Object?> get props => [firstName, lastName, age, email, phone];
+  GraftProps get props => propsOf(firstName, lastName, age, email, phone);
 }
 
 class MultiFieldBatchGraft extends Graft<MultiFieldBatchState> {
@@ -58,15 +58,15 @@ void main() {
           home: Scaffold(
             body: graft.slots(
               layout: (children) => Column(children: children),
-              children: (s) => [
+              slots: [
                 // Slot 0: firstName & lastName (indices 0, 1)
-                Text('Name: ${s.firstName} ${s.lastName}'),
+                (s) => Text('Name: ${s.firstName} ${s.lastName}'),
                 // Slot 1: age (index 2)
-                Text('Age: ${s.age}'),
+                (s) => Text('Age: ${s.age}'),
                 // Slot 2: email (index 3)
-                Text('Email: ${s.email}'),
+                (s) => Text('Email: ${s.email}'),
                 // Slot 3: phone (index 4)
-                Text('Phone: ${s.phone}'),
+                (s) => Text('Phone: ${s.phone}'),
               ],
             ),
           ),

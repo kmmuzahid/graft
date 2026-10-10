@@ -7,7 +7,7 @@ class CounterState extends GraftState {
   CounterState(this.count);
 
   @override
-  List<Object?> get props => [count];
+  GraftProps get props => propsOf(count);
 
   @override
   void onReset() {

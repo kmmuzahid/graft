@@ -16,7 +16,7 @@ class ProfileState extends GraftState {
   });
 
   @override
-  List<Object?> get props => [name, email, isVerified, isLoading];
+  GraftProps get props => propsOf(name, email, isVerified, isLoading);
 }
 
 class ProfileGraft extends Graft<ProfileState> {
@@ -106,10 +106,10 @@ void main() {
         home: Scaffold(
           body: graft.slots(
             layout: (children) => Column(children: children),
-            children: (s) => [
-              const ConstHeaderWidget(),
-              DynamicNameWidget(s.name),
-              DynamicEmailWidget(s.email),
+            slots: [
+              (_) => const ConstHeaderWidget(),
+              (s) => DynamicNameWidget(s.name),
+              (s) => DynamicEmailWidget(s.email),
             ],
           ),
         ),
@@ -161,9 +161,9 @@ void main() {
         home: Scaffold(
           body: graft.slots(
             layout: (children) => Row(children: children),
-            children: (s) => [
-              Text('Rating: ${s.name}'),
-              Text('Contact: ${s.email}'),
+            slots: [
+              (s) => Text('Rating: ${s.name}'),
+              (s) => Text('Contact: ${s.email}'),
             ],
           ),
         ),
@@ -237,10 +237,10 @@ void main() {
         home: Scaffold(
           body: graft.slots(
             layout: (children) => Column(children: children),
-            children: (s) => [
-              Text('Name: ${s.name}'),
-              if (s.isVerified) const Text('Verified Badge'),
-              Text('Email: ${s.email}'),
+            slots: [
+              (s) => Text('Name: ${s.name}'),
+              (s) => s.isVerified ? const Text('Verified Badge') : const SizedBox.shrink(),
+              (s) => Text('Email: ${s.email}'),
             ],
           ),
         ),
@@ -370,8 +370,8 @@ void main() {
         home: Scaffold(
           body: graft.slots(
             layout: (children) => Column(children: children),
-            children: (s) => [
-              graft.slot(builder: (s) => Text(s.name)),
+            slots: [
+              (s) => graft.slot(builder: (s) => Text(s.name)),
             ],
           ),
         ),
@@ -398,9 +398,9 @@ void main() {
         home: Scaffold(
           body: graftA.slots(
             layout: (children) => Column(children: children),
-            children: (sA) => [
-              Text('User: ${sA.name}'),
-              graftB.slot(builder: (sB) => Text('Other: ${sB.email}')),
+            slots: [
+              (sA) => Text('User: ${sA.name}'),
+              (_) => graftB.slot(builder: (sB) => Text('Other: ${sB.email}')),
             ],
           ),
         ),
@@ -424,12 +424,12 @@ void main() {
         home: Scaffold(
           body: graft.slots(
             layout: (children) => Column(children: children),
-            children: (s) => [
+            slots: [
               // Non-const 3rd-party-like widget without GraftEquivalent
               // ignore: prefer_const_constructors
-              MockCkText('COREKIT EXAMPLE'),
-              Text('Name: ${s.name}'),
-              Text('Email: ${s.email}'),
+              (_) => MockCkText('COREKIT EXAMPLE'),
+              (s) => Text('Name: ${s.name}'),
+              (s) => Text('Email: ${s.email}'),
             ],
           ),
         ),
@@ -486,9 +486,9 @@ void main() {
         home: Scaffold(
           body: graft.slots(
             layout: (children) => Column(children: children),
-            children: (s) => [
-              const MockKeyedWidget(key: ValueKey('stable_key')),
-              Text('Name: ${s.name}'),
+            slots: [
+              (_) => const MockKeyedWidget(key: ValueKey('stable_key')),
+              (s) => Text('Name: ${s.name}'),
             ],
           ),
         ),
@@ -518,16 +518,16 @@ void main() {
         home: Scaffold(
           body: graft.slots(
             layout: (children) => Column(children: children),
-            children: (s) => [
-              GestureDetector(
+            slots: [
+              (_) => GestureDetector(
                 onTap: () => buttonClicks++,
                 child: const Text('Tap Me'),
               ),
-              ElevatedButton(
+              (_) => ElevatedButton(
                 onPressed: () => buttonClicks += 10,
                 child: const Text('Submit Button'),
               ),
-              Text('Name: ${s.name}'),
+              (s) => Text('Name: ${s.name}'),
             ],
           ),
         ),
@@ -587,9 +587,9 @@ void main() {
         home: Scaffold(
           body: graft.slots(
             layout: (children) => Column(children: children),
-            children: (s) => [
-              const MockCompositeText('Fixed CoreKit Label'),
-              Text(s.name),
+            slots: [
+              (_) => const MockCompositeText('Fixed CoreKit Label'),
+              (s) => Text(s.name),
             ],
           ),
         ),
@@ -632,15 +632,15 @@ void main() {
         home: Scaffold(
           body: graftA.slots(
             layout: (children) => Column(children: children),
-            children: (sA) => [
-              Text('Name: ${sA.name}'),
-              Container(
+            slots: [
+              (sA) => Text('Name: ${sA.name}'),
+              (_) => Container(
                 color: Colors.amber,
                 padding: const EdgeInsets.all(8),
                 child: graftB.slots(
                   layout: (children) => Row(children: children),
-                  children: (sB) => [
-                    Text('Nested: ${sB.email}'),
+                  slots: [
+                    (sB) => Text('Nested: ${sB.email}'),
                   ],
                 ),
               ),
@@ -858,7 +858,7 @@ void main() {
           body: graft.slots(
             // ❌ Mistake: forgot to pass children!
             layout: (children) => const Column(children: [Text('Hardcoded')]),
-            children: (s) => [Text(s.name)],
+            slots: [(s) => Text(s.name)],
           ),
         ),
       ),
@@ -885,10 +885,10 @@ void main() {
         home: Scaffold(
           body: graft.slots(
             layout: (children) => Column(children: children),
-            children: (s) => [
-              const Text('Slot 1: Header'),
-              if (showMiddleSlot) const Text('Slot 2: Removable Widget'),
-              Text('Slot 3: ${s.name}'),
+            slots: [
+              (_) => const Text('Slot 1: Header'),
+              if (showMiddleSlot) (_) => const Text('Slot 2: Removable Widget'),
+              (s) => Text('Slot 3: ${s.name}'),
             ],
           ),
         ),

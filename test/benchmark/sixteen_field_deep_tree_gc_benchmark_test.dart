@@ -54,7 +54,7 @@ class State16Graft extends GraftState {
   int level = 5;
 
   @override
-  List<Object?> get props => [
+  GraftProps get props => propsOf(
         id,
         name,
         email,
@@ -71,7 +71,7 @@ class State16Graft extends GraftState {
         isActive,
         progress,
         level,
-      ];
+      );
 }
 
 class Controller16Graft extends Graft<State16Graft> {

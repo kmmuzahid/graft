@@ -11,7 +11,7 @@ import 'package:get/get.dart' as getx;
 class GraftListState extends GraftState {
   List<String> items = [];
   @override
-  List<Object?> get props => [items];
+  GraftProps get props => propsOf(items);
 }
 
 class GraftListController extends Graft<GraftListState> {

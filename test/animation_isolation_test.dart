@@ -14,7 +14,7 @@ class AnimationBenchmarkState extends GraftState {
   });
 
   @override
-  List<Object?> get props => [counter, isExpanded, status];
+  GraftProps get props => propsOf(counter, isExpanded, status);
 
   @override
   void onReset() {
@@ -131,19 +131,19 @@ void main() {
                       layoutBuildCount++;
                       return Column(children: children);
                     },
-                    children: (s) => [
+                    slots: [
                       // Slot 0: Static Heavy Widget
-                      HeavyTrackingWidget(
+                      (_) => HeavyTrackingWidget(
                         label: 'Heavy Static Header',
                         onBuild: () => heavyHeaderBuildCount++,
                       ),
                       // Slot 1: 60fps High-frequency animated spinner
-                      AnimatedSpinnerSlot(
+                      (_) => AnimatedSpinnerSlot(
                         controller: animationController,
                         onFrameBuild: () => animatedSlotFrameCount++,
                       ),
                       // Slot 2: Graft state text
-                      HeavyTrackingWidget(
+                      (s) => HeavyTrackingWidget(
                         label: 'Status: ${s.status}',
                         onBuild: () => reactiveTextBuildCount++,
                       ),
@@ -216,16 +216,16 @@ void main() {
               },
               child: graft.slots(
                 layout: (children) => Column(children: children),
-                children: (s) => [
-                  HeavyTrackingWidget(
+                slots: [
+                  (_) => HeavyTrackingWidget(
                     label: 'Heavy Header',
                     onBuild: () => heavyHeaderBuildCount++,
                   ),
-                  AnimatedSpinnerSlot(
+                  (_) => AnimatedSpinnerSlot(
                     controller: animationController,
                     onFrameBuild: () => animatedSlotFrameCount++,
                   ),
-                  HeavyTrackingWidget(
+                  (s) => HeavyTrackingWidget(
                     label: 'Counter: ${s.counter}',
                     onBuild: () => reactiveTextBuildCount++,
                   ),
@@ -365,12 +365,12 @@ void main() {
           home: Scaffold(
             body: graft.slots(
               layout: (children) => Column(children: children),
-              children: (s) => [
-                HeavyTrackingWidget(
+              slots: [
+                (_) => HeavyTrackingWidget(
                   label: 'Sibling Static Slot',
                   onBuild: () => siblingBuildCount++,
                 ),
-                AnimatedContainer(
+                (s) => AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
                   height: s.isExpanded ? 200.0 : 50.0,
                   child: const Text('Animated Box'),

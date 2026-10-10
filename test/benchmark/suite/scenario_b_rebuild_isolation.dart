@@ -15,7 +15,7 @@ import 'tracking_widget.dart';
 class GraftBState extends GraftState {
   int count = 0;
   @override
-  List<Object?> get props => propsOf(count);
+  GraftProps get props => propsOf(count);
 }
 
 class GraftBController extends Graft<GraftBState> {

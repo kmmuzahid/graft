@@ -12,7 +12,7 @@ class AsyncDemoState extends GraftState {
   });
 
   @override
-  List<Object?> get props => [title, profile];
+  GraftProps get props => propsOf(title, profile);
 }
 
 class AsyncDemoGraft extends Graft<AsyncDemoState> {

@@ -7,7 +7,7 @@ class TabCounterState extends GraftState {
   TabCounterState({this.count = 0});
 
   @override
-  List<Object?> get props => [count];
+  GraftProps get props => propsOf(count);
 }
 
 class TabCounterGraft extends Graft<TabCounterState> {

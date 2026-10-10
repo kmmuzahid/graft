@@ -24,7 +24,7 @@ class CollectionState extends GraftState {
         tags = tags ?? {1, 2};
 
   @override
-  List<Object?> get props => [name, tasks, metadata, tags];
+  GraftProps get props => propsOf(name, tasks, metadata, tags);
 }
 
 class CollectionGraft extends Graft<CollectionState> {
@@ -73,18 +73,16 @@ void main() {
           home: Scaffold(
             body: graft.slots(
               layout: (children) => Column(children: children),
-              children: (s) {
-                return [
-                  _TrackedWidget(
-                    text: 'Name: ${s.name}',
-                    onBuild: () => nameBuildCount++,
-                  ),
-                  _TrackedWidget(
-                    text: 'Tasks: ${s.tasks.map((t) => t.title).join(", ")}',
-                    onBuild: () => listBuildCount++,
-                  ),
-                ];
-              },
+              slots: [
+                (s) => _TrackedWidget(
+                  text: 'Name: ${s.name}',
+                  onBuild: () => nameBuildCount++,
+                ),
+                (s) => _TrackedWidget(
+                  text: 'Tasks: ${s.tasks.map((t) => t.title).join(", ")}',
+                  onBuild: () => listBuildCount++,
+                ),
+              ],
             ),
           ),
         ),
@@ -115,14 +113,17 @@ void main() {
           home: Scaffold(
             body: graft.slots(
               layout: (children) => Column(children: children),
-              children: (s) {
-                listBuildCount++;
-                return [
-                  Column(
-                    children: s.tasks.map((t) => Text(t.title)).toList(),
-                  ),
-                ];
-              },
+              slots: [
+                (s) {
+                  listBuildCount++;
+                  return Column(
+                    children: [
+                      for (final t in (s as CollectionState).tasks)
+                        Text(t.title),
+                    ],
+                  );
+                },
+              ],
             ),
           ),
         ),

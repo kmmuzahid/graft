@@ -10,7 +10,7 @@ import 'benchmark_models.dart';
 class LifecycleGraftState extends GraftState {
   int count = 0;
   @override
-  List<Object?> get props => propsOf(count);
+  GraftProps get props => propsOf(count);
 }
 
 class LifecycleGraftController extends Graft<LifecycleGraftState> {

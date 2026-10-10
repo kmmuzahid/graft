@@ -8,7 +8,7 @@ class TestState extends GraftState {
   TestState({this.count = 0, this.text = ''});
 
   @override
-  List<Object?> get props => [count, text];
+  GraftProps get props => propsOf(count, text);
 
   @override
   void onReset() {

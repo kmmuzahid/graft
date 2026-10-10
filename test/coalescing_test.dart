@@ -13,7 +13,7 @@ class CoalesceState extends GraftState {
   });
 
   @override
-  List<Object?> get props => [count, text, flag];
+  GraftProps get props => propsOf(count, text, flag);
 
   @override
   void onReset() {

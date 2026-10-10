@@ -44,7 +44,7 @@ class GraftDiamondState extends GraftState {
   int get d => b + c;
 
   @override
-  List<Object?> get props => [a];
+  GraftProps get props => propsOf(a);
 }
 
 class GraftDiamondController extends Graft<GraftDiamondState> {

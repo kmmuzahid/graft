@@ -17,7 +17,7 @@ class MultiFieldState extends GraftState {
   });
 
   @override
-  List<Object?> get props => [firstName, lastName, score, email];
+  GraftProps get props => propsOf(firstName, lastName, score, email);
 }
 
 class MultiFieldGraft extends Graft<MultiFieldState> {
@@ -89,17 +89,17 @@ void main() {
         home: Scaffold(
           body: graft.slots(
             layout: (children) => Column(children: children),
-            children: (s) => [
+            slots: [
               // Slot 0: Depends on BOTH firstName (field 0) AND lastName (field 1)
-              TrackedSlotWidget('Full: ${s.firstName} ${s.lastName}',
+              (s) => TrackedSlotWidget('Full: ${s.firstName} ${s.lastName}',
                   onBuild: () => multiFieldBuilds++),
               // Slot 1: Depends only on score (field 2)
-              TrackedSlotWidget('Score: ${s.score}',
+              (s) => TrackedSlotWidget('Score: ${s.score}',
                   onBuild: () => scoreBuilds++),
               // Slot 2: Static banner (0 fields)
-              TrackedSlotWidget('STATIC BANNER', onBuild: () => staticBuilds++),
+              (_) => TrackedSlotWidget('STATIC BANNER', onBuild: () => staticBuilds++),
               // Slot 3: Depends only on email (field 3)
-              TrackedSlotWidget('Email: ${s.email}',
+              (s) => TrackedSlotWidget('Email: ${s.email}',
                   onBuild: () => emailBuilds++),
             ],
           ),

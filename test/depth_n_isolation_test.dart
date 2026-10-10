@@ -14,7 +14,7 @@ class BoundaryUserState extends GraftState {
   });
 
   @override
-  List<Object?> get props => [name, role, counter];
+  GraftProps get props => propsOf(name, role, counter);
 }
 
 class BoundaryUserGraft extends Graft<BoundaryUserState> {

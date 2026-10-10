@@ -29,7 +29,7 @@ class GraftBatchState extends GraftState {
   int f5 = 0;
 
   @override
-  List<Object?> get props => [f1, f2, f3, f4, f5];
+  GraftProps get props => propsOf(f1, f2, f3, f4, f5);
 }
 
 class GraftBatchController extends Graft<GraftBatchState> {

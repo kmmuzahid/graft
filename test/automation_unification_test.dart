@@ -13,7 +13,7 @@ class AutoCounterState extends GraftState {
   AutoCounterState({this.count = 0, this.title = 'Counter'});
 
   @override
-  List<Object?> get props => [count, title];
+  GraftProps get props => propsOf(count, title);
 
   @override
   void onReset() {
@@ -108,9 +108,9 @@ void main() {
           home: Scaffold(
             body: graft.slots(
               layout: (children) => Column(children: children),
-              children: (s) => [
-                Text('Title: ${s.title}'),
-                Text('Count: ${s.count}'),
+              slots: [
+                (s) => Text('Title: ${s.title}'),
+                (s) => Text('Count: ${s.count}'),
               ],
             ),
           ),

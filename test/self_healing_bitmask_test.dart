@@ -18,13 +18,13 @@ class AccountState extends GraftState {
   });
 
   @override
-  List<Object?> get props => [
+  GraftProps get props => propsOf(
         firstName,
         lastName,
         email,
         isLoggedIn,
         unreadNotifications,
-      ];
+      );
 }
 
 class AccountGraft extends Graft<AccountState> {
@@ -125,13 +125,13 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: accountGraft.slots(
-              layout: (children) => Column(children: children),
-              children: (s) => [
+              layout: Column(children: slots),
+              slots: [
                 const Text('Header Banner'),
-                s.isLoggedIn
+                (s) => s.isLoggedIn
                     ? Text('Logged as: ${s.firstName}')
                     : const Text('Guest Mode'),
-                Text('Notifications: ${s.unreadNotifications}'),
+                (s) => Text('Notifications: ${s.unreadNotifications}'),
               ],
             ),
           ),

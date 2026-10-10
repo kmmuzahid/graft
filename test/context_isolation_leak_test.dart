@@ -10,7 +10,7 @@ class ThemedTestState extends GraftState {
   ThemedTestState({this.title = 'Card Title', this.count = 0});
 
   @override
-  List<Object?> get props => [title, count];
+  GraftProps get props => propsOf(title, count);
 }
 
 class ThemedTestGraft extends Graft<ThemedTestState> {
@@ -59,9 +59,9 @@ void main() {
                 layoutBuilds++;
                 return Column(children: children);
               },
-              children: (s) => [
-                IsolatedThemedCard(title: s.title),
-                Text('Count: ${s.count}'),
+              slots: [
+                (s) => IsolatedThemedCard(title: s.title),
+                (s) => Text('Count: ${s.count}'),
               ],
             ),
           ),

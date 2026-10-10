@@ -8,7 +8,7 @@ class LifecycleState extends GraftState {
   LifecycleState(this.text);
 
   @override
-  List<Object?> get props => [text];
+  GraftProps get props => propsOf(text);
 }
 
 class LifecycleGraft extends Graft<LifecycleState> {
@@ -64,9 +64,9 @@ void main() {
           home: Scaffold(
             body: showSlots
                 ? graft.slots(
-                    layout: (children) => Column(children: children),
-                    children: (s) => [
-                      Text('Text: ${s.text}'),
+                    layout: Column(children: slots),
+                    slots: [
+                      (s) => Text('Text: ${s.text}'),
                       const Text('Static Header'),
                     ],
                   )

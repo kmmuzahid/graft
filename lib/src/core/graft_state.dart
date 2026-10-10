@@ -28,7 +28,7 @@ import 'graft_mask.dart';
 ///   bool isOnline = false;
 ///
 ///   @override
-///   List<Object?> get props => [name, email, isOnline];
+///   GraftProps get props => propsOf(name, email, isOnline);
 /// }
 /// ```
 abstract class GraftState {
@@ -66,12 +66,9 @@ abstract class GraftState {
 
   /// Declares domain properties for fine-grained slot diffing and automated snapshots.
   ///
-  /// **Mandatory override**: The Dart compiler enforces declaring properties here.
-  List<Object?> get props;
-
-  /// Backward-compatible alias for [props].
-  @Deprecated('Use props instead.')
-  List<Object?> get tracked => props;
+  /// **Mandatory override**: Must return a [GraftProps] instance created via [propsOf] or [propsOfMany].
+  /// Writing a `List` literal (e.g. `[a, b]`) is a compile-time error.
+  GraftProps get props;
 
   /// Returns an unmodifiable snapshot of the baseline property values before the current mutation pass.
   @internal
@@ -85,6 +82,7 @@ abstract class GraftState {
   static const Object _undefined = _Sentinel();
 
   List<Object?>? _propsBuffer;
+  _GraftPropsBuffer? _propsView;
 
   /// High-performance zero-allocation register slot builder.
   ///
@@ -98,12 +96,12 @@ abstract class GraftState {
   ///   int count = 0;
   ///
   ///   @override
-  ///   List<Object?> get props => propsOf(name, count);
+  ///   GraftProps get props => propsOf(name, count);
   /// }
   /// ```
   @protected
   @pragma('vm:prefer-inline')
-  List<Object?> propsOf([
+  GraftProps propsOf([
     Object? p0 = _undefined,
     Object? p1 = _undefined,
     Object? p2 = _undefined,
@@ -121,64 +119,63 @@ abstract class GraftState {
     Object? p14 = _undefined,
     Object? p15 = _undefined,
   ]) {
+    // ⚡ 1. 100% Dynamic Infinite Mode:
+    // When passing a List or Iterable: propsOf([f1, f2, ... infinite fields])
+    if (p0 is List<Object?>) {
+      if (p0.isEmpty) return const _EmptyGraftProps();
+      return _GraftPropsListView(p0);
+    }
+    if (p0 is Iterable && identical(p1, _undefined)) {
+      if (p0.isEmpty) return const _EmptyGraftProps();
+      return _GraftPropsListView(List<Object?>.of(p0, growable: false));
+    }
+
+    // ⚡ 2. Single Property Fast-Path (0 allocation):
+    if (identical(p1, _undefined)) {
+      if (identical(p0, _undefined)) return const _EmptyGraftProps();
+      return _GraftPropsSingle(p0);
+    }
+
+    // ⚡ 3. Fast register-buffer path for comma-separated parameters:
+    var view = _propsView;
     var buf = _propsBuffer;
-    if (buf == null) {
-      int count = 0;
-      if (!identical(p0, _undefined)) {
-        count = 1;
-        if (!identical(p1, _undefined)) {
-          count = 2;
-          if (!identical(p2, _undefined)) {
-            count = 3;
-            if (!identical(p3, _undefined)) {
-              count = 4;
-              if (!identical(p4, _undefined)) {
-                count = 5;
-                if (!identical(p5, _undefined)) {
-                  count = 6;
-                  if (!identical(p6, _undefined)) {
-                    count = 7;
-                    if (!identical(p7, _undefined)) {
-                      count = 8;
-                      if (!identical(p8, _undefined)) {
-                        count = 9;
-                        if (!identical(p9, _undefined)) {
-                          count = 10;
-                          if (!identical(p10, _undefined)) {
-                            count = 11;
-                            if (!identical(p11, _undefined)) {
-                              count = 12;
-                              if (!identical(p12, _undefined)) {
-                                count = 13;
-                                if (!identical(p13, _undefined)) {
-                                  count = 14;
-                                  if (!identical(p14, _undefined)) {
-                                    count = 15;
-                                    if (!identical(p15, _undefined)) {
-                                      count = 16;
-                                    }
-                                  }
-                                }
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
+    if (view == null || buf == null) {
+      int count = 2;
+      if (!identical(p15, _undefined)) {
+        count = 16;
+      } else if (!identical(p14, _undefined)) {
+        count = 15;
+      } else if (!identical(p13, _undefined)) {
+        count = 14;
+      } else if (!identical(p12, _undefined)) {
+        count = 13;
+      } else if (!identical(p11, _undefined)) {
+        count = 12;
+      } else if (!identical(p10, _undefined)) {
+        count = 11;
+      } else if (!identical(p9, _undefined)) {
+        count = 10;
+      } else if (!identical(p8, _undefined)) {
+        count = 9;
+      } else if (!identical(p7, _undefined)) {
+        count = 8;
+      } else if (!identical(p6, _undefined)) {
+        count = 7;
+      } else if (!identical(p5, _undefined)) {
+        count = 6;
+      } else if (!identical(p4, _undefined)) {
+        count = 5;
+      } else if (!identical(p3, _undefined)) {
+        count = 4;
+      } else if (!identical(p2, _undefined)) {
+        count = 3;
       }
       buf = _propsBuffer = List<Object?>.filled(count, null);
+      view = _propsView = _GraftPropsBuffer(buf, count);
     }
-    final len = buf.length;
+
+    final len = view._length;
     switch (len) {
-      case 1:
-        buf[0] = p0;
-        break;
       case 2:
         buf[0] = p0;
         buf[1] = p1;
@@ -246,12 +243,29 @@ abstract class GraftState {
         if (len > 14) buf[14] = p14;
         if (len > 15) buf[15] = p15;
     }
-    return buf;
+    return view;
+  }
+
+  /// Adapts an arbitrary [Iterable] or list of properties into [GraftProps].
+  ///
+  /// Useful for states with dynamic or large sets of properties.
+  @protected
+  @pragma('vm:prefer-inline')
+  GraftProps propsOfMany(Iterable<Object?> items) {
+    if (items.isEmpty) return const _EmptyGraftProps();
+    if (items is List<Object?>) {
+      return _GraftPropsListView(items);
+    }
+    return _GraftPropsListView(List<Object?>.of(items, growable: false));
   }
 
   @pragma('vm:prefer-inline')
   static Object? _snapshotValue(Object? value) {
-    if (value == null || value is num || value is String || value is bool || value is Enum) {
+    if (value == null ||
+        value is num ||
+        value is String ||
+        value is bool ||
+        value is Enum) {
       return value;
     }
     if (value is GraftState) {
@@ -296,7 +310,8 @@ abstract class GraftState {
     if (a is Map && b is Map) {
       if (a.length != b.length) return false;
       for (final entry in a.entries) {
-        if (!b.containsKey(entry.key) || !_deepEquals(entry.value, b[entry.key])) {
+        if (!b.containsKey(entry.key) ||
+            !_deepEquals(entry.value, b[entry.key])) {
           return false;
         }
       }
@@ -498,3 +513,94 @@ abstract class GraftState {
 class _Sentinel {
   const _Sentinel();
 }
+
+/// Represents the hardware-aligned domain property container for [GraftState].
+///
+/// Guaranteed zero heap allocations when constructed via [propsOf].
+/// Returning a `List` literal (e.g. `[a, b]`) is a compile-time error.
+abstract final class GraftProps extends Iterable<Object?> {
+  const GraftProps();
+
+  /// Gets the property value at [index].
+  Object? operator [](int index);
+
+  @override
+  int get length;
+
+  @override
+  bool get isEmpty => length == 0;
+
+  @override
+  bool get isNotEmpty => length > 0;
+}
+
+final class _EmptyGraftProps extends GraftProps {
+  const _EmptyGraftProps();
+
+  @override
+  Object? operator [](int index) => throw RangeError.index(index, this);
+
+  @override
+  int get length => 0;
+
+  @override
+  Iterator<Object?> get iterator => const <Object?>[].iterator;
+}
+
+final class _GraftPropsBuffer extends GraftProps {
+  final List<Object?> _buffer;
+  final int _length;
+
+  const _GraftPropsBuffer(this._buffer, this._length);
+
+  @override
+  Object? operator [](int index) {
+    if (index < 0 || index >= _length) {
+      throw RangeError.index(index, this);
+    }
+    return _buffer[index];
+  }
+
+  @override
+  int get length => _length;
+
+  @override
+  Iterator<Object?> get iterator => _GraftPropsIterator(_buffer, _length);
+}
+
+final class _GraftPropsIterator implements Iterator<Object?> {
+  final List<Object?> _buffer;
+  final int _length;
+  int _index = -1;
+
+  _GraftPropsIterator(this._buffer, this._length);
+
+  @override
+  Object? get current =>
+      _index >= 0 && _index < _length ? _buffer[_index] : null;
+
+  @override
+  bool moveNext() {
+    if (_index + 1 < _length) {
+      _index++;
+      return true;
+    }
+    return false;
+  }
+}
+
+final class _GraftPropsListView extends GraftProps {
+  final List<Object?> _list;
+
+  const _GraftPropsListView(this._list);
+
+  @override
+  Object? operator [](int index) => _list[index];
+
+  @override
+  int get length => _list.length;
+
+  @override
+  Iterator<Object?> get iterator => _list.iterator;
+}
+

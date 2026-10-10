@@ -5,7 +5,7 @@ class Large128State extends GraftState {
   final List<int> values = List.generate(128, (i) => i * 10);
 
   @override
-  List<Object?> get props => values;
+  GraftProps get props => propsOfMany(values);
 }
 
 class Large128Graft extends Graft<Large128State> {
@@ -22,7 +22,7 @@ class Large500State extends GraftState {
   final List<String> entries = List.generate(500, (i) => 'init_$i');
 
   @override
-  List<Object?> get props => entries;
+  GraftProps get props => propsOfMany(entries);
 }
 
 class Large500Graft extends Graft<Large500State> {

@@ -36,7 +36,7 @@ class _GraftNotifier<T> extends ValueNotifier<T> {
 ///   int age = 0;
 ///
 ///   @override
-///   List<Object?> get props => [name, age];
+///   GraftProps get props => propsOf(name, age);
 /// }
 ///
 /// class UserGraft extends Graft<UserState> {
@@ -50,7 +50,7 @@ class _GraftNotifier<T> extends ValueNotifier<T> {
 ///   }
 /// }
 /// ```
-abstract class Graft<S extends GraftState> {
+class Graft<S extends GraftState> {
   /// Global observer for monitoring lifecycle transitions and errors across all [Graft] instances.
   ///
   /// Set this in `main()` to log transitions or report errors to analytics:
@@ -230,6 +230,23 @@ abstract class Graft<S extends GraftState> {
     } finally {
       _isNotifying = false;
     }
+  }
+
+  /// Mutates [state] in-place via [action] and automatically triggers diffing and UI notification.
+  ///
+  /// This is an optional alternative to native Dart cascades (`state..field = val..update()`).
+  ///
+  /// ```dart
+  /// graft.mutate((s) {
+  ///   s.name = 'Alice';
+  ///   s.score += 10;
+  /// });
+  /// ```
+  @nonVirtual
+  S mutate(void Function(S state) action) {
+    action(_state);
+    _state.update();
+    return _state;
   }
 
   /// Resets this Graft's state and notifies all listeners synchronously.

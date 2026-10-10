@@ -36,7 +36,7 @@ class BuildCounterWidget extends StatelessWidget implements GraftEquivalent {
 class GraftUIState extends GraftState {
   int count = 0;
   @override
-  List<Object?> get props => [count];
+  GraftProps get props => propsOf(count);
 }
 
 class GraftUIController extends Graft<GraftUIState> {
@@ -145,9 +145,9 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: graft.slots(
-              layout: (children) => Column(children: children),
-              children: (s) => [
-                BuildCounterWidget(
+              layout: Column(children: slots),
+              slots: [
+                (s) => BuildCounterWidget(
                   label: 'Dynamic: ${s.count}',
                   onBuild: () => dynamicBuilds++,
                 ),

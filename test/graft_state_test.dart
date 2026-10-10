@@ -14,7 +14,7 @@ class TestProfileState extends GraftState {
   });
 
   @override
-  List<Object?> get props => [name, age, isLoading];
+  GraftProps get props => propsOf(name, age, isLoading);
 }
 
 class TestProfileGraft extends Graft<TestProfileState> {
@@ -162,11 +162,11 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: graft.slots(
-              layout: (children) => Column(children: children),
-              children: (s) => [
+              layout: Column(children: slots),
+              slots: [
                 const _ConstHeaderWidget(),
-                _DynamicFieldWidget(label: 'Name', value: s.name),
-                _DynamicFieldWidget(label: 'Age', value: s.age.toString(), isAge: true),
+                (s) => _DynamicFieldWidget(label: 'Name', value: s.name),
+                (s) => _DynamicFieldWidget(label: 'Age', value: s.age.toString(), isAge: true),
               ],
             ),
           ),

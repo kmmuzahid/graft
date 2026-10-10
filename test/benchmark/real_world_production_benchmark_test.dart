@@ -18,7 +18,7 @@ class RealGraftState extends GraftState {
   double score = 98.5;
 
   @override
-  List<Object?> get props => [name, count, email, isOnline, score];
+  GraftProps get props => propsOf(name, count, email, isOnline, score);
 }
 
 class RealGraftController extends Graft<RealGraftState> {

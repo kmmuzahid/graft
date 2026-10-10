@@ -19,7 +19,7 @@ class UserState extends GraftState {
   });
 
   @override
-  List<Object?> get props => [name, email, isVerified, notificationCount];
+  GraftProps get props => propsOf(name, email, isVerified, notificationCount);
 }
 
 // =============================================================================
@@ -87,7 +87,7 @@ class TaskListState extends GraftState {
   TaskListState({required this.tasks});
 
   @override
-  List<Object?> get props => [tasks];
+  GraftProps get props => propsOf(tasks);
 }
 
 class TaskListGraft extends Graft<TaskListState> {
@@ -162,7 +162,7 @@ class ProductCatalogState extends GraftState {
   ProductCatalogState({this.products = const [], this.isLoading = true});
 
   @override
-  List<Object?> get props => [products, isLoading];
+  GraftProps get props => propsOf(products, isLoading);
 }
 
 class ProductCatalogGraft extends Graft<ProductCatalogState> {
@@ -213,7 +213,7 @@ class LiveCounterState extends GraftState {
   LiveCounterState({this.count = 0});
 
   @override
-  List<Object?> get props => [count];
+  GraftProps get props => propsOf(count);
 
   @override
   void onReset() {
@@ -323,9 +323,9 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(height: 8),
 
             graft.slots(
-              layout: (children) => Column(children: children),
-              children: (s) => [
-                // Const widget: Flutter skips re-rendering entirely (0 rebuilds)
+              layout: Column(children: slots),
+              slots: [
+                // Const widget directly without wrapping: 0 rebuilds, 0 closure evaluations
                 const Card(
                   color: Colors.deepPurple,
                   child: Padding(
@@ -341,25 +341,26 @@ class HomeScreen extends StatelessWidget {
                 ),
 
                 // Slot 1: Name
-                ListTile(
-                  leading: Icon(Icons.person, color: Colors.deepPurple),
+                (s) => ListTile(
+                  leading: const Icon(Icons.person, color: Colors.deepPurple),
                   title: Text('Name: ${s.name}'),
                   subtitle: const Text('Rebuilds ONLY when name changes'),
                 ),
 
                 // Slot 2: Email
-                ListTile(
+                (s) => ListTile(
                   leading: const Icon(Icons.email, color: Colors.deepPurple),
                   title: Text('Email: ${s.email}'),
                   subtitle: const Text('0 rebuilds if email is unchanged'),
                 ),
 
                 // Slot 3: Conditional Badge
-                if (s.isVerified)
-                  const Chip(
-                    avatar: Icon(Icons.verified, color: Colors.green),
-                    label: Text('Verified User Account'),
-                  ),
+                (s) => s.isVerified
+                    ? const Chip(
+                        avatar: Icon(Icons.verified, color: Colors.green),
+                        label: Text('Verified User Account'),
+                      )
+                    : const SizedBox.shrink(),
               ],
             ),
 
@@ -627,13 +628,13 @@ class EditProfileScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: graft.slots(
           layout: (children) => Column(children: children),
-          children: (s) => [
-            const Text(
+          slots: [
+            (_) => const Text(
               'This screen called context.use<UserGraft>() and borrowed the existing instance from HomeScreen.',
               style: TextStyle(fontSize: 15),
             ),
-            const SizedBox(height: 16),
-            Card(
+            (_) => const SizedBox(height: 16),
+            (s) => Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -651,8 +652,8 @@ class EditProfileScreen extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 16),
-            ElevatedButton(
+            (_) => const SizedBox(height: 16),
+            (_) => ElevatedButton(
               onPressed: () {
                 graft.updateName('Edited by Second Screen!');
                 Navigator.of(context).pop();
@@ -684,15 +685,15 @@ class IsolatedProfileScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: graft.slots(
           layout: (children) => Column(children: children),
-          children: (s) => [
-            const Text(
+          slots: [
+            (_) => const Text(
               'This screen used context.create<UserGraft>() to create a completely independent instance.',
               style: TextStyle(fontSize: 15),
             ),
-            const SizedBox(height: 16),
-            Text('Independent Name: ${s.name}'),
-            const SizedBox(height: 8),
-            ElevatedButton(
+            (_) => const SizedBox(height: 16),
+            (s) => Text('Independent Name: ${s.name}'),
+            (_) => const SizedBox(height: 8),
+            (_) => ElevatedButton(
               onPressed: () => graft.updateName('Isolated Change'),
               child: const Text('Change (Does NOT Affect Home)'),
             ),
@@ -951,13 +952,11 @@ class MultiGraftCompositionScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-
-            // Parent Graft: userGraft.slots
             userGraft.slots(
               layout: (children) => Column(children: children),
-              children: (userState) => [
+              slots: [
                 // Slot 0: User Profile Card (Parent Graft)
-                Card(
+                (userState) => Card(
                   elevation: 2,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -1012,12 +1011,12 @@ class MultiGraftCompositionScreen extends StatelessWidget {
                   ),
                 ),
 
-                const SizedBox(height: 16),
+                (_) => const SizedBox(height: 16),
 
                 // Slot 1: NESTED INDEPENDENT GRAFT (counterGraft.slots)
                 // Embedded inside a styled Container within UserGraft's slots!
                 // Thanks to GraftEquivalent, UserGraft updates do NOT rebuild this Container!
-                Container(
+                (_) => Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: Colors.amber.shade100,
@@ -1026,8 +1025,8 @@ class MultiGraftCompositionScreen extends StatelessWidget {
                   ),
                   child: counterGraft.slots(
                     layout: (children) => Column(children: children),
-                    children: (counterState) => [
-                      Row(
+                    slots: [
+                      (_) => Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(Icons.bolt, color: Colors.amber.shade900),
@@ -1041,8 +1040,8 @@ class MultiGraftCompositionScreen extends StatelessWidget {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 8),
-                      Text(
+                      (_) => const SizedBox(height: 8),
+                      (counterState) => Text(
                         'Count: ${counterState.count}',
                         style: TextStyle(
                           fontSize: 28,
@@ -1050,8 +1049,8 @@ class MultiGraftCompositionScreen extends StatelessWidget {
                           color: Colors.brown.shade900,
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      Row(
+                      (_) => const SizedBox(height: 12),
+                      (_) => Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           IconButton.filled(
@@ -1068,7 +1067,7 @@ class MultiGraftCompositionScreen extends StatelessWidget {
                               backgroundColor: Colors.amber.shade800,
                             ),
                             icon: const Icon(Icons.refresh),
-                            tooltip: 'Reset',
+                            tooltip: 'Reset to 0',
                             onPressed: counterGraft.reset,
                           ),
                           const SizedBox(width: 16),

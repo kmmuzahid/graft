@@ -14,7 +14,7 @@ class MultiSlotState extends GraftState {
   });
 
   @override
-  List<Object?> get props => [title, counter, unobservedField];
+  GraftProps get props => propsOf(title, counter, unobservedField);
 }
 
 class MultiSlotController extends Graft<MultiSlotState> {
@@ -48,7 +48,8 @@ void main() {
     testWidgets('childrenBuilder is completely bypassed when dirtyMask is covered by all slots ignoredMask',
         (WidgetTester tester) async {
       final controller = MultiSlotController();
-      int builderCallCount = 0;
+      int titleSlotCalls = 0;
+      int counterSlotCalls = 0;
       int titleBuildCount = 0;
       int counterBuildCount = 0;
 
@@ -57,19 +58,23 @@ void main() {
           home: Scaffold(
             body: controller.slots(
               layout: (children) => Column(children: children),
-              children: (s) {
-                builderCallCount++;
-                return [
-                  TrackedTextWidget(s.title, onBuild: () => titleBuildCount++),
-                  TrackedTextWidget('Count: ${s.counter}', onBuild: () => counterBuildCount++),
-                ];
-              },
+              slots: [
+                (s) {
+                  titleSlotCalls++;
+                  return TrackedTextWidget(s.title, onBuild: () => titleBuildCount++);
+                },
+                (s) {
+                  counterSlotCalls++;
+                  return TrackedTextWidget('Count: ${s.counter}', onBuild: () => counterBuildCount++);
+                },
+              ],
             ),
           ),
         ),
       );
 
-      expect(builderCallCount, 1);
+      expect(titleSlotCalls, 1);
+      expect(counterSlotCalls, 1);
       expect(titleBuildCount, 1);
       expect(counterBuildCount, 1);
 
@@ -78,7 +83,6 @@ void main() {
       controller.increment();
       await tester.pump();
 
-      expect(builderCallCount, 2);
       expect(titleBuildCount, 1); // 0 rebuilds for title!
       expect(counterBuildCount, 2);
 
@@ -87,7 +91,6 @@ void main() {
       controller.setTitle('New Title');
       await tester.pump();
 
-      expect(builderCallCount, 3);
       expect(titleBuildCount, 2);
       expect(counterBuildCount, 2); // 0 rebuilds for counter!
 
@@ -96,18 +99,21 @@ void main() {
       controller.setUnobserved(42.0);
       await tester.pump();
 
-      expect(builderCallCount, 4);
       expect(titleBuildCount, 2); // 0 rebuilds
       expect(counterBuildCount, 2); // 0 rebuilds
 
       // 4. NOW: Mutate unobservedField AGAIN!
       // All slots have learned that they ignore bit 2.
-      // Therefore, childrenBuilder MUST BE BYPASSED IN 1 CPU INSTRUCTION!
+      // Therefore, layout reconciliation is bypassed completely in 1 CPU instruction!
+      final titleCallsAfterFirst = titleSlotCalls;
+      final counterCallsAfterFirst = counterSlotCalls;
       controller.setUnobserved(99.0);
       await tester.pump();
 
-      expect(builderCallCount, 4,
-          reason: 'childrenBuilder was bypassed completely because all slots ignore field index 2');
+      expect(titleSlotCalls, titleCallsAfterFirst,
+          reason: 'Slot closures were bypassed completely because all slots ignore field index 2');
+      expect(counterSlotCalls, counterCallsAfterFirst,
+          reason: 'Slot closures were bypassed completely because all slots ignore field index 2');
       expect(titleBuildCount, 2);
       expect(counterBuildCount, 2);
 
@@ -124,8 +130,8 @@ void main() {
           home: Scaffold(
             body: controller.slots(
               layout: (children) => Column(children: children),
-              children: (s) => [
-                TrackedTextWidget('Count: ${s.counter}', onBuild: () => counterBuildCount++),
+              slots: [
+                (s) => TrackedTextWidget('Count: ${s.counter}', onBuild: () => counterBuildCount++),
               ],
             ),
           ),

@@ -9,7 +9,7 @@ class UserState extends GraftState {
   UserState({this.name = 'Alice', this.email = 'alice@example.com'});
 
   @override
-  List<Object?> get props => [name, email];
+  GraftProps get props => propsOf(name, email);
 
   @override
   void onReset() {
@@ -41,7 +41,7 @@ class ThemeState extends GraftState {
   ThemeState({this.isDark = false, this.accent = 'purple'});
 
   @override
-  List<Object?> get props => [isDark, accent];
+  GraftProps get props => propsOf(isDark, accent);
 
   @override
   void onReset() {
@@ -223,11 +223,11 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: dashboardGraft.slots(
-              layout: (children) => Column(children: children),
-              children: (s) => [
+              layout: Column(children: slots),
+              slots: [
                 // ignore: prefer_const_constructors
                 Text('Dashboard Header'),
-                TrackedSlotWidget('Section: ${s.title}',
+                (s) => TrackedSlotWidget('Section: ${s.title}',
                     onBuild: () => slot1BuildCount++),
                 HeavyPaintContainer(
                   child: GraftBoundary(
@@ -317,7 +317,7 @@ class DashboardState extends GraftState {
   DashboardState({this.title = 'Analytics'});
 
   @override
-  List<Object?> get props => [title];
+  GraftProps get props => propsOf(title);
 }
 
 class DashboardGraft extends Graft<DashboardState> {

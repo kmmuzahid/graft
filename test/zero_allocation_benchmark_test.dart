@@ -17,7 +17,7 @@ class BenchmarkState extends GraftState {
   });
 
   @override
-  List<Object?> get props => [id, username, balance, isVip, tier];
+  GraftProps get props => propsOf(id, username, balance, isVip, tier);
 }
 
 class BenchmarkGraft extends Graft<BenchmarkState> {

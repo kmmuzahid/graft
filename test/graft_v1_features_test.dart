@@ -18,7 +18,7 @@ class ProfileTestState extends GraftState {
   });
 
   @override
-  List<Object?> get props => [name, score, bioAsync];
+  GraftProps get props => propsOf(name, score, bioAsync);
 }
 
 class ProfileTestGraft extends Graft<ProfileTestState> {

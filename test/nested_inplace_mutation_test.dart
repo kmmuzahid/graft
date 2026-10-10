@@ -8,7 +8,7 @@ class AddressState extends GraftState {
   AddressState({this.city = 'London', this.zip = 10001});
 
   @override
-  List<Object?> get props => [city, zip];
+  GraftProps get props => propsOf(city, zip);
 }
 
 class UserProfileState extends GraftState {
@@ -23,7 +23,7 @@ class UserProfileState extends GraftState {
   });
 
   @override
-  List<Object?> get props => [username, address, hobbies];
+  GraftProps get props => propsOf(username, address, hobbies);
 }
 
 class UserProfileGraft extends Graft<UserProfileState> {

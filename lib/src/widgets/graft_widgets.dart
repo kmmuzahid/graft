@@ -138,34 +138,42 @@ extension GraftWidgetsX<S extends GraftState> on Graft<S> {
   /// - Collection-`if` and collection-`for` are 100% supported natively.
   /// - 100% layout agnostic: Works with [Column], [Row], [Wrap], [Stack], [Flex], etc.
   ///
-  /// ### Example:
+  /// Creates a multi-child layout where each slot in [slots] is isolated and diffed independently.
+  ///
+  /// Supports both:
+  /// 1. Direct layout widgets with the [slots] token:
   /// ```dart
-  /// // 1. Vertical Column:
   /// graft.slots(
-  ///   layout: (children) => Column(children: children),
-  ///   children: (s) => [
-  ///     const ProfileHeader(),
-  ///     Text(s.name),
-  ///     if (s.isVerified) const VerifiedBadge(),
-  ///     Text(s.email),
+  ///   layout: Column(
+  ///     mainAxisAlignment: MainAxisAlignment.center,
+  ///     crossAxisAlignment: CrossAxisAlignment.stretch,
+  ///     children: slots, // 👈 Clean direct layout widget syntax!
+  ///   ),
+  ///   slots: [
+  ///     (s) => Text(s.name),
+  ///     (s) => Text(s.email),
+  ///     const SizedBox(height: 16),
+  ///     const Divider(),
+  ///     (s) => Text(s.phone),
   ///   ],
   /// )
   /// ```
+  /// 2. Layout builder functions:
+  /// ```dart
+  /// graft.slots(
+  ///   layout: (children) => Column(children: children),
+  ///   slots: [ ... ],
+  /// )
+  /// ```
   Widget slots({
-    required Widget Function(List<Widget> children) layout,
-    List<Widget> Function(S state)? children,
-    List<Widget Function(S state)>? slots,
-    Key? key,
+    required dynamic layout,
+    required List<Object> slots,
   }) {
-    assert(children != null || slots != null,
-        'Either children or slots must be provided to graft.slots');
     GraftScopeGuard.verifyNotActive(this, 'graft.slots');
     return GraftMultiChildDiffEngine<S>(
-      key: key,
       graft: this,
-      layoutBuilder: layout,
-      childrenBuilder: children,
-      slotBuilders: slots,
+      layout: layout,
+      slots: slots,
     );
   }
 

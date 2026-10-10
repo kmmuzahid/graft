@@ -9,7 +9,7 @@ class MockGraft extends Graft<MockState> {
 
 class MockState extends GraftState {
   @override
-  List<Object?> get props => const [];
+  GraftProps get props => propsOf();
 }
 
 class AnotherGraft extends Graft<MockState> {

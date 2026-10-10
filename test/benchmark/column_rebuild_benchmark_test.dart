@@ -7,7 +7,7 @@ class BenchmarkState extends GraftState {
   BenchmarkState(this.counter);
 
   @override
-  List<Object?> get props => [counter];
+  GraftProps get props => propsOf(counter);
 }
 
 class BenchmarkGraft extends Graft<BenchmarkState> {
@@ -70,9 +70,9 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: graft.slots(
-            layout: (children) => Column(children: children),
-            children: (s) => [
-              BenchmarkTrackingWidget(
+            layout: Column(children: slots),
+            slots: [
+              (s) => BenchmarkTrackingWidget(
                 label: 'Changing: ${s.counter}',
                 onBuild: () => changingSlotBuildCount++,
               ),
