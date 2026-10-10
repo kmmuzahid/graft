@@ -46,4 +46,5 @@ export 'src/widgets/child_slot_engine.dart'
 export 'src/widgets/graft_boundary.dart';
 export 'src/widgets/graft_scope.dart' show GraftScope;
 export 'src/widgets/graft_widgets.dart';
+export 'src/native/graft_simd.dart';
 

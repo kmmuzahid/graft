@@ -11,6 +11,8 @@ import 'graft_state.dart';
 class _GraftNotifier<T> extends ValueNotifier<T> {
   _GraftNotifier(super.value);
 
+  bool get hasActiveListeners => hasListeners;
+
   void forceNotify() {
     notifyListeners();
   }
@@ -168,7 +170,7 @@ abstract class Graft<S extends GraftState> {
           );
       observer?.onChange(this, effectiveChange);
     }
-    if (_notifier.hasListeners) {
+    if (_notifier.hasActiveListeners) {
       _notifier.forceNotify();
     }
   }
@@ -222,7 +224,7 @@ abstract class Graft<S extends GraftState> {
             );
         observer?.onChange(this, effectiveChange);
       }
-      if (_notifier.hasListeners) {
+      if (_notifier.hasActiveListeners) {
         _notifier.forceNotify();
       }
     } finally {

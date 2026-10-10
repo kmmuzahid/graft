@@ -305,6 +305,42 @@ abstract class GraftState {
     return a == b;
   }
 
+  @pragma('vm:prefer-inline')
+  static bool _isPropertyDirty(Object? p, Object? c) {
+    if (identical(p, c)) {
+      if (c is Iterable || c is Map) {
+        return !_deepEquals(p, c);
+      }
+      return false;
+    }
+    if (c == null || p == null) return true;
+    if (c is num || c is String || c is bool || c is Enum) {
+      return p != c;
+    }
+    if (c is GraftState) {
+      final subProps = c.props;
+      if (p is List && p.length == subProps.length) {
+        for (int j = 0; j < p.length; j++) {
+          if (_isPropertyDirty(p[j], subProps[j])) {
+            return true;
+          }
+        }
+        return false;
+      }
+      return true;
+    }
+    if (p is List && c is List) {
+      return p.length != c.length || !_deepEquals(p, c);
+    }
+    if (p is Set && c is Set) {
+      return p.length != c.length || !_deepEquals(p, c);
+    }
+    if (p is Map && c is Map) {
+      return p.length != c.length || !_deepEquals(p, c);
+    }
+    return p != c;
+  }
+
   /// Compares current [props] against the in-place baseline snapshot.
   /// Returns [GraftMask.allDirty] on first evaluation, or a [GraftMask] of modified property indices.
   /// Handles in-place mutations on collections (List, Set, Map) and nested [GraftState] objects transparently.
@@ -330,6 +366,49 @@ abstract class GraftState {
       return GraftMask.allDirty;
     }
 
+    // ⚡ Hardware Fast-Path: Single-Property State (Counter, Toggle, Status)
+    if (len == 1) {
+      final p = prev[0];
+      final c = current[0];
+      if (_isPropertyDirty(p, c)) {
+        prev[0] = _snapshotValue(c);
+        final mask = GraftMask.fromIndex(0);
+        _dirtyMask = mask;
+        return mask;
+      } else {
+        _dirtyMask = GraftMask.empty;
+        return GraftMask.empty;
+      }
+    }
+
+    // ⚡ Hardware Fast-Path: Dual-Property State
+    if (len == 2) {
+      final d0 = _isPropertyDirty(prev[0], current[0]);
+      final d1 = _isPropertyDirty(prev[1], current[1]);
+
+      if (!d0 && !d1) {
+        _dirtyMask = GraftMask.empty;
+        return GraftMask.empty;
+      }
+      if (d0 && !d1) {
+        prev[0] = _snapshotValue(current[0]);
+        final mask = GraftMask.fromIndex(0);
+        _dirtyMask = mask;
+        return mask;
+      }
+      if (!d0 && d1) {
+        prev[1] = _snapshotValue(current[1]);
+        final mask = GraftMask.fromIndex(1);
+        _dirtyMask = mask;
+        return mask;
+      }
+      prev[0] = _snapshotValue(current[0]);
+      prev[1] = _snapshotValue(current[1]);
+      final mask = GraftMask.fromWords(3, 0);
+      _dirtyMask = mask;
+      return mask;
+    }
+
     int singleDirtyIndex = -1;
     int dirtyCount = 0;
     int w0 = 0;
@@ -340,68 +419,27 @@ abstract class GraftState {
       final p = prev[i];
       final c = current[i];
 
-      bool isDirty = false;
+      if (!_isPropertyDirty(p, c)) {
+        continue;
+      }
 
-      // 1. Ultra-fast path: identical non-collection reference (1 CPU cycle for primitives and unmutated references)
-      if (identical(p, c)) {
-        if (c is! Iterable && c is! Map) {
-          continue;
-        }
-        if (c is List) {
-          if (p is List && p.length != c.length) {
-            isDirty = true;
-          } else {
-            isDirty = !_deepEquals(p, c);
-          }
-        } else {
-          isDirty = !_deepEquals(p, c);
-        }
-      } else if (c == null || p == null) {
-        isDirty = true;
-      } else if (c is num || c is String || c is bool || c is Enum) {
-        isDirty = (p != c);
-      } else if (c is GraftState) {
-        final subProps = c.props;
-        if (p is List && p.length == subProps.length) {
-          isDirty = false;
-          for (int j = 0; j < p.length; j++) {
-            if (!_deepEquals(p[j], subProps[j])) {
-              isDirty = true;
-              break;
-            }
-          }
-        } else {
-          isDirty = true;
-        }
-      } else if (p is List && c is List) {
-        isDirty = p.length != c.length || !_deepEquals(p, c);
-      } else if (p is Set && c is Set) {
-        isDirty = p.length != c.length || !_deepEquals(p, c);
-      } else if (p is Map && c is Map) {
-        isDirty = p.length != c.length || !_deepEquals(p, c);
+      dirtyCount++;
+      if (dirtyCount == 1) {
+        singleDirtyIndex = i;
+      }
+      if (i < 32) {
+        w0 |= (1 << i);
+      } else if (i < 64) {
+        w1 |= (1 << (i - 32));
       } else {
-        isDirty = (p != c);
-      }
-
-      if (isDirty) {
-        dirtyCount++;
-        if (dirtyCount == 1) {
-          singleDirtyIndex = i;
+        final wordIdx = (i >> 5) - 2;
+        extra ??= <int>[];
+        while (extra.length <= wordIdx) {
+          extra.add(0);
         }
-        if (i < 32) {
-          w0 |= (1 << i);
-        } else if (i < 64) {
-          w1 |= (1 << (i - 32));
-        } else {
-          final wordIdx = (i >> 5) - 2;
-          extra ??= <int>[];
-          while (extra.length <= wordIdx) {
-            extra.add(0);
-          }
-          extra[wordIdx] |= (1 << (i & 31));
-        }
-        prev[i] = _snapshotValue(c);
+        extra[wordIdx] |= (1 << (i & 31));
       }
+      prev[i] = _snapshotValue(c);
     }
 
     if (dirtyCount == 0) {
@@ -420,8 +458,30 @@ abstract class GraftState {
 
   /// Triggers fine-grained slot diffing and notifies all listeners synchronously.
   @nonVirtual
+  @pragma('vm:prefer-inline')
   void update() {
-    _flush();
+    final hasObserver = Graft.observer != null;
+    List<Object?>? prevSnapshot;
+    if (hasObserver) {
+      prevSnapshot = baselineSnapshot;
+    }
+    final mask = diffChanges();
+    if (!mask.isEmpty) {
+      if (hasObserver) {
+        _graft?.notifyMask(
+          mask,
+          change: GraftChange<dynamic>(
+            currentState: this,
+            nextState: this,
+            previousProps: prevSnapshot ?? const [],
+            nextProps: List<Object?>.of(props, growable: false),
+            dirtyMask: mask,
+          ),
+        );
+      } else {
+        _graft?.notifyMask(mask);
+      }
+    }
   }
 
   /// Resets this state by invoking [onReset] and triggering fine-grained diffing synchronously.
@@ -433,26 +493,6 @@ abstract class GraftState {
 
   /// Optional lifecycle hook called during [reset] to restore domain field values.
   void onReset() {}
-
-  void _flush() {
-    final previousProps = (Graft.observer != null && _baseline != null)
-        ? List<Object?>.of(_baseline!)
-        : const <Object?>[];
-    final mask = diffChanges();
-    if (!mask.isEmpty) {
-      GraftChange<dynamic>? change;
-      if (Graft.observer != null) {
-        change = GraftChange<dynamic>(
-          currentState: this,
-          nextState: this,
-          previousProps: previousProps,
-          nextProps: List<Object?>.of(props),
-          dirtyMask: mask,
-        );
-      }
-      _graft?.notifyMask(mask, change: change);
-    }
-  }
 }
 
 class _Sentinel {
