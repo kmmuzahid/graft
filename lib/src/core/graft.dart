@@ -108,6 +108,15 @@ class Graft<S extends GraftState> extends ChangeNotifier {
       (_extraListeners != null && _extraListeners!.isNotEmpty) ||
       super.hasListeners;
 
+  /// Internal engine check: whether any standard, mask, or ChangeNotifier listeners exist.
+  @internal
+  bool get hasAnyListeners =>
+      _singleListener != null ||
+      _singleMaskListener != null ||
+      (_extraListeners != null && _extraListeners!.isNotEmpty) ||
+      (_extraMaskListeners != null && _extraMaskListeners!.isNotEmpty) ||
+      super.hasListeners;
+
   /// Whether this [Graft] has been disposed.
   ///
   /// Once disposed, all listeners are released and emissions are ignored.

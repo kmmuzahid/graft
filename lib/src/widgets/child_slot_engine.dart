@@ -1348,7 +1348,10 @@ class _GraftItemSlotState<S extends GraftState, T> extends State<GraftItemSlot<S
     if (!mounted) return;
     try {
       final nextItem = widget.selector(widget.graft.state);
-      if (_hasInitialItem && (identical(_item, nextItem) || _item == nextItem)) {
+      if (identical(_item, nextItem)) {
+        return; // 0 REBUILDS (single pointer check)
+      }
+      if (_hasInitialItem && _item == nextItem) {
         return; // 0 REBUILDS!
       }
 

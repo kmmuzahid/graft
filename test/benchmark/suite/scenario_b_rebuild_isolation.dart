@@ -98,6 +98,7 @@ class ScenarioBRebuildIsolationRunner {
     final results = <BenchmarkStats>[];
     final staticCount = slotCount - 1;
     tester.view.physicalSize = const Size(1200, 3000);
+    await tester.pumpWidget(const SizedBox.shrink());
 
     // -------------------------------------------------------------------------
     // 0. GRAFT (leaf slot: graft((s) => ...))
