@@ -67,14 +67,36 @@ abstract class GraftState {
       final c = current is _GraftPropsSingle ? current.value : current[0];
       _singleBaseline = _snapshotValue(c);
       _prevListLength = c is List ? c.length : -1;
+      _allScalarProps = c is num || c is String || c is bool || c is Enum;
       // Capture version for O(1) nested GraftState detection.
       _singleNestedVersion = c is GraftState ? c._version : -1;
       if (c is GraftState) {
-        GraftState leaf = c;
-        while (leaf._baseline == null && leaf._singleBaseline is GraftState) {
-          leaf = leaf._singleBaseline as GraftState;
+        c.initBaseline();
+        GraftState cur = c;
+        while (cur.props.length == 1) {
+          final next = cur.props is _GraftPropsSingle
+              ? (cur.props as _GraftPropsSingle).value
+              : cur.props[0];
+          if (next is GraftState) {
+            next.initBaseline();
+            cur = next;
+          } else {
+            break;
+          }
         }
-        _leafState = leaf;
+        _leafState = cur;
+        GraftState chain = c;
+        while (!identical(chain, cur)) {
+          chain._leafState = cur;
+          final next = chain.props is _GraftPropsSingle
+              ? (chain.props as _GraftPropsSingle).value
+              : chain.props[0];
+          if (next is GraftState) {
+            chain = next;
+          } else {
+            break;
+          }
+        }
       }
       return;
     }
@@ -116,6 +138,15 @@ abstract class GraftState {
         }
       }
       _nestedVersions = nestedVers;
+      bool allScalar = true;
+      for (int i = 0; i < len; i++) {
+        final v = current[i];
+        if (v is! num && v is! String && v is! bool && v is! Enum) {
+          allScalar = false;
+          break;
+        }
+      }
+      _allScalarProps = allScalar;
     }
   }
 
@@ -159,6 +190,10 @@ abstract class GraftState {
 
   /// Direct pointer to leaf GraftState in nested hierarchy for zero-hop O(1) leaf mutations.
   GraftState? _leafState;
+
+  /// Whether all properties are scalar primitives (num, String, bool, Enum).
+  /// Enables zero-branch pure scalar diff fast-paths.
+  bool _allScalarProps = false;
 
   /// High-performance zero-allocation register slot builder.
   ///
@@ -595,6 +630,17 @@ abstract class GraftState {
   GraftMask diffChanges() {
     final p = _singleBaseline;
     if (_baseline == null && !identical(p, _undefined)) {
+      if (_allScalarProps) {
+        props;
+        final c = _pendingSingle;
+        if (p == c) {
+          _dirtyMask = GraftMask.empty;
+          return GraftMask.empty;
+        }
+        _singleBaseline = c;
+        _dirtyMask = GraftMask.bit0;
+        return GraftMask.bit0;
+      }
       if (p is GraftState) {
         // ⚡ O(1) version-stamp check: compare captured version vs current.
         // This replaces 8-level recursive diffChanges() traversal with a single
@@ -613,7 +659,26 @@ abstract class GraftState {
           _dirtyMask = GraftMask.empty;
           return GraftMask.empty;
         }
-        // Version changed or not yet captured — run full nested diff to sync baseline.
+        // Version changed or not yet captured — run leaf diff directly if cached.
+        final leaf = _leafState;
+        if (leaf != null) {
+          if (leaf.diffChanges().isNotEmpty) {
+            _singleNestedVersion = p._version;
+            _dirtyMask = GraftMask.bit0;
+            return GraftMask.bit0;
+          }
+          _singleNestedVersion = p._version;
+          props;
+          final c = _pendingSingle;
+          if (!identical(p, c)) {
+            _singleBaseline = c;
+            _singleNestedVersion = c is GraftState ? c._version : -1;
+            _dirtyMask = GraftMask.bit0;
+            return GraftMask.bit0;
+          }
+          _dirtyMask = GraftMask.empty;
+          return GraftMask.empty;
+        }
         GraftState cur = p;
         while (cur._baseline == null) {
           final next = cur._singleBaseline;
@@ -878,76 +943,87 @@ abstract class GraftState {
       final p1 = prev[1];
 
       bool d0 = false;
-      if (!identical(p0, c0)) {
-        if (c0 is! Iterable && c0 is! Map && c0 is! GraftState) {
-          if (p0 != c0) {
-            prev[0] = c0;
-            d0 = true;
-          }
-        } else if (c0 is GraftState) {
-          if (!identical(p0, c0) || c0.diffChanges().isNotEmpty) {
-            prev[0] = c0;
-            d0 = true;
-          }
-        } else if (p0 is List && c0 is List) {
-          if (p0.length != c0.length) {
-            prev[0] = List<Object?>.of(c0, growable: false);
-            d0 = true;
-          } else {
-            d0 = _diffListAndUpdate(p0, c0);
-          }
-        } else if (p0 is Map && c0 is Map) {
-          d0 = _diffMapAndUpdate(p0, c0);
-        } else if (_isPropertyDirty(p0, c0)) {
-          prev[0] = _updateSnapshot(p0, c0);
-          d0 = true;
-        }
-      } else if (c0 is GraftState) {
-        if (c0.diffChanges().isNotEmpty) {
+      bool d1 = false;
+      if (_allScalarProps) {
+        if (p0 != c0) {
           prev[0] = c0;
           d0 = true;
         }
-      } else if (c0 is Iterable || c0 is Map) {
-        if (!_deepEquals(p0, c0)) {
-          prev[0] = _snapshotValue(c0);
-          d0 = true;
-        }
-      }
-
-      bool d1 = false;
-      if (!identical(p1, c1)) {
-        if (c1 is! Iterable && c1 is! Map && c1 is! GraftState) {
-          if (p1 != c1) {
-            prev[1] = c1;
-            d1 = true;
-          }
-        } else if (c1 is GraftState) {
-          if (!identical(p1, c1) || c1.diffChanges().isNotEmpty) {
-            prev[1] = c1;
-            d1 = true;
-          }
-        } else if (p1 is List && c1 is List) {
-          if (p1.length != c1.length) {
-            prev[1] = List<Object?>.of(c1, growable: false);
-            d1 = true;
-          } else {
-            d1 = _diffListAndUpdate(p1, c1);
-          }
-        } else if (p1 is Map && c1 is Map) {
-          d1 = _diffMapAndUpdate(p1, c1);
-        } else if (_isPropertyDirty(p1, c1)) {
-          prev[1] = _updateSnapshot(p1, c1);
-          d1 = true;
-        }
-      } else if (c1 is GraftState) {
-        if (c1.diffChanges().isNotEmpty) {
+        if (p1 != c1) {
           prev[1] = c1;
           d1 = true;
         }
-      } else if (c1 is Iterable || c1 is Map) {
-        if (!_deepEquals(p1, c1)) {
-          prev[1] = _snapshotValue(c1);
-          d1 = true;
+      } else {
+        if (!identical(p0, c0)) {
+          if (c0 is! Iterable && c0 is! Map && c0 is! GraftState) {
+            if (p0 != c0) {
+              prev[0] = c0;
+              d0 = true;
+            }
+          } else if (c0 is GraftState) {
+            if (!identical(p0, c0) || c0.diffChanges().isNotEmpty) {
+              prev[0] = c0;
+              d0 = true;
+            }
+          } else if (p0 is List && c0 is List) {
+            if (p0.length != c0.length) {
+              prev[0] = List<Object?>.of(c0, growable: false);
+              d0 = true;
+            } else {
+              d0 = _diffListAndUpdate(p0, c0);
+            }
+          } else if (p0 is Map && c0 is Map) {
+            d0 = _diffMapAndUpdate(p0, c0);
+          } else if (_isPropertyDirty(p0, c0)) {
+            prev[0] = _updateSnapshot(p0, c0);
+            d0 = true;
+          }
+        } else if (c0 is GraftState) {
+          if (c0.diffChanges().isNotEmpty) {
+            prev[0] = c0;
+            d0 = true;
+          }
+        } else if (c0 is Iterable || c0 is Map) {
+          if (!_deepEquals(p0, c0)) {
+            prev[0] = _snapshotValue(c0);
+            d0 = true;
+          }
+        }
+
+        if (!identical(p1, c1)) {
+          if (c1 is! Iterable && c1 is! Map && c1 is! GraftState) {
+            if (p1 != c1) {
+              prev[1] = c1;
+              d1 = true;
+            }
+          } else if (c1 is GraftState) {
+            if (!identical(p1, c1) || c1.diffChanges().isNotEmpty) {
+              prev[1] = c1;
+              d1 = true;
+            }
+          } else if (p1 is List && c1 is List) {
+            if (p1.length != c1.length) {
+              prev[1] = List<Object?>.of(c1, growable: false);
+              d1 = true;
+            } else {
+              d1 = _diffListAndUpdate(p1, c1);
+            }
+          } else if (p1 is Map && c1 is Map) {
+            d1 = _diffMapAndUpdate(p1, c1);
+          } else if (_isPropertyDirty(p1, c1)) {
+            prev[1] = _updateSnapshot(p1, c1);
+            d1 = true;
+          }
+        } else if (c1 is GraftState) {
+          if (c1.diffChanges().isNotEmpty) {
+            prev[1] = c1;
+            d1 = true;
+          }
+        } else if (c1 is Iterable || c1 is Map) {
+          if (!_deepEquals(p1, c1)) {
+            prev[1] = _snapshotValue(c1);
+            d1 = true;
+          }
         }
       }
 
@@ -986,59 +1062,119 @@ abstract class GraftState {
       }
       final p0 = prev[0], p1 = prev[1], p2 = prev[2];
       int w = 0;
-      if (p0 != c0) {
-        if (c0 is! Iterable && c0 is! Map && c0 is! GraftState) {
-          prev[0] = c0; w |= 1;
+      if (_allScalarProps) {
+        if (p0 != c0) {
+          prev[0] = c0;
+          w |= 1;
+        }
+        if (p1 != c1) {
+          prev[1] = c1;
+          w |= 2;
+        }
+        if (p2 != c2) {
+          prev[2] = c2;
+          w |= 4;
+        }
+      } else {
+        if (p0 != c0) {
+          if (c0 is! Iterable && c0 is! Map && c0 is! GraftState) {
+            prev[0] = c0;
+            w |= 1;
+          } else if (c0 is GraftState) {
+            if (!identical(p0, c0) || c0.diffChanges().isNotEmpty) {
+              prev[0] = c0;
+              w |= 1;
+            }
+          } else if (p0 is List && c0 is List) {
+            if (p0.length != c0.length) {
+              prev[0] = List<Object?>.of(c0, growable: false);
+              w |= 1;
+            } else if (_diffListAndUpdate(p0, c0)) {
+              w |= 1;
+            }
+          } else if (p0 is Map && c0 is Map) {
+            if (_diffMapAndUpdate(p0, c0)) w |= 1;
+          } else if (_isPropertyDirty(p0, c0)) {
+            prev[0] = _updateSnapshot(p0, c0);
+            w |= 1;
+          }
         } else if (c0 is GraftState) {
-          if (!identical(p0, c0) || c0.diffChanges().isNotEmpty) { prev[0] = c0; w |= 1; }
-        } else if (p0 is List && c0 is List) {
-          if (p0.length != c0.length) { prev[0] = List<Object?>.of(c0, growable: false); w |= 1; }
-          else if (_diffListAndUpdate(p0, c0)) w |= 1;
-        } else if (p0 is Map && c0 is Map) {
-          if (_diffMapAndUpdate(p0, c0)) w |= 1;
-        } else if (_isPropertyDirty(p0, c0)) {
-          prev[0] = _updateSnapshot(p0, c0); w |= 1;
+          if (c0.diffChanges().isNotEmpty) {
+            prev[0] = c0;
+            w |= 1;
+          }
+        } else if (c0 is Iterable || c0 is Map) {
+          if (!_deepEquals(p0, c0)) {
+            prev[0] = _snapshotValue(c0);
+            w |= 1;
+          }
         }
-      } else if (c0 is GraftState) {
-        if (c0.diffChanges().isNotEmpty) { prev[0] = c0; w |= 1; }
-      } else if (c0 is Iterable || c0 is Map) {
-        if (!_deepEquals(p0, c0)) { prev[0] = _snapshotValue(c0); w |= 1; }
-      }
-      if (p1 != c1) {
-        if (c1 is! Iterable && c1 is! Map && c1 is! GraftState) {
-          prev[1] = c1; w |= 2;
+        if (p1 != c1) {
+          if (c1 is! Iterable && c1 is! Map && c1 is! GraftState) {
+            prev[1] = c1;
+            w |= 2;
+          } else if (c1 is GraftState) {
+            if (!identical(p1, c1) || c1.diffChanges().isNotEmpty) {
+              prev[1] = c1;
+              w |= 2;
+            }
+          } else if (p1 is List && c1 is List) {
+            if (p1.length != c1.length) {
+              prev[1] = List<Object?>.of(c1, growable: false);
+              w |= 2;
+            } else if (_diffListAndUpdate(p1, c1)) {
+              w |= 2;
+            }
+          } else if (p1 is Map && c1 is Map) {
+            if (_diffMapAndUpdate(p1, c1)) w |= 2;
+          } else if (_isPropertyDirty(p1, c1)) {
+            prev[1] = _updateSnapshot(p1, c1);
+            w |= 2;
+          }
         } else if (c1 is GraftState) {
-          if (!identical(p1, c1) || c1.diffChanges().isNotEmpty) { prev[1] = c1; w |= 2; }
-        } else if (p1 is List && c1 is List) {
-          if (p1.length != c1.length) { prev[1] = List<Object?>.of(c1, growable: false); w |= 2; }
-          else if (_diffListAndUpdate(p1, c1)) w |= 2;
-        } else if (p1 is Map && c1 is Map) {
-          if (_diffMapAndUpdate(p1, c1)) w |= 2;
-        } else if (_isPropertyDirty(p1, c1)) {
-          prev[1] = _updateSnapshot(p1, c1); w |= 2;
+          if (c1.diffChanges().isNotEmpty) {
+            prev[1] = c1;
+            w |= 2;
+          }
+        } else if (c1 is Iterable || c1 is Map) {
+          if (!_deepEquals(p1, c1)) {
+            prev[1] = _snapshotValue(c1);
+            w |= 2;
+          }
         }
-      } else if (c1 is GraftState) {
-        if (c1.diffChanges().isNotEmpty) { prev[1] = c1; w |= 2; }
-      } else if (c1 is Iterable || c1 is Map) {
-        if (!_deepEquals(p1, c1)) { prev[1] = _snapshotValue(c1); w |= 2; }
-      }
-      if (p2 != c2) {
-        if (c2 is! Iterable && c2 is! Map && c2 is! GraftState) {
-          prev[2] = c2; w |= 4;
+        if (p2 != c2) {
+          if (c2 is! Iterable && c2 is! Map && c2 is! GraftState) {
+            prev[2] = c2;
+            w |= 4;
+          } else if (c2 is GraftState) {
+            if (!identical(p2, c2) || c2.diffChanges().isNotEmpty) {
+              prev[2] = c2;
+              w |= 4;
+            }
+          } else if (p2 is List && c2 is List) {
+            if (p2.length != c2.length) {
+              prev[2] = List<Object?>.of(c2, growable: false);
+              w |= 4;
+            } else if (_diffListAndUpdate(p2, c2)) {
+              w |= 4;
+            }
+          } else if (p2 is Map && c2 is Map) {
+            if (_diffMapAndUpdate(p2, c2)) w |= 4;
+          } else if (_isPropertyDirty(p2, c2)) {
+            prev[2] = _updateSnapshot(p2, c2);
+            w |= 4;
+          }
         } else if (c2 is GraftState) {
-          if (!identical(p2, c2) || c2.diffChanges().isNotEmpty) { prev[2] = c2; w |= 4; }
-        } else if (p2 is List && c2 is List) {
-          if (p2.length != c2.length) { prev[2] = List<Object?>.of(c2, growable: false); w |= 4; }
-          else if (_diffListAndUpdate(p2, c2)) w |= 4;
-        } else if (p2 is Map && c2 is Map) {
-          if (_diffMapAndUpdate(p2, c2)) w |= 4;
-        } else if (_isPropertyDirty(p2, c2)) {
-          prev[2] = _updateSnapshot(p2, c2); w |= 4;
+          if (c2.diffChanges().isNotEmpty) {
+            prev[2] = c2;
+            w |= 4;
+          }
+        } else if (c2 is Iterable || c2 is Map) {
+          if (!_deepEquals(p2, c2)) {
+            prev[2] = _snapshotValue(c2);
+            w |= 4;
+          }
         }
-      } else if (c2 is GraftState) {
-        if (c2.diffChanges().isNotEmpty) { prev[2] = c2; w |= 4; }
-      } else if (c2 is Iterable || c2 is Map) {
-        if (!_deepEquals(p2, c2)) { prev[2] = _snapshotValue(c2); w |= 4; }
       }
       if (w == 0) { _dirtyMask = GraftMask.empty; return GraftMask.empty; }
       if (w == 7) { _dirtyMask = GraftMask.allBitsUpTo(3); return _dirtyMask; }
@@ -1065,77 +1201,156 @@ abstract class GraftState {
       }
       final p0 = prev[0], p1 = prev[1], p2 = prev[2], p3 = prev[3];
       int w = 0;
-      if (p0 != c0) {
-        if (c0 is! Iterable && c0 is! Map && c0 is! GraftState) {
-          prev[0] = c0; w |= 1;
+      if (_allScalarProps) {
+        if (p0 != c0) {
+          prev[0] = c0;
+          w |= 1;
+        }
+        if (p1 != c1) {
+          prev[1] = c1;
+          w |= 2;
+        }
+        if (p2 != c2) {
+          prev[2] = c2;
+          w |= 4;
+        }
+        if (p3 != c3) {
+          prev[3] = c3;
+          w |= 8;
+        }
+      } else {
+        if (p0 != c0) {
+          if (c0 is! Iterable && c0 is! Map && c0 is! GraftState) {
+            prev[0] = c0;
+            w |= 1;
+          } else if (c0 is GraftState) {
+            if (!identical(p0, c0) || c0.diffChanges().isNotEmpty) {
+              prev[0] = c0;
+              w |= 1;
+            }
+          } else if (p0 is List && c0 is List) {
+            if (p0.length != c0.length) {
+              prev[0] = List<Object?>.of(c0, growable: false);
+              w |= 1;
+            } else if (_diffListAndUpdate(p0, c0)) {
+              w |= 1;
+            }
+          } else if (p0 is Map && c0 is Map) {
+            if (_diffMapAndUpdate(p0, c0)) w |= 1;
+          } else if (_isPropertyDirty(p0, c0)) {
+            prev[0] = _updateSnapshot(p0, c0);
+            w |= 1;
+          }
         } else if (c0 is GraftState) {
-          if (!identical(p0, c0) || c0.diffChanges().isNotEmpty) { prev[0] = c0; w |= 1; }
-        } else if (p0 is List && c0 is List) {
-          if (p0.length != c0.length) { prev[0] = List<Object?>.of(c0, growable: false); w |= 1; }
-          else if (_diffListAndUpdate(p0, c0)) w |= 1;
-        } else if (p0 is Map && c0 is Map) {
-          if (_diffMapAndUpdate(p0, c0)) w |= 1;
-        } else if (_isPropertyDirty(p0, c0)) {
-          prev[0] = _updateSnapshot(p0, c0); w |= 1;
+          if (c0.diffChanges().isNotEmpty) {
+            prev[0] = c0;
+            w |= 1;
+          }
+        } else if (c0 is Iterable || c0 is Map) {
+          if (!_deepEquals(p0, c0)) {
+            prev[0] = _snapshotValue(c0);
+            w |= 1;
+          }
         }
-      } else if (c0 is GraftState) {
-        if (c0.diffChanges().isNotEmpty) { prev[0] = c0; w |= 1; }
-      } else if (c0 is Iterable || c0 is Map) {
-        if (!_deepEquals(p0, c0)) { prev[0] = _snapshotValue(c0); w |= 1; }
-      }
-      if (p1 != c1) {
-        if (c1 is! Iterable && c1 is! Map && c1 is! GraftState) {
-          prev[1] = c1; w |= 2;
+        if (p1 != c1) {
+          if (c1 is! Iterable && c1 is! Map && c1 is! GraftState) {
+            prev[1] = c1;
+            w |= 2;
+          } else if (c1 is GraftState) {
+            if (!identical(p1, c1) || c1.diffChanges().isNotEmpty) {
+              prev[1] = c1;
+              w |= 2;
+            }
+          } else if (p1 is List && c1 is List) {
+            if (p1.length != c1.length) {
+              prev[1] = List<Object?>.of(c1, growable: false);
+              w |= 2;
+            } else if (_diffListAndUpdate(p1, c1)) {
+              w |= 2;
+            }
+          } else if (p1 is Map && c1 is Map) {
+            if (_diffMapAndUpdate(p1, c1)) w |= 2;
+          } else if (_isPropertyDirty(p1, c1)) {
+            prev[1] = _updateSnapshot(p1, c1);
+            w |= 2;
+          }
         } else if (c1 is GraftState) {
-          if (!identical(p1, c1) || c1.diffChanges().isNotEmpty) { prev[1] = c1; w |= 2; }
-        } else if (p1 is List && c1 is List) {
-          if (p1.length != c1.length) { prev[1] = List<Object?>.of(c1, growable: false); w |= 2; }
-          else if (_diffListAndUpdate(p1, c1)) w |= 2;
-        } else if (p1 is Map && c1 is Map) {
-          if (_diffMapAndUpdate(p1, c1)) w |= 2;
-        } else if (_isPropertyDirty(p1, c1)) {
-          prev[1] = _updateSnapshot(p1, c1); w |= 2;
+          if (c1.diffChanges().isNotEmpty) {
+            prev[1] = c1;
+            w |= 2;
+          }
+        } else if (c1 is Iterable || c1 is Map) {
+          if (!_deepEquals(p1, c1)) {
+            prev[1] = _snapshotValue(c1);
+            w |= 2;
+          }
         }
-      } else if (c1 is GraftState) {
-        if (c1.diffChanges().isNotEmpty) { prev[1] = c1; w |= 2; }
-      } else if (c1 is Iterable || c1 is Map) {
-        if (!_deepEquals(p1, c1)) { prev[1] = _snapshotValue(c1); w |= 2; }
-      }
-      if (p2 != c2) {
-        if (c2 is! Iterable && c2 is! Map && c2 is! GraftState) {
-          prev[2] = c2; w |= 4;
+        if (p2 != c2) {
+          if (c2 is! Iterable && c2 is! Map && c2 is! GraftState) {
+            prev[2] = c2;
+            w |= 4;
+          } else if (c2 is GraftState) {
+            if (!identical(p2, c2) || c2.diffChanges().isNotEmpty) {
+              prev[2] = c2;
+              w |= 4;
+            }
+          } else if (p2 is List && c2 is List) {
+            if (p2.length != c2.length) {
+              prev[2] = List<Object?>.of(c2, growable: false);
+              w |= 4;
+            } else if (_diffListAndUpdate(p2, c2)) {
+              w |= 4;
+            }
+          } else if (p2 is Map && c2 is Map) {
+            if (_diffMapAndUpdate(p2, c2)) w |= 4;
+          } else if (_isPropertyDirty(p2, c2)) {
+            prev[2] = _updateSnapshot(p2, c2);
+            w |= 4;
+          }
         } else if (c2 is GraftState) {
-          if (!identical(p2, c2) || c2.diffChanges().isNotEmpty) { prev[2] = c2; w |= 4; }
-        } else if (p2 is List && c2 is List) {
-          if (p2.length != c2.length) { prev[2] = List<Object?>.of(c2, growable: false); w |= 4; }
-          else if (_diffListAndUpdate(p2, c2)) w |= 4;
-        } else if (p2 is Map && c2 is Map) {
-          if (_diffMapAndUpdate(p2, c2)) w |= 4;
-        } else if (_isPropertyDirty(p2, c2)) {
-          prev[2] = _updateSnapshot(p2, c2); w |= 4;
+          if (c2.diffChanges().isNotEmpty) {
+            prev[2] = c2;
+            w |= 4;
+          }
+        } else if (c2 is Iterable || c2 is Map) {
+          if (!_deepEquals(p2, c2)) {
+            prev[2] = _snapshotValue(c2);
+            w |= 4;
+          }
         }
-      } else if (c2 is GraftState) {
-        if (c2.diffChanges().isNotEmpty) { prev[2] = c2; w |= 4; }
-      } else if (c2 is Iterable || c2 is Map) {
-        if (!_deepEquals(p2, c2)) { prev[2] = _snapshotValue(c2); w |= 4; }
-      }
-      if (p3 != c3) {
-        if (c3 is! Iterable && c3 is! Map && c3 is! GraftState) {
-          prev[3] = c3; w |= 8;
+        if (p3 != c3) {
+          if (c3 is! Iterable && c3 is! Map && c3 is! GraftState) {
+            prev[3] = c3;
+            w |= 8;
+          } else if (c3 is GraftState) {
+            if (!identical(p3, c3) || c3.diffChanges().isNotEmpty) {
+              prev[3] = c3;
+              w |= 8;
+            }
+          } else if (p3 is List && c3 is List) {
+            if (p3.length != c3.length) {
+              prev[3] = List<Object?>.of(c3, growable: false);
+              w |= 8;
+            } else if (_diffListAndUpdate(p3, c3)) {
+              w |= 8;
+            }
+          } else if (p3 is Map && c3 is Map) {
+            if (_diffMapAndUpdate(p3, c3)) w |= 8;
+          } else if (_isPropertyDirty(p3, c3)) {
+            prev[3] = _updateSnapshot(p3, c3);
+            w |= 8;
+          }
         } else if (c3 is GraftState) {
-          if (!identical(p3, c3) || c3.diffChanges().isNotEmpty) { prev[3] = c3; w |= 8; }
-        } else if (p3 is List && c3 is List) {
-          if (p3.length != c3.length) { prev[3] = List<Object?>.of(c3, growable: false); w |= 8; }
-          else if (_diffListAndUpdate(p3, c3)) w |= 8;
-        } else if (p3 is Map && c3 is Map) {
-          if (_diffMapAndUpdate(p3, c3)) w |= 8;
-        } else if (_isPropertyDirty(p3, c3)) {
-          prev[3] = _updateSnapshot(p3, c3); w |= 8;
+          if (c3.diffChanges().isNotEmpty) {
+            prev[3] = c3;
+            w |= 8;
+          }
+        } else if (c3 is Iterable || c3 is Map) {
+          if (!_deepEquals(p3, c3)) {
+            prev[3] = _snapshotValue(c3);
+            w |= 8;
+          }
         }
-      } else if (c3 is GraftState) {
-        if (c3.diffChanges().isNotEmpty) { prev[3] = c3; w |= 8; }
-      } else if (c3 is Iterable || c3 is Map) {
-        if (!_deepEquals(p3, c3)) { prev[3] = _snapshotValue(c3); w |= 8; }
       }
       if (w == 0) { _dirtyMask = GraftMask.empty; return GraftMask.empty; }
       if (w == 15) { _dirtyMask = GraftMask.allBitsUpTo(4); return _dirtyMask; }
@@ -1164,95 +1379,103 @@ abstract class GraftState {
       }
       final p0 = prev[0], p1 = prev[1], p2 = prev[2], p3 = prev[3], p4 = prev[4];
       int w = 0;
-      if (p0 != c0) {
-        if (c0 is! Iterable && c0 is! Map && c0 is! GraftState) {
-          prev[0] = c0; w |= 1;
+      if (_allScalarProps) {
+        if (p0 != c0) { prev[0] = c0; w |= 1; }
+        if (p1 != c1) { prev[1] = c1; w |= 2; }
+        if (p2 != c2) { prev[2] = c2; w |= 4; }
+        if (p3 != c3) { prev[3] = c3; w |= 8; }
+        if (p4 != c4) { prev[4] = c4; w |= 16; }
+      } else {
+        if (p0 != c0) {
+          if (c0 is! Iterable && c0 is! Map && c0 is! GraftState) {
+            prev[0] = c0; w |= 1;
+          } else if (c0 is GraftState) {
+            if (!identical(p0, c0) || c0.diffChanges().isNotEmpty) { prev[0] = c0; w |= 1; }
+          } else if (p0 is List && c0 is List) {
+            if (p0.length != c0.length) { prev[0] = List<Object?>.of(c0, growable: false); w |= 1; }
+            else if (_diffListAndUpdate(p0, c0)) w |= 1;
+          } else if (p0 is Map && c0 is Map) {
+            if (_diffMapAndUpdate(p0, c0)) w |= 1;
+          } else if (_isPropertyDirty(p0, c0)) {
+            prev[0] = _updateSnapshot(p0, c0); w |= 1;
+          }
         } else if (c0 is GraftState) {
-          if (!identical(p0, c0) || c0.diffChanges().isNotEmpty) { prev[0] = c0; w |= 1; }
-        } else if (p0 is List && c0 is List) {
-          if (p0.length != c0.length) { prev[0] = List<Object?>.of(c0, growable: false); w |= 1; }
-          else if (_diffListAndUpdate(p0, c0)) w |= 1;
-        } else if (p0 is Map && c0 is Map) {
-          if (_diffMapAndUpdate(p0, c0)) w |= 1;
-        } else if (_isPropertyDirty(p0, c0)) {
-          prev[0] = _updateSnapshot(p0, c0); w |= 1;
+          if (c0.diffChanges().isNotEmpty) { prev[0] = c0; w |= 1; }
+        } else if (c0 is Iterable || c0 is Map) {
+          if (!_deepEquals(p0, c0)) { prev[0] = _snapshotValue(c0); w |= 1; }
         }
-      } else if (c0 is GraftState) {
-        if (c0.diffChanges().isNotEmpty) { prev[0] = c0; w |= 1; }
-      } else if (c0 is Iterable || c0 is Map) {
-        if (!_deepEquals(p0, c0)) { prev[0] = _snapshotValue(c0); w |= 1; }
-      }
-      if (p1 != c1) {
-        if (c1 is! Iterable && c1 is! Map && c1 is! GraftState) {
-          prev[1] = c1; w |= 2;
+        if (p1 != c1) {
+          if (c1 is! Iterable && c1 is! Map && c1 is! GraftState) {
+            prev[1] = c1; w |= 2;
+          } else if (c1 is GraftState) {
+            if (!identical(p1, c1) || c1.diffChanges().isNotEmpty) { prev[1] = c1; w |= 2; }
+          } else if (p1 is List && c1 is List) {
+            if (p1.length != c1.length) { prev[1] = List<Object?>.of(c1, growable: false); w |= 2; }
+            else if (_diffListAndUpdate(p1, c1)) w |= 2;
+          } else if (p1 is Map && c1 is Map) {
+            if (_diffMapAndUpdate(p1, c1)) w |= 2;
+          } else if (_isPropertyDirty(p1, c1)) {
+            prev[1] = _updateSnapshot(p1, c1); w |= 2;
+          }
         } else if (c1 is GraftState) {
-          if (!identical(p1, c1) || c1.diffChanges().isNotEmpty) { prev[1] = c1; w |= 2; }
-        } else if (p1 is List && c1 is List) {
-          if (p1.length != c1.length) { prev[1] = List<Object?>.of(c1, growable: false); w |= 2; }
-          else if (_diffListAndUpdate(p1, c1)) w |= 2;
-        } else if (p1 is Map && c1 is Map) {
-          if (_diffMapAndUpdate(p1, c1)) w |= 2;
-        } else if (_isPropertyDirty(p1, c1)) {
-          prev[1] = _updateSnapshot(p1, c1); w |= 2;
+          if (c1.diffChanges().isNotEmpty) { prev[1] = c1; w |= 2; }
+        } else if (c1 is Iterable || c1 is Map) {
+          if (!_deepEquals(p1, c1)) { prev[1] = _snapshotValue(c1); w |= 2; }
         }
-      } else if (c1 is GraftState) {
-        if (c1.diffChanges().isNotEmpty) { prev[1] = c1; w |= 2; }
-      } else if (c1 is Iterable || c1 is Map) {
-        if (!_deepEquals(p1, c1)) { prev[1] = _snapshotValue(c1); w |= 2; }
-      }
-      if (p2 != c2) {
-        if (c2 is! Iterable && c2 is! Map && c2 is! GraftState) {
-          prev[2] = c2; w |= 4;
+        if (p2 != c2) {
+          if (c2 is! Iterable && c2 is! Map && c2 is! GraftState) {
+            prev[2] = c2; w |= 4;
+          } else if (c2 is GraftState) {
+            if (!identical(p2, c2) || c2.diffChanges().isNotEmpty) { prev[2] = c2; w |= 4; }
+          } else if (p2 is List && c2 is List) {
+            if (p2.length != c2.length) { prev[2] = List<Object?>.of(c2, growable: false); w |= 4; }
+            else if (_diffListAndUpdate(p2, c2)) w |= 4;
+          } else if (p2 is Map && c2 is Map) {
+            if (_diffMapAndUpdate(p2, c2)) w |= 4;
+          } else if (_isPropertyDirty(p2, c2)) {
+            prev[2] = _updateSnapshot(p2, c2); w |= 4;
+          }
         } else if (c2 is GraftState) {
-          if (!identical(p2, c2) || c2.diffChanges().isNotEmpty) { prev[2] = c2; w |= 4; }
-        } else if (p2 is List && c2 is List) {
-          if (p2.length != c2.length) { prev[2] = List<Object?>.of(c2, growable: false); w |= 4; }
-          else if (_diffListAndUpdate(p2, c2)) w |= 4;
-        } else if (p2 is Map && c2 is Map) {
-          if (_diffMapAndUpdate(p2, c2)) w |= 4;
-        } else if (_isPropertyDirty(p2, c2)) {
-          prev[2] = _updateSnapshot(p2, c2); w |= 4;
+          if (c2.diffChanges().isNotEmpty) { prev[2] = c2; w |= 4; }
+        } else if (c2 is Iterable || c2 is Map) {
+          if (!_deepEquals(p2, c2)) { prev[2] = _snapshotValue(c2); w |= 4; }
         }
-      } else if (c2 is GraftState) {
-        if (c2.diffChanges().isNotEmpty) { prev[2] = c2; w |= 4; }
-      } else if (c2 is Iterable || c2 is Map) {
-        if (!_deepEquals(p2, c2)) { prev[2] = _snapshotValue(c2); w |= 4; }
-      }
-      if (p3 != c3) {
-        if (c3 is! Iterable && c3 is! Map && c3 is! GraftState) {
-          prev[3] = c3; w |= 8;
+        if (p3 != c3) {
+          if (c3 is! Iterable && c3 is! Map && c3 is! GraftState) {
+            prev[3] = c3; w |= 8;
+          } else if (c3 is GraftState) {
+            if (!identical(p3, c3) || c3.diffChanges().isNotEmpty) { prev[3] = c3; w |= 8; }
+          } else if (p3 is List && c3 is List) {
+            if (p3.length != c3.length) { prev[3] = List<Object?>.of(c3, growable: false); w |= 8; }
+            else if (_diffListAndUpdate(p3, c3)) w |= 8;
+          } else if (p3 is Map && c3 is Map) {
+            if (_diffMapAndUpdate(p3, c3)) w |= 8;
+          } else if (_isPropertyDirty(p3, c3)) {
+            prev[3] = _updateSnapshot(p3, c3); w |= 8;
+          }
         } else if (c3 is GraftState) {
-          if (!identical(p3, c3) || c3.diffChanges().isNotEmpty) { prev[3] = c3; w |= 8; }
-        } else if (p3 is List && c3 is List) {
-          if (p3.length != c3.length) { prev[3] = List<Object?>.of(c3, growable: false); w |= 8; }
-          else if (_diffListAndUpdate(p3, c3)) w |= 8;
-        } else if (p3 is Map && c3 is Map) {
-          if (_diffMapAndUpdate(p3, c3)) w |= 8;
-        } else if (_isPropertyDirty(p3, c3)) {
-          prev[3] = _updateSnapshot(p3, c3); w |= 8;
+          if (c3.diffChanges().isNotEmpty) { prev[3] = c3; w |= 8; }
+        } else if (c3 is Iterable || c3 is Map) {
+          if (!_deepEquals(p3, c3)) { prev[3] = _snapshotValue(c3); w |= 8; }
         }
-      } else if (c3 is GraftState) {
-        if (c3.diffChanges().isNotEmpty) { prev[3] = c3; w |= 8; }
-      } else if (c3 is Iterable || c3 is Map) {
-        if (!_deepEquals(p3, c3)) { prev[3] = _snapshotValue(c3); w |= 8; }
-      }
-      if (p4 != c4) {
-        if (c4 is! Iterable && c4 is! Map && c4 is! GraftState) {
-          prev[4] = c4; w |= 16;
+        if (p4 != c4) {
+          if (c4 is! Iterable && c4 is! Map && c4 is! GraftState) {
+            prev[4] = c4; w |= 16;
+          } else if (c4 is GraftState) {
+            if (!identical(p4, c4) || c4.diffChanges().isNotEmpty) { prev[4] = c4; w |= 16; }
+          } else if (p4 is List && c4 is List) {
+            if (p4.length != c4.length) { prev[4] = List<Object?>.of(c4, growable: false); w |= 16; }
+            else if (_diffListAndUpdate(p4, c4)) w |= 16;
+          } else if (p4 is Map && c4 is Map) {
+            if (_diffMapAndUpdate(p4, c4)) w |= 16;
+          } else if (_isPropertyDirty(p4, c4)) {
+            prev[4] = _updateSnapshot(p4, c4); w |= 16;
+          }
         } else if (c4 is GraftState) {
-          if (!identical(p4, c4) || c4.diffChanges().isNotEmpty) { prev[4] = c4; w |= 16; }
-        } else if (p4 is List && c4 is List) {
-          if (p4.length != c4.length) { prev[4] = List<Object?>.of(c4, growable: false); w |= 16; }
-          else if (_diffListAndUpdate(p4, c4)) w |= 16;
-        } else if (p4 is Map && c4 is Map) {
-          if (_diffMapAndUpdate(p4, c4)) w |= 16;
-        } else if (_isPropertyDirty(p4, c4)) {
-          prev[4] = _updateSnapshot(p4, c4); w |= 16;
+          if (c4.diffChanges().isNotEmpty) { prev[4] = c4; w |= 16; }
+        } else if (c4 is Iterable || c4 is Map) {
+          if (!_deepEquals(p4, c4)) { prev[4] = _snapshotValue(c4); w |= 16; }
         }
-      } else if (c4 is GraftState) {
-        if (c4.diffChanges().isNotEmpty) { prev[4] = c4; w |= 16; }
-      } else if (c4 is Iterable || c4 is Map) {
-        if (!_deepEquals(p4, c4)) { prev[4] = _snapshotValue(c4); w |= 16; }
       }
       if (w == 0) { _dirtyMask = GraftMask.empty; return GraftMask.empty; }
       if (w == 31) { _dirtyMask = GraftMask.allBitsUpTo(5); return _dirtyMask; }
@@ -1384,6 +1607,15 @@ abstract class GraftState {
     _version++;
     final p = _singleBaseline;
     if (_baseline == null && !identical(p, _undefined) && Graft.observer == null) {
+      if (_allScalarProps) {
+        props;
+        final c = _pendingSingle;
+        if (p == c) return;
+        _singleBaseline = c;
+        _dirtyMask = GraftMask.bit0;
+        _graft?.notifyMask(GraftMask.bit0);
+        return;
+      }
       if (p is num || p is String || p is bool || p is Enum) {
         props;
         final c = _pendingSingle;
@@ -1396,38 +1628,83 @@ abstract class GraftState {
         }
       } else if (p is GraftState) {
         // ⚡ Direct O(1) leaf state resolution without recursive traversal.
-        GraftState cur = _leafState ?? p;
-        if (_leafState == null) {
-          while (cur._baseline == null) {
-            cur._version++;
-            final next = cur._singleBaseline;
-            if (next is GraftState) {
-              cur = next;
-            } else {
-              break;
-            }
-          }
-          _leafState = cur;
-        } else {
-          cur._version++;
-        }
+        final cur = _leafState ?? p;
+        cur._version++;
         final leafP = cur._singleBaseline;
-        if (cur._baseline == null && (leafP is num || leafP is String || leafP is bool || leafP is Enum)) {
+        if (cur._baseline == null && (cur._allScalarProps || leafP is num || leafP is String || leafP is bool || leafP is Enum)) {
           cur.props;
           final c = cur._pendingSingle;
           if (leafP == c) return;
-          if (c is num || c is String || c is bool || c is Enum) {
-            cur._singleBaseline = c;
-            _singleNestedVersion = p._version; // stamp root's child version
-            _dirtyMask = GraftMask.bit0;
-            _graft?.notifyMask(GraftMask.bit0);
-            return;
-          }
+          cur._singleBaseline = c;
+          _singleNestedVersion = p._version; // stamp root's child version
+          _dirtyMask = GraftMask.bit0;
+          _graft?.notifyMask(GraftMask.bit0);
+          return;
         }
         if (cur.diffChanges().isNotEmpty) {
           _singleNestedVersion = p._version; // stamp root's child version
           _dirtyMask = GraftMask.bit0;
           _graft?.notifyMask(GraftMask.bit0);
+          return;
+        }
+      }
+    }
+
+    final prev = _baseline;
+    if (prev != null && _allScalarProps && Graft.observer == null) {
+      props;
+      final buf = _propsBuffer;
+      final len = prev.length;
+      if (buf != null) {
+        if (len == 5) {
+          final c0 = buf[0], c1 = buf[1], c2 = buf[2], c3 = buf[3], c4 = buf[4];
+          final p0 = prev[0], p1 = prev[1], p2 = prev[2], p3 = prev[3], p4 = prev[4];
+          int w = 0;
+          if (p0 != c0) { prev[0] = c0; w |= 1; }
+          if (p1 != c1) { prev[1] = c1; w |= 2; }
+          if (p2 != c2) { prev[2] = c2; w |= 4; }
+          if (p3 != c3) { prev[3] = c3; w |= 8; }
+          if (p4 != c4) { prev[4] = c4; w |= 16; }
+          if (w == 0) return;
+          final mask = w == 31 ? GraftMask.allBitsUpTo(5) : GraftMask.fromWords(w, 0);
+          _dirtyMask = mask;
+          _graft?.notifyMask(mask);
+          return;
+        } else if (len == 2) {
+          final c0 = buf[0], c1 = buf[1];
+          final p0 = prev[0], p1 = prev[1];
+          int w = 0;
+          if (p0 != c0) { prev[0] = c0; w |= 1; }
+          if (p1 != c1) { prev[1] = c1; w |= 2; }
+          if (w == 0) return;
+          final mask = w == 3 ? GraftMask.allBitsUpTo(2) : (w == 1 ? GraftMask.bit0 : GraftMask.bit1);
+          _dirtyMask = mask;
+          _graft?.notifyMask(mask);
+          return;
+        } else if (len == 3) {
+          final c0 = buf[0], c1 = buf[1], c2 = buf[2];
+          final p0 = prev[0], p1 = prev[1], p2 = prev[2];
+          int w = 0;
+          if (p0 != c0) { prev[0] = c0; w |= 1; }
+          if (p1 != c1) { prev[1] = c1; w |= 2; }
+          if (p2 != c2) { prev[2] = c2; w |= 4; }
+          if (w == 0) return;
+          final mask = w == 7 ? GraftMask.allBitsUpTo(3) : GraftMask.fromWords(w, 0);
+          _dirtyMask = mask;
+          _graft?.notifyMask(mask);
+          return;
+        } else if (len == 4) {
+          final c0 = buf[0], c1 = buf[1], c2 = buf[2], c3 = buf[3];
+          final p0 = prev[0], p1 = prev[1], p2 = prev[2], p3 = prev[3];
+          int w = 0;
+          if (p0 != c0) { prev[0] = c0; w |= 1; }
+          if (p1 != c1) { prev[1] = c1; w |= 2; }
+          if (p2 != c2) { prev[2] = c2; w |= 4; }
+          if (p3 != c3) { prev[3] = c3; w |= 8; }
+          if (w == 0) return;
+          final mask = w == 15 ? GraftMask.allBitsUpTo(4) : GraftMask.fromWords(w, 0);
+          _dirtyMask = mask;
+          _graft?.notifyMask(mask);
           return;
         }
       }

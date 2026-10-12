@@ -98,7 +98,14 @@ class ScenarioBRebuildIsolationRunner {
     final results = <BenchmarkStats>[];
     final staticCount = slotCount - 1;
     tester.view.physicalSize = const Size(1200, 3000);
-    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: SizedBox.shrink(),
+        ),
+      ),
+    );
+    await tester.pump();
 
     // -------------------------------------------------------------------------
     // 0. GRAFT (leaf slot: graft((s) => ...))
@@ -433,7 +440,9 @@ class ScenarioBRebuildIsolationRunner {
             home: Scaffold(
               body: Column(
                 children: [
-                  signals_pkg.Watch((context) {
+                  signals_pkg.Watch(
+                    key: ValueKey(countSignal),
+                    (context) {
                     final val = countSignal.watch(context);
                     return TrackingWidget(
                       label: 'Dynamic: $val',

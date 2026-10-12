@@ -267,7 +267,19 @@ class ScenarioCLargeListRunner {
   }) async {
     final results = <BenchmarkStats>[];
     final targetIndex = itemCount ~/ 2;
-
+    // Warm-up ListView and ScrollController pipelines
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ListView.builder(
+            itemCount: 10,
+            itemExtent: 50.0,
+            itemBuilder: (context, i) => SizedBox(height: 50.0, child: Text('$i')),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
     // 1. Graft
     {
       final samples = <double>[];
@@ -485,7 +497,9 @@ class ScenarioCLargeListRunner {
                 itemCount: itemCount,
                 itemExtent: 50.0,
                 itemBuilder: (context, index) {
-                  return signals_pkg.Watch((context) {
+                  return signals_pkg.Watch(
+                    key: ValueKey(ctrl.items[index]),
+                    (context) {
                     final item = ctrl.items[index].value;
                     return TrackedListTile(
                       key: ValueKey(item.id),
