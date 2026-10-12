@@ -67,7 +67,7 @@ class ProviderBModel extends ChangeNotifier {
 // =============================================================================
 class ScenarioBRebuildIsolationRunner {
   static const int totalFrames = 120;
-  static const int warmUpRuns = 3;
+  static const int warmUpRuns = 15;
   static const int measuredRuns = 15;
 
   static Future<List<BenchmarkStats>> runAll(WidgetTester tester) async {
@@ -98,14 +98,79 @@ class ScenarioBRebuildIsolationRunner {
     final results = <BenchmarkStats>[];
     final staticCount = slotCount - 1;
     tester.view.physicalSize = const Size(1200, 3000);
-    await tester.pumpWidget(
-      const MaterialApp(
-        home: Scaffold(
-          body: SizedBox.shrink(),
+    // Pre-flight JIT warm-up of all widget/element reconciliation and paragraph pipelines
+    {
+      int dummy = 0;
+      void Function(void Function())? stateSetter;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Column(
+              children: [
+                StatefulBuilder(
+                  builder: (context, setState) {
+                    stateSetter = setState;
+                    return TrackingWidget(label: 'Warm: $dummy', onBuild: () {});
+                  },
+                ),
+                for (int i = 0; i < staticCount; i++)
+                  TrackingWidget(label: 'Static $i', onBuild: () {}),
+              ],
+            ),
+          ),
         ),
-      ),
-    );
-    await tester.pump();
+      );
+      await tester.pump();
+      for (int f = 0; f < 60; f++) {
+        stateSetter?.call(() => dummy++);
+        await tester.pump();
+      }
+
+      // Pre-warm Graft element types
+      final warmCtrl = GraftBController();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Column(
+              children: [
+                warmCtrl((s) => TrackingWidget(label: 'W: ${s.count}', onBuild: () {})),
+                for (int i = 0; i < staticCount; i++)
+                  TrackingWidget(label: 'Static $i', onBuild: () {}),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      for (int f = 0; f < 60; f++) {
+        warmCtrl.increment();
+        await tester.pump();
+      }
+      warmCtrl.dispose();
+
+      final warmSlotsCtrl = GraftBController();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: warmSlotsCtrl.slots(
+              layout: Column(children: slots),
+              slots: [
+                (s) => TrackingWidget(label: 'W: ${s.count}', onBuild: () {}),
+                for (int i = 0; i < staticCount; i++)
+                  TrackingWidget(label: 'Static $i', onBuild: () {}),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      for (int f = 0; f < 60; f++) {
+        warmSlotsCtrl.increment();
+        await tester.pump();
+      }
+      warmSlotsCtrl.dispose();
+      await tester.pumpWidget(const SizedBox.shrink());
+    }
 
     // -------------------------------------------------------------------------
     // 0. GRAFT (leaf slot: graft((s) => ...))
@@ -152,6 +217,7 @@ class ScenarioBRebuildIsolationRunner {
           lastDynamicBuilds = counter.dynamicBuilds;
           lastStaticBuilds = counter.totalStaticBuilds;
         }
+        ctrl.dispose();
       }
 
       results.add(BenchmarkStats(
@@ -211,6 +277,7 @@ class ScenarioBRebuildIsolationRunner {
           lastDynamicBuilds = counter.dynamicBuilds;
           lastStaticBuilds = counter.totalStaticBuilds;
         }
+        ctrl.dispose();
       }
 
       results.add(BenchmarkStats(

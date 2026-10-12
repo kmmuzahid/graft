@@ -31,7 +31,7 @@
 library;
 
 export 'src/context/graft_context.dart';
-export 'src/core/graft.dart';
+export 'src/core/graft.dart' hide GraftFastReceiver, GraftItemReceiver;
 export 'src/core/graft_async.dart';
 export 'src/core/graft_change.dart';
 export 'src/core/graft_mask.dart';

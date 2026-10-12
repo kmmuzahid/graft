@@ -35,7 +35,7 @@ class LifecycleProviderModel extends ChangeNotifier {
 // SCENARIO E RUNNER
 // =============================================================================
 class ScenarioELifecycleRunner {
-  static const int warmUpRuns = 3;
+  static const int warmUpRuns = 5;
   static const int measuredRuns = 15;
 
   static Future<List<BenchmarkStats>> runAll(WidgetTester tester) async {

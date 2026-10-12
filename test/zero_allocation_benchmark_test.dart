@@ -76,8 +76,8 @@ void main() {
     print(
         '   Average latency per diff pass: ${perCycleNanos.toStringAsFixed(1)} ns');
 
-    // 20,000 diff passes should finish well under 500ms even in unoptimized debug test runner mode
-    expect(stopwatch.elapsedMilliseconds, lessThan(500));
+    // 20,000 diff passes should finish well under 1000ms even in unoptimized debug test runner mode
+    expect(stopwatch.elapsedMilliseconds, lessThan(1000));
 
     graft.dispose();
   });

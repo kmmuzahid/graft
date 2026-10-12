@@ -326,14 +326,18 @@ extension GraftWidgetsX<S extends GraftState> on Graft<S> {
   /// - [CarouselView]
   ///
   /// Rebuilds **ONLY** when [selector] returns a new or modified item.
+  /// When [index] is supplied, enables direct O(1) indexed routing from [Graft.updateItem]
+  /// or [GraftState.update(itemIndex: index)].
   Widget item<T>({
     required T Function(S state) selector,
     required Widget Function(T item) builder,
+    int? index,
     Key? key,
   }) {
     GraftScopeGuard.verifyNotActive(this, 'graft.item');
     return GraftItemSlot<S, T>(
       key: key,
+      index: index,
       graft: this,
       selector: selector,
       builder: (context, itm) => builder(itm),
@@ -343,20 +347,24 @@ extension GraftWidgetsX<S extends GraftState> on Graft<S> {
   /// Universal fine-grained selector slot adapter.
   ///
   /// Rebuilds **ONLY** when [selector] returns a new or modified value (`prev != next`).
+  /// When [index] is supplied, enables direct O(1) indexed routing from [Graft.updateItem]
+  /// or [GraftState.update(itemIndex: index)].
   ///
   /// ### Example:
   /// ```dart
   /// graft.select(
   ///   (s) => s.items[index],
+  ///   index: index,
   ///   builder: (item) => Text(item.title),
   /// )
   /// ```
   Widget select<T>(
     T Function(S state) selector, {
     required Widget Function(T value) builder,
+    int? index,
     Key? key,
   }) =>
-      item<T>(selector: selector, builder: builder, key: key);
+      item<T>(selector: selector, builder: builder, index: index, key: key);
 }
 
 class _GraftComputation<S extends GraftState, R> extends StatefulWidget

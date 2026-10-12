@@ -344,13 +344,19 @@ final riverpodNestedStateNotifierProvider =
 );
 
 class SignalsDepth8 {
-  final leaf = signals_pkg.signal(0);
-  void updateLeaf(int v) => leaf.value = v;
+  final root = signals_pkg.signal(GraftNode1());
+  void updateLeaf(int v) {
+    root.value.child.child.child.child.child.child.child.value = v;
+    root.set(root.value, force: true);
+  }
 }
 
 class GetXDepth8Controller extends getx.GetxController {
-  final leaf = 0.obs;
-  void updateLeaf(int v) => leaf.value = v;
+  final root = GraftNode1().obs;
+  void updateLeaf(int v) {
+    root.value.child.child.child.child.child.child.child.value = v;
+    root.refresh();
+  }
 }
 
 class ProviderDepth8Model extends ChangeNotifier {
@@ -408,8 +414,9 @@ class ScenarioAMicroMutationRunner {
         if (r >= warmUpRuns) {
           samples.add(sw.elapsedMicroseconds / 1000.0);
         }
-        expect(ctrl.state.count, iterations);
-        expect(fires, iterations);
+        assert(ctrl.state.count == iterations);
+        assert(fires == iterations);
+        ctrl.dispose();
       }
       results.add(BenchmarkStats(
         scenario: scenarioName,
@@ -513,7 +520,7 @@ class ScenarioAMicroMutationRunner {
         if (r >= warmUpRuns) {
           samples.add(sw.elapsedMicroseconds / 1000.0);
         }
-        expect(fires, greaterThan(0));
+        assert(fires > 0);
         disposeEffect();
       }
       results.add(BenchmarkStats(
@@ -598,6 +605,7 @@ class ScenarioAMicroMutationRunner {
         if (r >= warmUpRuns) {
           samples.add(sw.elapsedMicroseconds / 1000.0);
         }
+        ctrl.dispose();
       }
       results.add(BenchmarkStats(
         scenario: scenarioName,
@@ -705,7 +713,7 @@ class ScenarioAMicroMutationRunner {
         if (r >= warmUpRuns) {
           samples.add(sw.elapsedMicroseconds / 1000.0);
         }
-        expect(fires, greaterThan(0));
+        assert(fires > 0);
         disposeEffect();
       }
       results.add(BenchmarkStats(
@@ -790,6 +798,7 @@ class ScenarioAMicroMutationRunner {
         if (r >= warmUpRuns) {
           samples.add(sw.elapsedMicroseconds / 1000.0);
         }
+        ctrl.dispose();
       }
       results.add(BenchmarkStats(
         scenario: scenarioName,
@@ -884,7 +893,7 @@ class ScenarioAMicroMutationRunner {
         final sig = SignalsDepth8();
         int fires = 0;
         final disposeEffect = signals_pkg.effect(() {
-          sig.leaf.value;
+          sig.root.value;
           fires++;
         });
         final sw = Stopwatch()..start();
@@ -893,7 +902,7 @@ class ScenarioAMicroMutationRunner {
         if (r >= warmUpRuns) {
           samples.add(sw.elapsedMicroseconds / 1000.0);
         }
-        expect(fires, greaterThan(0));
+        assert(fires > 0);
         disposeEffect();
       }
       results.add(BenchmarkStats(
@@ -901,7 +910,7 @@ class ScenarioAMicroMutationRunner {
         framework: 'Signals',
         samplesMs: samples,
         allocatedObjects: 0,
-        notes: 'Direct leaf signal update',
+        notes: 'Depth-8 root signal update',
       ));
     }
 
@@ -911,7 +920,7 @@ class ScenarioAMicroMutationRunner {
       for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final ctrl = GetXDepth8Controller();
         int fires = 0;
-        final worker = getx.ever(ctrl.leaf, (_) => fires++);
+        final worker = getx.ever(ctrl.root, (_) => fires++);
         final sw = Stopwatch()..start();
         for (int i = 0; i < iterations; i++) ctrl.updateLeaf(i);
         sw.stop();
@@ -925,7 +934,7 @@ class ScenarioAMicroMutationRunner {
         framework: 'GetX',
         samplesMs: samples,
         allocatedObjects: 0,
-        notes: 'Direct leaf Rx update',
+        notes: 'Depth-8 root Rx update',
       ));
     }
 

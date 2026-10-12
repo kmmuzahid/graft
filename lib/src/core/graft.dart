@@ -72,6 +72,60 @@ class Graft<S extends GraftState> extends ChangeNotifier {
   @internal
   GraftMask fastDirectMask = GraftMask.empty;
 
+  Map<int, GraftItemReceiver>? _indexedItemReceivers;
+
+  /// Registers an index-addressed item receiver.
+  @internal
+  void registerItemReceiver(int index, GraftItemReceiver receiver) {
+    _indexedItemReceivers ??= <int, GraftItemReceiver>{};
+    _indexedItemReceivers![index] = receiver;
+  }
+
+  /// Unregisters an index-addressed item receiver.
+  @internal
+  void unregisterItemReceiver(int index, GraftItemReceiver receiver) {
+    final map = _indexedItemReceivers;
+    if (map != null) {
+      if (identical(map[index], receiver)) {
+        map.remove(index);
+      }
+    }
+  }
+
+  /// Checks if an item receiver is registered at [index].
+  @internal
+  @pragma('vm:prefer-inline')
+  bool hasItemReceiver(int index) => _indexedItemReceivers?.containsKey(index) ?? false;
+
+  /// Dispatches an update directly to the item slot at [index] with O(1) pointer dispatch.
+  @pragma('vm:prefer-inline')
+  void notifyItem(int index) {
+    if (_isDisposed) return;
+    final r = _indexedItemReceivers?[index];
+    if (r != null && r.mounted) {
+      r.markItemDirty();
+      final single = _singleListener;
+      if (single != null) {
+        single();
+        final extra = _extraListeners;
+        if (extra != null && extra.isNotEmpty) {
+          final eLen = extra.length;
+          for (int i = 0; i < eLen; i++) {
+            extra[i]();
+          }
+        }
+      }
+      return;
+    }
+    notifyMask(GraftMask.bit0);
+  }
+
+  /// Mutates state and notifies the item receiver at [index] directly in O(1) time.
+  void updateItem(int index, [void Function()? mutate]) {
+    mutate?.call();
+    state.update(itemIndex: index);
+  }
+
   /// Creates a new [Graft] with the given [initialState].
   ///
   /// Automatically binds [initialState] to this controller and notifies [observer].
@@ -478,5 +532,15 @@ abstract interface class GraftFastReceiver {
 
   /// Directly marks the element dirty for rebuilding in Flutter's build pass.
   void markFastDirty();
+}
+
+/// Internal interface for zero-overhead index-addressed item slot notification.
+@internal
+abstract interface class GraftItemReceiver {
+  /// Whether the receiver element is currently mounted in the widget tree.
+  bool get mounted;
+
+  /// Directly marks the item slot dirty for rebuilding in Flutter's build pass.
+  void markItemDirty();
 }
 

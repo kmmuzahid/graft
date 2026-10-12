@@ -206,7 +206,7 @@ class Form12BlocCubit extends bloc_pkg.Cubit<Form12BlocState> {
 // SCENARIO D RUNNER
 // =============================================================================
 class ScenarioDCompositeRunner {
-  static const int warmUpRuns = 3;
+  static const int warmUpRuns = 5;
   static const int measuredRuns = 15;
 
   static Future<List<BenchmarkStats>> runAll(WidgetTester tester) async {
@@ -426,6 +426,32 @@ class ScenarioDCompositeRunner {
     required String scenarioName,
   }) async {
     final results = <BenchmarkStats>[];
+
+    // Neutral JIT warmup of showDialog, ModalBarrier, and Navigator animation pipelines
+    {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: ElevatedButton(
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (dContext) => const AlertDialog(title: Text('Warm')),
+                  );
+                },
+                child: const Text('Open'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+      Navigator.of(tester.element(find.byType(AlertDialog))).pop();
+      await tester.pumpAndSettle();
+    }
 
     // 1. Graft (context.use + PopupRoute Protection)
     {

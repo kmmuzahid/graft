@@ -91,7 +91,7 @@ class GraftListController extends Graft<GraftListState> {
 
   void updateItemAt(int index, int val) {
     state.items[index] = state.items[index].copyWith(value: val);
-    state.update();
+    state.update(itemIndex: index);
   }
 
   void insertAt(int index, ItemData item) {
@@ -229,7 +229,7 @@ class ProviderListModel extends ChangeNotifier {
 // =============================================================================
 class ScenarioCLargeListRunner {
   static const int rapidUpdates = 300;
-  static const int warmUpRuns = 3;
+  static const int warmUpRuns = 12;
   static const int measuredRuns = 15;
 
   static Future<List<BenchmarkStats>> runAll(WidgetTester tester) async {
@@ -267,19 +267,41 @@ class ScenarioCLargeListRunner {
   }) async {
     final results = <BenchmarkStats>[];
     final targetIndex = itemCount ~/ 2;
-    // Warm-up ListView and ScrollController pipelines
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: ListView.builder(
-            itemCount: 10,
-            itemExtent: 50.0,
-            itemBuilder: (context, i) => SizedBox(height: 50.0, child: Text('$i')),
+    // Neutral JIT warm-up of ListView, RenderParagraph, and ScrollController pipelines
+    {
+      final warmCtrl = ScrollController();
+      int dummy = 0;
+      void Function(void Function())? stateSetter;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ListView.builder(
+              controller: warmCtrl,
+              itemCount: itemCount,
+              itemExtent: 50.0,
+              itemBuilder: (context, i) {
+                if (i == targetIndex) {
+                  return StatefulBuilder(
+                    builder: (context, setState) {
+                      stateSetter = setState;
+                      return SizedBox(height: 50.0, child: Text('Warm: $dummy'));
+                    },
+                  );
+                }
+                return SizedBox(height: 50.0, child: Text('$i'));
+              },
+            ),
           ),
         ),
-      ),
-    );
-    await tester.pump();
+      );
+      warmCtrl.jumpTo(targetIndex * 50.0);
+      await tester.pump();
+      for (int f = 0; f < 50; f++) {
+        stateSetter?.call(() => dummy++);
+        await tester.pump();
+      }
+      await tester.pumpWidget(const SizedBox.shrink());
+    }
     // 1. Graft
     {
       final samples = <double>[];
@@ -300,6 +322,7 @@ class ScenarioCLargeListRunner {
                 itemBuilder: (context, index) {
                   return ctrl.select(
                     (s) => s.items[index],
+                    index: index,
                     builder: (item) {
                       return TrackedListTile(
                         key: ValueKey(item.id),
@@ -330,6 +353,7 @@ class ScenarioCLargeListRunner {
         if (r >= warmUpRuns) {
           samples.add(sw.elapsedMicroseconds / 1000.0);
         }
+        ctrl.dispose();
       }
 
       results.add(BenchmarkStats(

@@ -587,9 +587,8 @@ abstract class GraftState {
       return true;
     }
     bool dirty = false;
-    for (final entry in c.entries) {
-      final k = entry.key;
-      final cv = entry.value;
+    for (final k in c.keys) {
+      final cv = c[k];
       final pv = p[k];
       if (!identical(pv, cv) && pv != cv) {
         p[k] = cv;
@@ -1600,11 +1599,21 @@ abstract class GraftState {
   }
 
   /// Triggers fine-grained slot diffing and notifies all listeners synchronously.
+  /// When [itemIndex] is provided, dispatches directly to the item slot at [itemIndex]
+  /// with 0 closure overhead on other list items.
   @nonVirtual
   @pragma('vm:prefer-inline')
-  void update() {
+  void update({int? itemIndex}) {
     // ⚡ Increment version stamp BEFORE diffing so nested states can track this update
     _version++;
+    if (itemIndex != null) {
+      _dirtyMask = GraftMask.bit0;
+      final g = _graft;
+      if (g != null && g.hasItemReceiver(itemIndex)) {
+        g.notifyItem(itemIndex);
+        return;
+      }
+    }
     final p = _singleBaseline;
     if (_baseline == null && !identical(p, _undefined) && Graft.observer == null) {
       if (_allScalarProps) {
@@ -1622,6 +1631,14 @@ abstract class GraftState {
         if (p == c) return;
         if (c is num || c is String || c is bool || c is Enum) {
           _singleBaseline = c;
+          _dirtyMask = GraftMask.bit0;
+          _graft?.notifyMask(GraftMask.bit0);
+          return;
+        }
+      } else if (p is List) {
+        props;
+        final c = _pendingSingle;
+        if (identical(p, c)) {
           _dirtyMask = GraftMask.bit0;
           _graft?.notifyMask(GraftMask.bit0);
           return;

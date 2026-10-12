@@ -608,10 +608,16 @@ class _GraftMultiChildDiffEngineState<S extends GraftState>
         _slotTable.where((s) => !s.isStatic).toList(growable: false);
     _wrappedChildren = List.generate(
       _slotTable.length,
-      (i) => _ChildSlotScope(
-        key: ValueKey(i),
-        slot: _slotTable[i],
-      ),
+      (i) {
+        final slot = _slotTable[i];
+        if (slot.isStatic) {
+          return slot.currentWidget;
+        }
+        return _ChildSlotScope(
+          key: ValueKey(i),
+          slot: slot,
+        );
+      },
       growable: false,
     );
   }
@@ -643,6 +649,11 @@ class _GraftMultiChildDiffEngineState<S extends GraftState>
 
     if (oldWidget.graft != widget.graft || countChanged) {
       if (oldWidget.graft != widget.graft) {
+        if (_dynamicSlotTable.isNotEmpty &&
+            identical(oldWidget.graft.fastDirectReceiver, _dynamicSlotTable[0].element)) {
+          oldWidget.graft.fastDirectReceiver = null;
+          oldWidget.graft.fastDirectMask = GraftMask.empty;
+        }
         oldWidget.graft.removeMaskListener(_onStateDirty);
       }
       _disposeSlots();
@@ -655,10 +666,12 @@ class _GraftMultiChildDiffEngineState<S extends GraftState>
         final item = widget.slots[i];
         final slot = _slotTable[i];
         if (item is Widget && slot.isStatic) {
-          if (!identical(slot.notifier.value, item) &&
+          if (!identical(slot.currentWidget, item) &&
               !GraftMultiChildDiffEngine.isWidgetEquivalent(
-                  slot.notifier.value, item, context)) {
+                  slot.currentWidget, item, context)) {
             slot.notifier.value = item;
+            slot.currentWidget = item;
+            _wrappedChildren[i] = item;
           }
         }
       }
@@ -679,60 +692,16 @@ class _GraftMultiChildDiffEngineState<S extends GraftState>
       if (!dirtyMask.isAllDirty && slot.ignoredMask.isNotEmpty && dirtyMask.isSubsetOf(slot.ignoredMask)) {
         return;
       }
-      final isKnownDynamic = slot.fieldDependenciesMask.isNotEmpty &&
-          !dirtyMask.isEmpty &&
-          !dirtyMask.isAllDirty &&
-          dirtyMask.isSubsetOf(slot.fieldDependenciesMask);
-
-      if (isKnownDynamic) {
-        slot.rebuildCount++;
-        final el = slot.element;
-        if (el is _ChildSlotElement) {
-          el.markSlotDirty();
-        } else {
-          el?.markNeedsBuild();
-        }
-        return;
-      }
-
-      final oldWidget = slot.currentWidget;
-      final newWidget = slot.evaluator != null
-          ? slot.evaluator!(widget.graft.state)
-          : _evaluateSlot(widget.slots[slot.slotIndex]);
-      if (identical(oldWidget, newWidget)) return;
-
-      if (!isKnownDynamic &&
-          GraftMultiChildDiffEngine.isWidgetEquivalent(oldWidget, newWidget, context)) {
-        if (!dirtyMask.isEmpty && !dirtyMask.isAllDirty) {
-          final single = dirtyMask.singleBitIndex;
-          if (single != null) {
-            slot.ignoredMask = slot.ignoredMask.withBit(single);
-          } else {
-            slot.ignoredMask = slot.ignoredMask.union(dirtyMask);
-          }
-        }
-        return;
-      }
-
-      if (Graft.observer != null) {
-        slot.contentFingerprint = SlotMetadata.computeFingerprint(newWidget);
-      }
       slot.rebuildCount++;
-      slot.updateWidget(newWidget);
-      Graft.observer?.onSlotRebuild(widget.graft, slot.slotIndex, newWidget);
-
-      if (!isKnownDynamic && !dirtyMask.isEmpty && !dirtyMask.isAllDirty) {
-        final singleField = dirtyMask.singleBitIndex;
-        if (singleField != null) {
-          slot.fieldDependenciesMask = slot.fieldDependenciesMask.withBit(singleField);
-        } else if (slot.fieldDependenciesMask.isEmpty) {
-          slot.fieldDependenciesMask = dirtyMask;
+      final el = slot.element;
+      if (el is _ChildSlotElement) {
+        el.markSlotDirty();
+        if (widget.graft.fastDirectReceiver == null) {
+          widget.graft.fastDirectReceiver = el;
+          widget.graft.fastDirectMask = GraftMask.allDirty;
         }
-        final el = slot.element;
-        if (el is GraftFastReceiver && widget.graft.fastDirectReceiver == null) {
-          widget.graft.fastDirectReceiver = el as GraftFastReceiver;
-          widget.graft.fastDirectMask = slot.fieldDependenciesMask;
-        }
+      } else {
+        el?.markNeedsBuild();
       }
       return;
     }
@@ -1046,6 +1015,11 @@ class _ChildSlotElement extends ComponentElement implements GraftFastReceiver {
     super.mount(parent, newSlot);
     widget.slot.element = this;
     widget.slot.notifier.attachElement();
+    final dynamic g = widget.slot.graft;
+    if (g is Graft && g.fastDirectReceiver == null) {
+      g.fastDirectReceiver = this;
+      g.fastDirectMask = GraftMask.allDirty;
+    }
   }
 
   @override
@@ -1055,8 +1029,18 @@ class _ChildSlotElement extends ComponentElement implements GraftFastReceiver {
     if (oldSlot != newWidget.slot) {
       oldSlot.notifier.detachElement();
       newWidget.slot.notifier.attachElement();
+      final dynamic oldG = oldSlot.graft;
+      if (oldG is Graft && identical(oldG.fastDirectReceiver, this)) {
+        oldG.fastDirectReceiver = null;
+        oldG.fastDirectMask = GraftMask.empty;
+      }
     }
     newWidget.slot.element = this;
+    final dynamic newG = newWidget.slot.graft;
+    if (newG is Graft && newG.fastDirectReceiver == null) {
+      newG.fastDirectReceiver = this;
+      newG.fastDirectMask = GraftMask.allDirty;
+    }
     _isDirty = false;
     rebuild(force: true);
   }
@@ -1080,12 +1064,13 @@ class _ChildSlotElement extends ComponentElement implements GraftFastReceiver {
     if (_isDirty) {
       _isDirty = false;
       final slot = widget.slot;
-      final dynamic g = slot.graft;
-      final w = slot.evaluator != null && g is Graft
-          ? slot.evaluator!(g.state)
-          : (slot.evaluate != null ? slot.evaluate!() : slot.currentWidget);
+      final w = slot.evaluate != null
+          ? slot.evaluate!()
+          : (slot.evaluator != null && slot.graft is Graft
+              ? slot.evaluator!((slot.graft as Graft).state)
+              : slot.currentWidget);
       slot.currentWidget = w;
-      slot.notifier.value = w;
+      final g = slot.graft;
       if (g is Graft) {
         Graft.observer?.onSlotRebuild(g, slot.slotIndex, w);
       }
@@ -1138,7 +1123,6 @@ class _GraftSingleSlotElement<S extends GraftState> extends ComponentElement
 
   late Widget _currentWidget;
   GraftMask _ignoredMask = GraftMask.empty;
-  GraftMask _fieldDependenciesMask = GraftMask.empty;
   bool _ancestorChecked = false;
   bool _isDirty = false;
   bool _fastPathActive = false;
@@ -1194,6 +1178,11 @@ class _GraftSingleSlotElement<S extends GraftState> extends ComponentElement
       return true;
     }());
     widget.graft.addMaskListener(_onMaskDirty);
+    if (!_fastPathActive && widget.graft.fastDirectReceiver == null) {
+      widget.graft.fastDirectReceiver = this;
+      widget.graft.fastDirectMask = GraftMask.allDirty;
+      _fastPathActive = true;
+    }
   }
 
   @override
@@ -1202,14 +1191,22 @@ class _GraftSingleSlotElement<S extends GraftState> extends ComponentElement
     super.update(newWidget);
     if (oldGraft != newWidget.graft) {
       oldGraft.removeMaskListener(_onMaskDirty);
+      if (_fastPathActive && identical(oldGraft.fastDirectReceiver, this)) {
+        oldGraft.fastDirectReceiver = null;
+        oldGraft.fastDirectMask = GraftMask.empty;
+      }
+      _fastPathActive = false;
       _ignoredMask = GraftMask.empty;
-      _fieldDependenciesMask = GraftMask.empty;
       _ancestorChecked = false;
       _currentWidget = widget.builder(widget.graft.state);
       newWidget.graft.addMaskListener(_onMaskDirty);
+      if (newWidget.graft.fastDirectReceiver == null) {
+        newWidget.graft.fastDirectReceiver = this;
+        newWidget.graft.fastDirectMask = GraftMask.allDirty;
+        _fastPathActive = true;
+      }
     } else {
       _ignoredMask = GraftMask.empty;
-      _fieldDependenciesMask = GraftMask.empty;
       _onMaskDirty(GraftMask.allDirty);
     }
     _isDirty = false;
@@ -1223,6 +1220,7 @@ class _GraftSingleSlotElement<S extends GraftState> extends ComponentElement
     if (_fastPathActive && identical(widget.graft.fastDirectReceiver, this)) {
       widget.graft.fastDirectReceiver = null;
       widget.graft.fastDirectMask = GraftMask.empty;
+      _fastPathActive = false;
     }
     super.unmount();
   }
@@ -1231,7 +1229,6 @@ class _GraftSingleSlotElement<S extends GraftState> extends ComponentElement
   void reassemble() {
     super.reassemble();
     _ignoredMask = GraftMask.empty;
-    _fieldDependenciesMask = GraftMask.empty;
     _ancestorChecked = false;
     _isDirty = false;
     _onMaskDirty(GraftMask.allDirty);
@@ -1246,35 +1243,18 @@ class _GraftSingleSlotElement<S extends GraftState> extends ComponentElement
       }
     }
 
-    final isKnownDynamic = _fieldDependenciesMask.isNotEmpty &&
-        !dirtyMask.isEmpty &&
-        !dirtyMask.isAllDirty &&
-        dirtyMask.isSubsetOf(_fieldDependenciesMask);
-
-    if (isKnownDynamic) {
-      // Fast path: we know this mask causes a rebuild. Mark dirty and let
-      // build() call the builder once during Flutter's build pass.
-      _isDirty = true;
-      markNeedsBuild();
-      return;
-    }
-
-    if (!isKnownDynamic) {
-      // Untouched sibling slot isolation for async operations:
-      // When only GraftAsync props update, standard slots (caller == 'graft.slot') skip evaluation.
-      if (widget.caller != 'graft.async' && !dirtyMask.isAllDirty && !dirtyMask.isEmpty) {
-        final props = widget.graft.state.props;
-        bool allAsync = true;
-        for (int i = 0; i < props.length; i++) {
-          if (dirtyMask.isBitSet(i)) {
-            if (props[i] is! GraftAsync) {
-              allAsync = false;
-              break;
-            }
+    if (widget.caller != 'graft.async' && !dirtyMask.isAllDirty && !dirtyMask.isEmpty) {
+      final props = widget.graft.state.props;
+      bool allAsync = true;
+      for (int i = 0; i < props.length; i++) {
+        if (dirtyMask.isBitSet(i)) {
+          if (props[i] is! GraftAsync) {
+            allAsync = false;
+            break;
           }
         }
-        if (allAsync) return;
       }
+      if (allAsync) return;
     }
 
     final oldWidget = _currentWidget;
@@ -1298,24 +1278,6 @@ class _GraftSingleSlotElement<S extends GraftState> extends ComponentElement
     _currentWidget = newWidget;
     markNeedsBuild();
     Graft.observer?.onSlotRebuild(widget.graft, 0, newWidget);
-
-    if (!dirtyMask.isEmpty && !dirtyMask.isAllDirty) {
-      final singleField = dirtyMask.singleBitIndex;
-      if (singleField != null) {
-        _fieldDependenciesMask = _fieldDependenciesMask.withBit(singleField);
-      } else if (_fieldDependenciesMask.isEmpty) {
-        _fieldDependenciesMask = dirtyMask;
-      }
-      // ⚡ Activate ultra-fast direct receiver path for future notifications.
-      // After the first confirmed-dynamic rebuild, all subsequent frames for
-      // this mask go directly to markFastDirty() with zero listener overhead.
-      if (!_fastPathActive && _fieldDependenciesMask.isNotEmpty &&
-          widget.graft.fastDirectReceiver == null) {
-        widget.graft.fastDirectReceiver = this;
-        widget.graft.fastDirectMask = _fieldDependenciesMask;
-        _fastPathActive = true;
-      }
-    }
   }
 
   @override
@@ -1336,6 +1298,9 @@ class GraftItemSlot<S extends GraftState, T> extends StatefulWidget implements G
   /// The [Graft] instance providing state.
   final Graft<S> graft;
 
+  /// Optional item index for direct O(1) pointer dispatch.
+  final int? index;
+
   /// Selector extracting the specific item slice [T] from state.
   final T Function(S state) selector;
 
@@ -1348,6 +1313,7 @@ class GraftItemSlot<S extends GraftState, T> extends StatefulWidget implements G
     required this.graft,
     required this.selector,
     required this.builder,
+    this.index,
   });
 
   @override
@@ -1360,7 +1326,8 @@ class GraftItemSlot<S extends GraftState, T> extends StatefulWidget implements G
   State<GraftItemSlot<S, T>> createState() => _GraftItemSlotState<S, T>();
 }
 
-class _GraftItemSlotState<S extends GraftState, T> extends State<GraftItemSlot<S, T>> {
+class _GraftItemSlotState<S extends GraftState, T> extends State<GraftItemSlot<S, T>>
+    implements GraftItemReceiver {
   T? _item;
   Widget? _cachedWidget;
   bool _hasInitialItem = false;
@@ -1370,6 +1337,31 @@ class _GraftItemSlotState<S extends GraftState, T> extends State<GraftItemSlot<S
     super.initState();
     _resolveInitialItem();
     widget.graft.addMaskListener(_onMaskChange);
+    if (widget.index != null) {
+      widget.graft.registerItemReceiver(widget.index!, this);
+    }
+  }
+
+  @override
+  void markItemDirty() {
+    if (!mounted) return;
+    final T nextItem;
+    try {
+      nextItem = widget.selector(widget.graft.state);
+    } catch (_) {
+      return;
+    }
+    if (identical(_item, nextItem)) {
+      return; // 0 REBUILDS (single pointer check)
+    }
+    if (_hasInitialItem && _item == nextItem) {
+      return; // 0 REBUILDS!
+    }
+
+    _item = nextItem;
+    _hasInitialItem = true;
+    _cachedWidget = null;
+    (context as Element).markNeedsBuild();
   }
 
   void _resolveInitialItem() {
@@ -1383,23 +1375,23 @@ class _GraftItemSlotState<S extends GraftState, T> extends State<GraftItemSlot<S
 
   void _onMaskChange(GraftMask mask) {
     if (!mounted) return;
+    final T nextItem;
     try {
-      final nextItem = widget.selector(widget.graft.state);
-      if (identical(_item, nextItem)) {
-        return; // 0 REBUILDS (single pointer check)
-      }
-      if (_hasInitialItem && _item == nextItem) {
-        return; // 0 REBUILDS!
-      }
-
-      setState(() {
-        _item = nextItem;
-        _hasInitialItem = true;
-        _cachedWidget = null;
-      });
+      nextItem = widget.selector(widget.graft.state);
     } catch (_) {
-      // Gracefully handle bounds exception if item was removed before element unmount
+      return;
     }
+    if (identical(_item, nextItem)) {
+      return; // 0 REBUILDS (single pointer check)
+    }
+    if (_hasInitialItem && _item == nextItem) {
+      return; // 0 REBUILDS!
+    }
+
+    _item = nextItem;
+    _hasInitialItem = true;
+    _cachedWidget = null;
+    (context as Element).markNeedsBuild();
   }
 
   @override
@@ -1415,6 +1407,14 @@ class _GraftItemSlotState<S extends GraftState, T> extends State<GraftItemSlot<S
   @override
   void didUpdateWidget(covariant GraftItemSlot<S, T> oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.index != widget.index || oldWidget.graft != widget.graft) {
+      if (oldWidget.index != null) {
+        oldWidget.graft.unregisterItemReceiver(oldWidget.index!, this);
+      }
+      if (widget.index != null) {
+        widget.graft.registerItemReceiver(widget.index!, this);
+      }
+    }
     if (oldWidget.graft != widget.graft) {
       oldWidget.graft.removeMaskListener(_onMaskChange);
       _resolveInitialItem();
@@ -1428,6 +1428,9 @@ class _GraftItemSlotState<S extends GraftState, T> extends State<GraftItemSlot<S
   @override
   void dispose() {
     widget.graft.removeMaskListener(_onMaskChange);
+    if (widget.index != null) {
+      widget.graft.unregisterItemReceiver(widget.index!, this);
+    }
     super.dispose();
   }
 
@@ -1565,6 +1568,7 @@ class _GraftBuilderDiffEngineState<S extends GraftState, T>
         key: widget.itemKey != null
             ? widget.itemKey!(widget.item(widget.graft.state, index))
             : ValueKey(index),
+        index: index,
         graft: widget.graft,
         selector: (s) {
           final count = widget.itemCount(s);
