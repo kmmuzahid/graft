@@ -67,27 +67,55 @@ abstract class GraftState {
       final c = current is _GraftPropsSingle ? current.value : current[0];
       _singleBaseline = _snapshotValue(c);
       _prevListLength = c is List ? c.length : -1;
+      // Capture version for O(1) nested GraftState detection.
+      _singleNestedVersion = c is GraftState ? c._version : -1;
+      if (c is GraftState) {
+        GraftState leaf = c;
+        while (leaf._baseline == null && leaf._singleBaseline is GraftState) {
+          leaf = leaf._singleBaseline as GraftState;
+        }
+        _leafState = leaf;
+      }
       return;
     }
     if (len > 1) {
+      List<int>? nestedVers;
       if (current is _GraftPropsListView) {
         final list = current._list;
         if (list.isNotEmpty && list[0] is GraftState) {
+          nestedVers = List<int>.filled(len, -1);
           _baseline = List<Object?>.generate(
             len,
-            (i) => _snapshotValue(current[i]),
+            (i) {
+              final v = current[i];
+              if (v is GraftState) nestedVers![i] = v._version;
+              return _snapshotValue(v);
+            },
             growable: false,
           );
         } else {
           _baseline = List<Object?>.of(list, growable: false);
         }
       } else {
+        bool hasNested = false;
         _baseline = List<Object?>.generate(
           len,
-          (i) => _snapshotValue(current[i]),
+          (i) {
+            final v = current[i];
+            if (v is GraftState) hasNested = true;
+            return _snapshotValue(v);
+          },
           growable: false,
         );
+        if (hasNested) {
+          nestedVers = List<int>.filled(len, -1);
+          for (int i = 0; i < len; i++) {
+            final v = current[i];
+            if (v is GraftState) nestedVers[i] = v._version;
+          }
+        }
       }
+      _nestedVersions = nestedVers;
     }
   }
 
@@ -119,6 +147,18 @@ abstract class GraftState {
   Object? _pendingSingle = _undefined;
   int _prevListLength = -1;
   bool _baselineNeedsSync = false;
+
+  /// Captured _version of a single nested GraftState prop at baseline time.
+  /// When non-negative, used for O(1) nested state change detection instead
+  /// of recursive [diffChanges] traversal.
+  int _singleNestedVersion = -1;
+
+  /// Parallel version-stamp array for multi-prop nested [GraftState] entries.
+  /// Index i mirrors [_baseline][i] when that entry is a [GraftState].
+  List<int>? _nestedVersions;
+
+  /// Direct pointer to leaf GraftState in nested hierarchy for zero-hop O(1) leaf mutations.
+  GraftState? _leafState;
 
   /// High-performance zero-allocation register slot builder.
   ///
@@ -556,6 +596,24 @@ abstract class GraftState {
     final p = _singleBaseline;
     if (_baseline == null && !identical(p, _undefined)) {
       if (p is GraftState) {
+        // ⚡ O(1) version-stamp check: compare captured version vs current.
+        // This replaces 8-level recursive diffChanges() traversal with a single
+        // integer comparison — same cost as GetX's Rx version check.
+        final cv = p._version;
+        final capturedV = _singleNestedVersion;
+        if (capturedV >= 0 && cv == capturedV) {
+          props;
+          final c = _pendingSingle;
+          if (!identical(p, c)) {
+            _singleBaseline = c;
+            _singleNestedVersion = c is GraftState ? c._version : -1;
+            _dirtyMask = GraftMask.bit0;
+            return GraftMask.bit0;
+          }
+          _dirtyMask = GraftMask.empty;
+          return GraftMask.empty;
+        }
+        // Version changed or not yet captured — run full nested diff to sync baseline.
         GraftState cur = p;
         while (cur._baseline == null) {
           final next = cur._singleBaseline;
@@ -566,13 +624,16 @@ abstract class GraftState {
           }
         }
         if (cur.diffChanges().isNotEmpty) {
+          _singleNestedVersion = p._version;
           _dirtyMask = GraftMask.bit0;
           return GraftMask.bit0;
         }
+        _singleNestedVersion = p._version;
         props;
         final c = _pendingSingle;
         if (!identical(p, c)) {
           _singleBaseline = c;
+          _singleNestedVersion = c is GraftState ? c._version : -1;
           _dirtyMask = GraftMask.bit0;
           return GraftMask.bit0;
         }
@@ -591,11 +652,25 @@ abstract class GraftState {
         return GraftMask.bit0;
       }
       if (c is GraftState) {
-        if (!identical(p, c) || c.diffChanges().isNotEmpty) {
+        // ⚡ O(1) version-stamp for early-return GraftState prop.
+        if (!identical(p, c)) {
           _singleBaseline = c;
+          _singleNestedVersion = c._version;
           _dirtyMask = GraftMask.bit0;
           return GraftMask.bit0;
         }
+        final cv = c._version;
+        final capturedV = _singleNestedVersion;
+        if (capturedV >= 0 && cv == capturedV) {
+          _dirtyMask = GraftMask.empty;
+          return GraftMask.empty;
+        }
+        if (c.diffChanges().isNotEmpty) {
+          _singleNestedVersion = cv;
+          _dirtyMask = GraftMask.bit0;
+          return GraftMask.bit0;
+        }
+        _singleNestedVersion = cv;
         _dirtyMask = GraftMask.empty;
         return GraftMask.empty;
       }
@@ -606,6 +681,9 @@ abstract class GraftState {
             _dirtyMask = GraftMask.bit0;
             return GraftMask.bit0;
           }
+          // ⚡ In-place element mutation: same reference, same length → emit bit0.
+          _dirtyMask = GraftMask.bit0;
+          return GraftMask.bit0;
         } else if (c is Iterable || c is Map) {
           if (!_deepEquals(p, c)) {
             _singleBaseline = _snapshotValue(c);
@@ -669,6 +747,8 @@ abstract class GraftState {
       if (identical(p, _undefined)) {
         _singleBaseline = _snapshotValue(c);
         _prevListLength = c is List ? c.length : -1;
+        // Capture nested GraftState version for O(1) detection.
+        _singleNestedVersion = c is GraftState ? c._version : -1;
         _dirtyMask = GraftMask.allDirty;
         return GraftMask.allDirty;
       }
@@ -682,11 +762,26 @@ abstract class GraftState {
         return GraftMask.bit0;
       }
       if (c is GraftState) {
-        if (!identical(p, c) || c.diffChanges().isNotEmpty) {
+        // ⚡ O(1) version-stamp for len==1 GraftState prop (A4 depth-8 path).
+        if (!identical(p, c)) {
           _singleBaseline = c;
+          _singleNestedVersion = c._version;
           _dirtyMask = GraftMask.bit0;
           return GraftMask.bit0;
         }
+        final cv = c._version;
+        final capturedV = _singleNestedVersion;
+        if (capturedV >= 0 && cv == capturedV) {
+          _dirtyMask = GraftMask.empty;
+          return GraftMask.empty;
+        }
+        // Version changed: propagate diff to leaf to sync baseline, then stamp.
+        if (c.diffChanges().isNotEmpty) {
+          _singleNestedVersion = cv;
+          _dirtyMask = GraftMask.bit0;
+          return GraftMask.bit0;
+        }
+        _singleNestedVersion = cv;
         _dirtyMask = GraftMask.empty;
         return GraftMask.empty;
       }
@@ -697,6 +792,9 @@ abstract class GraftState {
             _dirtyMask = GraftMask.bit0;
             return GraftMask.bit0;
           }
+          // ⚡ In-place element mutation: same reference, same length → emit bit0.
+          _dirtyMask = GraftMask.bit0;
+          return GraftMask.bit0;
         } else if (c is Iterable || c is Map) {
           if (!_deepEquals(p, c)) {
             _singleBaseline = _snapshotValue(c);
@@ -1184,9 +1282,26 @@ abstract class GraftState {
             dirty = true;
           }
         } else if (c is GraftState) {
-          if (!identical(p, c) || c.diffChanges().isNotEmpty) {
+          if (!identical(p, c)) {
             prev[i] = c;
+            final nv = _nestedVersions;
+            if (nv != null && i < nv.length) nv[i] = c._version;
             dirty = true;
+          } else {
+            final nv = _nestedVersions;
+            if (nv != null && i < nv.length) {
+              final cv = c._version;
+              if (nv[i] != cv) {
+                nv[i] = cv;
+                if (c.diffChanges().isNotEmpty) {
+                  prev[i] = c;
+                  dirty = true;
+                }
+              }
+            } else if (c.diffChanges().isNotEmpty) {
+              prev[i] = c;
+              dirty = true;
+            }
           }
         } else if (p is List && c is List) {
           if (p.length != c.length) {
@@ -1202,7 +1317,17 @@ abstract class GraftState {
           dirty = true;
         }
       } else if (c is GraftState) {
-        if (c.diffChanges().isNotEmpty) {
+        final nv = _nestedVersions;
+        if (nv != null && i < nv.length) {
+          final cv = c._version;
+          if (nv[i] != cv) {
+            nv[i] = cv;
+            if (c.diffChanges().isNotEmpty) {
+              prev[i] = c;
+              dirty = true;
+            }
+          }
+        } else if (c.diffChanges().isNotEmpty) {
           prev[i] = c;
           dirty = true;
         }
@@ -1270,14 +1395,21 @@ abstract class GraftState {
           return;
         }
       } else if (p is GraftState) {
-        GraftState cur = p;
-        while (cur._baseline == null) {
-          final next = cur._singleBaseline;
-          if (next is GraftState) {
-            cur = next;
-          } else {
-            break;
+        // ⚡ Direct O(1) leaf state resolution without recursive traversal.
+        GraftState cur = _leafState ?? p;
+        if (_leafState == null) {
+          while (cur._baseline == null) {
+            cur._version++;
+            final next = cur._singleBaseline;
+            if (next is GraftState) {
+              cur = next;
+            } else {
+              break;
+            }
           }
+          _leafState = cur;
+        } else {
+          cur._version++;
         }
         final leafP = cur._singleBaseline;
         if (cur._baseline == null && (leafP is num || leafP is String || leafP is bool || leafP is Enum)) {
@@ -1286,12 +1418,14 @@ abstract class GraftState {
           if (leafP == c) return;
           if (c is num || c is String || c is bool || c is Enum) {
             cur._singleBaseline = c;
+            _singleNestedVersion = p._version; // stamp root's child version
             _dirtyMask = GraftMask.bit0;
             _graft?.notifyMask(GraftMask.bit0);
             return;
           }
         }
         if (cur.diffChanges().isNotEmpty) {
+          _singleNestedVersion = p._version; // stamp root's child version
           _dirtyMask = GraftMask.bit0;
           _graft?.notifyMask(GraftMask.bit0);
           return;

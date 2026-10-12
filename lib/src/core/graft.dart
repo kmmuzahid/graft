@@ -60,6 +60,18 @@ class Graft<S extends GraftState> extends ChangeNotifier {
   bool _isNotifying = false;
   ValueListenable<S>? _listenableCache;
 
+  /// Direct fast receiver pointer for the ultra-fast single-slot dispatch path.
+  /// Set by [_GraftSingleSlotElement] or single dynamic [_ChildSlotElement]
+  /// after the first confirmed-dynamic rebuild.
+  /// When non-null and conditions are met, [notifyMask] skips all listener
+  /// machinery and calls [GraftFastReceiver.markFastDirty] directly.
+  @internal
+  GraftFastReceiver? fastDirectReceiver;
+
+  /// The dirty mask subset under which [fastDirectReceiver] applies.
+  @internal
+  GraftMask fastDirectMask = GraftMask.empty;
+
   /// Creates a new [Graft] with the given [initialState].
   ///
   /// Automatically binds [initialState] to this controller and notifies [observer].
@@ -202,6 +214,26 @@ class Graft<S extends GraftState> extends ChangeNotifier {
   @pragma('vm:prefer-inline')
   void notifyMask(GraftMask dirtyMask, {GraftChange<dynamic>? change}) {
     if (_isDisposed) return;
+
+    // ⚡ Ultra-fast direct element path.
+    // Active post-warmup when exactly one single-slot scope is subscribed and
+    // its field dependency mask has been confirmed. Bypasses the entire
+    // listener chain with a single markFastDirty() call — same depth as Signals.
+    final fe = fastDirectReceiver;
+    if (fe != null &&
+        observer == null &&
+        _singleListener == null &&
+        _extraMaskListeners == null &&
+        dirtyMask.isSubsetOf(fastDirectMask)) {
+      if (fe.mounted) {
+        fe.markFastDirty();
+        return;
+      }
+      // Element unmounted but not yet cleared — do cleanup and fall through.
+      fastDirectReceiver = null;
+      fastDirectMask = GraftMask.empty;
+    }
+
     final sml = _singleMaskListener;
     if (sml != null) {
       sml(dirtyMask);
@@ -414,6 +446,8 @@ class Graft<S extends GraftState> extends ChangeNotifier {
     _extraListeners?.clear();
     _singleMaskListener = null;
     _extraMaskListeners?.clear();
+    fastDirectReceiver = null;
+    fastDirectMask = GraftMask.empty;
     super.dispose();
     observer?.onDispose(this);
   }
@@ -431,5 +465,18 @@ class _GraftListenable<S extends GraftState> implements ValueListenable<S> {
 
   @override
   void removeListener(VoidCallback listener) => _graft.removeListener(listener);
+}
+
+/// Internal interface for zero-overhead direct element notification.
+///
+/// Implemented by slot elements to allow [Graft.notifyMask] to directly mark
+/// the element dirty in Flutter's pipeline without invoking closure listener chains.
+@internal
+abstract interface class GraftFastReceiver {
+  /// Whether the receiver element is currently mounted in the widget tree.
+  bool get mounted;
+
+  /// Directly marks the element dirty for rebuilding in Flutter's build pass.
+  void markFastDirty();
 }
 

@@ -728,6 +728,11 @@ class _GraftMultiChildDiffEngineState<S extends GraftState>
         } else if (slot.fieldDependenciesMask.isEmpty) {
           slot.fieldDependenciesMask = dirtyMask;
         }
+        final el = slot.element;
+        if (el is GraftFastReceiver && widget.graft.fastDirectReceiver == null) {
+          widget.graft.fastDirectReceiver = el as GraftFastReceiver;
+          widget.graft.fastDirectMask = slot.fieldDependenciesMask;
+        }
       }
       return;
     }
@@ -1008,7 +1013,7 @@ class _ChildSlotScope extends Widget {
   Element createElement() => _ChildSlotElement(this);
 }
 
-class _ChildSlotElement extends ComponentElement {
+class _ChildSlotElement extends ComponentElement implements GraftFastReceiver {
   _ChildSlotElement(_ChildSlotScope super.widget);
 
   @override
@@ -1032,6 +1037,9 @@ class _ChildSlotElement extends ComponentElement {
     _isDirty = true;
     markNeedsBuild();
   }
+
+  @override
+  void markFastDirty() => markSlotDirty();
 
   @override
   void mount(Element? parent, Object? newSlot) {
@@ -1058,6 +1066,11 @@ class _ChildSlotElement extends ComponentElement {
     widget.slot.notifier.detachElement();
     if (identical(widget.slot.element, this)) {
       widget.slot.element = null;
+    }
+    final dynamic g = widget.slot.graft;
+    if (g is Graft && identical(g.fastDirectReceiver, this)) {
+      g.fastDirectReceiver = null;
+      g.fastDirectMask = GraftMask.empty;
     }
     super.unmount();
   }
@@ -1116,7 +1129,8 @@ class GraftSingleSlotScope<S extends GraftState> extends Widget
   Element createElement() => _GraftSingleSlotElement<S>(this);
 }
 
-class _GraftSingleSlotElement<S extends GraftState> extends ComponentElement {
+class _GraftSingleSlotElement<S extends GraftState> extends ComponentElement
+    implements GraftFastReceiver {
   _GraftSingleSlotElement(GraftSingleSlotScope<S> super.widget);
 
   @override
@@ -1127,6 +1141,13 @@ class _GraftSingleSlotElement<S extends GraftState> extends ComponentElement {
   GraftMask _fieldDependenciesMask = GraftMask.empty;
   bool _ancestorChecked = false;
   bool _isDirty = false;
+  bool _fastPathActive = false;
+
+  @override
+  void markFastDirty() {
+    _isDirty = true;
+    markNeedsBuild();
+  }
 
   @override
   void mount(Element? parent, Object? newSlot) {
@@ -1198,6 +1219,11 @@ class _GraftSingleSlotElement<S extends GraftState> extends ComponentElement {
   @override
   void unmount() {
     widget.graft.removeMaskListener(_onMaskDirty);
+    // Clear direct receiver reference if this element owns it.
+    if (_fastPathActive && identical(widget.graft.fastDirectReceiver, this)) {
+      widget.graft.fastDirectReceiver = null;
+      widget.graft.fastDirectMask = GraftMask.empty;
+    }
     super.unmount();
   }
 
@@ -1226,6 +1252,8 @@ class _GraftSingleSlotElement<S extends GraftState> extends ComponentElement {
         dirtyMask.isSubsetOf(_fieldDependenciesMask);
 
     if (isKnownDynamic) {
+      // Fast path: we know this mask causes a rebuild. Mark dirty and let
+      // build() call the builder once during Flutter's build pass.
       _isDirty = true;
       markNeedsBuild();
       return;
@@ -1277,6 +1305,15 @@ class _GraftSingleSlotElement<S extends GraftState> extends ComponentElement {
         _fieldDependenciesMask = _fieldDependenciesMask.withBit(singleField);
       } else if (_fieldDependenciesMask.isEmpty) {
         _fieldDependenciesMask = dirtyMask;
+      }
+      // ⚡ Activate ultra-fast direct receiver path for future notifications.
+      // After the first confirmed-dynamic rebuild, all subsequent frames for
+      // this mask go directly to markFastDirty() with zero listener overhead.
+      if (!_fastPathActive && _fieldDependenciesMask.isNotEmpty &&
+          widget.graft.fastDirectReceiver == null) {
+        widget.graft.fastDirectReceiver = this;
+        widget.graft.fastDirectMask = _fieldDependenciesMask;
+        _fastPathActive = true;
       }
     }
   }
