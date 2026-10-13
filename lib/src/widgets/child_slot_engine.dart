@@ -1123,7 +1123,6 @@ class _GraftSingleSlotElement<S extends GraftState> extends ComponentElement
 
   late Widget _currentWidget;
   GraftMask _ignoredMask = GraftMask.empty;
-  bool _ancestorChecked = false;
   bool _isDirty = false;
   bool _fastPathActive = false;
 
@@ -1135,48 +1134,12 @@ class _GraftSingleSlotElement<S extends GraftState> extends ComponentElement
 
   @override
   void mount(Element? parent, Object? newSlot) {
-    _currentWidget = GraftScopeGuard.run(
-      widget.graft,
-      widget.caller,
-      () => widget.builder(widget.graft.state),
-    );
-    super.mount(parent, newSlot);
     assert(() {
-      if (!_ancestorChecked) {
-        visitAncestorElements((ancestor) {
-          if (ancestor is _GraftSingleSlotElement &&
-              identical(ancestor.widget.graft, widget.graft)) {
-            throw FlutterError(
-              '\n════════════════════════════════════════════════════════════════════════════════\n'
-              '⚠️ GRAFT ANTI-PATTERN DETECTED: NESTED ELEMENT TREE SCOPE ON ${widget.graft.runtimeType}\n'
-              '════════════════════════════════════════════════════════════════════════════════\n'
-              'A widget inside "${ancestor.widget.caller}" is trying to observe the exact same ${widget.graft.runtimeType} with "${widget.caller}"!\n'
-              'This creates duplicate element listeners on the same controller and degrades performance.\n\n'
-              'Fix: Return widgets directly inside "${ancestor.widget.caller}" without wrapping them in ${widget.caller}().\n'
-              '════════════════════════════════════════════════════════════════════════════════\n',
-            );
-          }
-          if (ancestor is StatefulElement &&
-              ancestor.state is _GraftMultiChildDiffEngineState) {
-            final diffEngine = (ancestor.state as _GraftMultiChildDiffEngineState).widget;
-            if (identical(diffEngine.graft, widget.graft)) {
-              throw FlutterError(
-                '\n════════════════════════════════════════════════════════════════════════════════\n'
-                '⚠️ GRAFT ANTI-PATTERN DETECTED: NESTED ELEMENT TREE SCOPE ON ${widget.graft.runtimeType}\n'
-                '════════════════════════════════════════════════════════════════════════════════\n'
-                'A widget inside "graft.slots" is trying to observe the exact same ${widget.graft.runtimeType} with "${widget.caller}"!\n'
-                'This creates duplicate element listeners on the same controller and degrades performance.\n\n'
-                'Fix: Return widgets directly inside "graft.slots" without wrapping them in ${widget.caller}().\n'
-                '════════════════════════════════════════════════════════════════════════════════\n',
-              );
-            }
-          }
-          return true;
-        });
-        _ancestorChecked = true;
-      }
+      GraftScopeGuard.verifyNotActive(widget.graft, widget.caller);
       return true;
     }());
+    _currentWidget = widget.builder(widget.graft.state);
+    super.mount(parent, newSlot);
     widget.graft.addMaskListener(_onMaskDirty);
     if (!_fastPathActive && widget.graft.fastDirectReceiver == null) {
       widget.graft.fastDirectReceiver = this;
@@ -1197,7 +1160,6 @@ class _GraftSingleSlotElement<S extends GraftState> extends ComponentElement
       }
       _fastPathActive = false;
       _ignoredMask = GraftMask.empty;
-      _ancestorChecked = false;
       _currentWidget = widget.builder(widget.graft.state);
       newWidget.graft.addMaskListener(_onMaskDirty);
       if (newWidget.graft.fastDirectReceiver == null) {
@@ -1229,7 +1191,6 @@ class _GraftSingleSlotElement<S extends GraftState> extends ComponentElement
   void reassemble() {
     super.reassemble();
     _ignoredMask = GraftMask.empty;
-    _ancestorChecked = false;
     _isDirty = false;
     _onMaskDirty(GraftMask.allDirty);
   }
@@ -1281,6 +1242,7 @@ class _GraftSingleSlotElement<S extends GraftState> extends ComponentElement
   }
 
   @override
+  @pragma('vm:prefer-inline')
   Widget build() {
     if (_isDirty) {
       _isDirty = false;

@@ -299,17 +299,6 @@ class Graft<S extends GraftState> extends ChangeNotifier {
         }
       }
     }
-    if (observer != null) {
-      final effectiveChange = change ??
-          GraftChange<S>(
-            currentState: _state,
-            nextState: _state,
-            previousProps: _state.baselineSnapshot,
-            nextProps: List<Object?>.of(_state.props, growable: false),
-            dirtyMask: dirtyMask,
-          );
-      observer?.onChange(this, effectiveChange);
-    }
     final single = _singleListener;
     if (single != null) {
       single();
@@ -320,6 +309,17 @@ class Graft<S extends GraftState> extends ChangeNotifier {
           extra[i]();
         }
       }
+    }
+    if (observer != null) {
+      final effectiveChange = change ??
+          GraftChange<S>(
+            currentState: _state,
+            nextState: _state,
+            previousProps: _state.baselineSnapshot,
+            nextProps: List<Object?>.of(_state.props, growable: false),
+            dirtyMask: dirtyMask,
+          );
+      observer?.onChange(this, effectiveChange);
     }
   }
 

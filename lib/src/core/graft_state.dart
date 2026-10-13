@@ -481,36 +481,36 @@ abstract class GraftState {
     final len = p.length;
     int i = 0;
     while (i + 15 < len) {
-      if (identical(p[i], c[i]) &&
-          identical(p[i + 1], c[i + 1]) &&
-          identical(p[i + 2], c[i + 2]) &&
-          identical(p[i + 3], c[i + 3]) &&
-          identical(p[i + 4], c[i + 4]) &&
-          identical(p[i + 5], c[i + 5]) &&
-          identical(p[i + 6], c[i + 6]) &&
-          identical(p[i + 7], c[i + 7]) &&
-          identical(p[i + 8], c[i + 8]) &&
-          identical(p[i + 9], c[i + 9]) &&
-          identical(p[i + 10], c[i + 10]) &&
-          identical(p[i + 11], c[i + 11]) &&
-          identical(p[i + 12], c[i + 12]) &&
-          identical(p[i + 13], c[i + 13]) &&
-          identical(p[i + 14], c[i + 14]) &&
-          identical(p[i + 15], c[i + 15])) {
+      if ((identical(p[i], c[i]) || p[i] == c[i]) &&
+          (identical(p[i + 1], c[i + 1]) || p[i + 1] == c[i + 1]) &&
+          (identical(p[i + 2], c[i + 2]) || p[i + 2] == c[i + 2]) &&
+          (identical(p[i + 3], c[i + 3]) || p[i + 3] == c[i + 3]) &&
+          (identical(p[i + 4], c[i + 4]) || p[i + 4] == c[i + 4]) &&
+          (identical(p[i + 5], c[i + 5]) || p[i + 5] == c[i + 5]) &&
+          (identical(p[i + 6], c[i + 6]) || p[i + 6] == c[i + 6]) &&
+          (identical(p[i + 7], c[i + 7]) || p[i + 7] == c[i + 7]) &&
+          (identical(p[i + 8], c[i + 8]) || p[i + 8] == c[i + 8]) &&
+          (identical(p[i + 9], c[i + 9]) || p[i + 9] == c[i + 9]) &&
+          (identical(p[i + 10], c[i + 10]) || p[i + 10] == c[i + 10]) &&
+          (identical(p[i + 11], c[i + 11]) || p[i + 11] == c[i + 11]) &&
+          (identical(p[i + 12], c[i + 12]) || p[i + 12] == c[i + 12]) &&
+          (identical(p[i + 13], c[i + 13]) || p[i + 13] == c[i + 13]) &&
+          (identical(p[i + 14], c[i + 14]) || p[i + 14] == c[i + 14]) &&
+          (identical(p[i + 15], c[i + 15]) || p[i + 15] == c[i + 15])) {
         i += 16;
         continue;
       }
       break;
     }
     while (i + 7 < len) {
-      if (identical(p[i], c[i]) &&
-          identical(p[i + 1], c[i + 1]) &&
-          identical(p[i + 2], c[i + 2]) &&
-          identical(p[i + 3], c[i + 3]) &&
-          identical(p[i + 4], c[i + 4]) &&
-          identical(p[i + 5], c[i + 5]) &&
-          identical(p[i + 6], c[i + 6]) &&
-          identical(p[i + 7], c[i + 7])) {
+      if ((identical(p[i], c[i]) || p[i] == c[i]) &&
+          (identical(p[i + 1], c[i + 1]) || p[i + 1] == c[i + 1]) &&
+          (identical(p[i + 2], c[i + 2]) || p[i + 2] == c[i + 2]) &&
+          (identical(p[i + 3], c[i + 3]) || p[i + 3] == c[i + 3]) &&
+          (identical(p[i + 4], c[i + 4]) || p[i + 4] == c[i + 4]) &&
+          (identical(p[i + 5], c[i + 5]) || p[i + 5] == c[i + 5]) &&
+          (identical(p[i + 6], c[i + 6]) || p[i + 6] == c[i + 6]) &&
+          (identical(p[i + 7], c[i + 7]) || p[i + 7] == c[i + 7])) {
         i += 8;
         continue;
       }
@@ -526,42 +526,42 @@ abstract class GraftState {
           if (next >= len) return true;
           int end = len - 1;
           while (end - 15 >= next) {
-            if (identical(p[end], c[end]) &&
-                identical(p[end - 1], c[end - 1]) &&
-                identical(p[end - 2], c[end - 2]) &&
-                identical(p[end - 3], c[end - 3]) &&
-                identical(p[end - 4], c[end - 4]) &&
-                identical(p[end - 5], c[end - 5]) &&
-                identical(p[end - 6], c[end - 6]) &&
-                identical(p[end - 7], c[end - 7]) &&
-                identical(p[end - 8], c[end - 8]) &&
-                identical(p[end - 9], c[end - 9]) &&
-                identical(p[end - 10], c[end - 10]) &&
-                identical(p[end - 11], c[end - 11]) &&
-                identical(p[end - 12], c[end - 12]) &&
-                identical(p[end - 13], c[end - 13]) &&
-                identical(p[end - 14], c[end - 14]) &&
-                identical(p[end - 15], c[end - 15])) {
+            if ((identical(p[end], c[end]) || p[end] == c[end]) &&
+                (identical(p[end - 1], c[end - 1]) || p[end - 1] == c[end - 1]) &&
+                (identical(p[end - 2], c[end - 2]) || p[end - 2] == c[end - 2]) &&
+                (identical(p[end - 3], c[end - 3]) || p[end - 3] == c[end - 3]) &&
+                (identical(p[end - 4], c[end - 4]) || p[end - 4] == c[end - 4]) &&
+                (identical(p[end - 5], c[end - 5]) || p[end - 5] == c[end - 5]) &&
+                (identical(p[end - 6], c[end - 6]) || p[end - 6] == c[end - 6]) &&
+                (identical(p[end - 7], c[end - 7]) || p[end - 7] == c[end - 7]) &&
+                (identical(p[end - 8], c[end - 8]) || p[end - 8] == c[end - 8]) &&
+                (identical(p[end - 9], c[end - 9]) || p[end - 9] == c[end - 9]) &&
+                (identical(p[end - 10], c[end - 10]) || p[end - 10] == c[end - 10]) &&
+                (identical(p[end - 11], c[end - 11]) || p[end - 11] == c[end - 11]) &&
+                (identical(p[end - 12], c[end - 12]) || p[end - 12] == c[end - 12]) &&
+                (identical(p[end - 13], c[end - 13]) || p[end - 13] == c[end - 13]) &&
+                (identical(p[end - 14], c[end - 14]) || p[end - 14] == c[end - 14]) &&
+                (identical(p[end - 15], c[end - 15]) || p[end - 15] == c[end - 15])) {
               end -= 16;
               continue;
             }
             break;
           }
           while (end - 7 >= next) {
-            if (identical(p[end], c[end]) &&
-                identical(p[end - 1], c[end - 1]) &&
-                identical(p[end - 2], c[end - 2]) &&
-                identical(p[end - 3], c[end - 3]) &&
-                identical(p[end - 4], c[end - 4]) &&
-                identical(p[end - 5], c[end - 5]) &&
-                identical(p[end - 6], c[end - 6]) &&
-                identical(p[end - 7], c[end - 7])) {
+            if ((identical(p[end], c[end]) || p[end] == c[end]) &&
+                (identical(p[end - 1], c[end - 1]) || p[end - 1] == c[end - 1]) &&
+                (identical(p[end - 2], c[end - 2]) || p[end - 2] == c[end - 2]) &&
+                (identical(p[end - 3], c[end - 3]) || p[end - 3] == c[end - 3]) &&
+                (identical(p[end - 4], c[end - 4]) || p[end - 4] == c[end - 4]) &&
+                (identical(p[end - 5], c[end - 5]) || p[end - 5] == c[end - 5]) &&
+                (identical(p[end - 6], c[end - 6]) || p[end - 6] == c[end - 6]) &&
+                (identical(p[end - 7], c[end - 7]) || p[end - 7] == c[end - 7])) {
               end -= 8;
               continue;
             }
             break;
           }
-          while (end >= next && identical(p[end], c[end])) {
+          while (end >= next && (identical(p[end], c[end]) || p[end] == c[end])) {
             end--;
           }
           if (end < next) return true;
@@ -587,8 +587,9 @@ abstract class GraftState {
       return true;
     }
     bool dirty = false;
-    for (final k in c.keys) {
-      final cv = c[k];
+    for (final entry in c.entries) {
+      final k = entry.key;
+      final cv = entry.value;
       final pv = p[k];
       if (!identical(pv, cv) && pv != cv) {
         p[k] = cv;
@@ -1604,13 +1605,27 @@ abstract class GraftState {
   @nonVirtual
   @pragma('vm:prefer-inline')
   void update({int? itemIndex}) {
-    // ⚡ Increment version stamp BEFORE diffing so nested states can track this update
-    _version++;
     if (itemIndex != null) {
+      _version++;
       _dirtyMask = GraftMask.bit0;
       final g = _graft;
       if (g != null && g.hasItemReceiver(itemIndex)) {
         g.notifyItem(itemIndex);
+        return;
+      }
+    }
+    final leaf = _leafState;
+    if (leaf != null && Graft.observer == null) {
+      if (leaf._allScalarProps) {
+        leaf.props;
+        final c = leaf._pendingSingle;
+        if (leaf._singleBaseline == c) return;
+        _version++;
+        leaf._version++;
+        leaf._singleBaseline = c;
+        _dirtyMask = GraftMask.bit0;
+        final g = _graft;
+        if (g != null) g.notifyMask(GraftMask.bit0);
         return;
       }
     }
@@ -1620,9 +1635,11 @@ abstract class GraftState {
         props;
         final c = _pendingSingle;
         if (p == c) return;
+        _version++;
         _singleBaseline = c;
         _dirtyMask = GraftMask.bit0;
-        _graft?.notifyMask(GraftMask.bit0);
+        final g = _graft;
+        if (g != null) g.notifyMask(GraftMask.bit0);
         return;
       }
       if (p is num || p is String || p is bool || p is Enum) {
@@ -1630,42 +1647,65 @@ abstract class GraftState {
         final c = _pendingSingle;
         if (p == c) return;
         if (c is num || c is String || c is bool || c is Enum) {
+          _version++;
           _singleBaseline = c;
           _dirtyMask = GraftMask.bit0;
-          _graft?.notifyMask(GraftMask.bit0);
+          final g = _graft;
+          if (g != null) g.notifyMask(GraftMask.bit0);
           return;
         }
       } else if (p is List) {
         props;
         final c = _pendingSingle;
-        if (identical(p, c)) {
-          _dirtyMask = GraftMask.bit0;
-          _graft?.notifyMask(GraftMask.bit0);
-          return;
+        if (c is List) {
+          final clen = c.length;
+          if (_prevListLength != clen) {
+            _prevListLength = clen;
+            _version++;
+            _singleBaseline = List<Object?>.of(c, growable: false);
+            _dirtyMask = GraftMask.bit0;
+            final g = _graft;
+            if (g != null) g.notifyMask(GraftMask.bit0);
+            return;
+          }
+          if (_diffListAndUpdate(p, c)) {
+            _version++;
+            _dirtyMask = GraftMask.bit0;
+            final g = _graft;
+            if (g != null) g.notifyMask(GraftMask.bit0);
+            return;
+          }
         }
       } else if (p is GraftState) {
         // ⚡ Direct O(1) leaf state resolution without recursive traversal.
         final cur = _leafState ?? p;
-        cur._version++;
         final leafP = cur._singleBaseline;
         if (cur._baseline == null && (cur._allScalarProps || leafP is num || leafP is String || leafP is bool || leafP is Enum)) {
           cur.props;
           final c = cur._pendingSingle;
           if (leafP == c) return;
+          _version++;
+          cur._version++;
           cur._singleBaseline = c;
           _singleNestedVersion = p._version; // stamp root's child version
           _dirtyMask = GraftMask.bit0;
-          _graft?.notifyMask(GraftMask.bit0);
+          final g = _graft;
+          if (g != null) g.notifyMask(GraftMask.bit0);
           return;
         }
         if (cur.diffChanges().isNotEmpty) {
+          _version++;
+          cur._version++;
           _singleNestedVersion = p._version; // stamp root's child version
           _dirtyMask = GraftMask.bit0;
-          _graft?.notifyMask(GraftMask.bit0);
+          final g = _graft;
+          if (g != null) g.notifyMask(GraftMask.bit0);
           return;
         }
       }
     }
+
+    _version++;
 
     final prev = _baseline;
     if (prev != null && _allScalarProps && Graft.observer == null) {

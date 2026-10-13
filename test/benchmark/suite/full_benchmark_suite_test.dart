@@ -23,7 +23,21 @@ void main() {
   });
 
   // ---------------------------------------------------------------------------
-  // SCENARIO B: FINE-GRAINED REBUILD ISOLATION (RUN FIRST WITH FRESH HEAP)
+  // SCENARIO A: MICRO MUTATION SPEED (RUN FIRST WITH PRISTINE HEAP)
+  // ---------------------------------------------------------------------------
+  test('Scenario A: Micro Mutation Speed', () {
+    // ignore: avoid_print
+    print('▶ Running Scenario A: Micro Mutation Speed...');
+    final statsA = ScenarioAMicroMutationRunner.runAll();
+    for (final s in statsA) {
+      collector.add(s);
+    }
+    // ignore: avoid_print
+    print('✔ Scenario A completed (\${statsA.length} benchmark targets).');
+  });
+
+  // ---------------------------------------------------------------------------
+  // SCENARIO B: FINE-GRAINED REBUILD ISOLATION (120 FRAMES)
   // ---------------------------------------------------------------------------
   testWidgets('Scenario B: Fine-Grained Rebuild Isolation (120 Frames)', (WidgetTester tester) async {
     // ignore: avoid_print
@@ -33,7 +47,7 @@ void main() {
       collector.add(s);
     }
     // ignore: avoid_print
-    print('✔ Scenario B completed (${statsB.length} benchmark targets).');
+    print('✔ Scenario B completed (\${statsB.length} benchmark targets).');
   });
 
   // ---------------------------------------------------------------------------
@@ -47,7 +61,7 @@ void main() {
       collector.add(s);
     }
     // ignore: avoid_print
-    print('✔ Scenario C completed (${statsC.length} benchmark targets).');
+    print('✔ Scenario C completed (\${statsC.length} benchmark targets).');
   });
 
   // ---------------------------------------------------------------------------
@@ -61,7 +75,7 @@ void main() {
       collector.add(s);
     }
     // ignore: avoid_print
-    print('✔ Scenario D completed (${statsD.length} benchmark targets).');
+    print('✔ Scenario D completed (\${statsD.length} benchmark targets).');
   });
 
   // ---------------------------------------------------------------------------
@@ -75,21 +89,7 @@ void main() {
       collector.add(s);
     }
     // ignore: avoid_print
-    print('✔ Scenario E completed (${statsE.length} benchmark targets).');
-  });
-
-  // ---------------------------------------------------------------------------
-  // SCENARIO A: MICRO MUTATION SPEED
-  // ---------------------------------------------------------------------------
-  test('Scenario A: Micro Mutation Speed', () {
-    // ignore: avoid_print
-    print('▶ Running Scenario A: Micro Mutation Speed...');
-    final statsA = ScenarioAMicroMutationRunner.runAll();
-    for (final s in statsA) {
-      collector.add(s);
-    }
-    // ignore: avoid_print
-    print('✔ Scenario A completed (${statsA.length} benchmark targets).');
+    print('✔ Scenario E completed (\${statsE.length} benchmark targets).');
   });
 
   // ---------------------------------------------------------------------------

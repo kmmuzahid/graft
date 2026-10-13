@@ -376,6 +376,31 @@ class ScenarioAMicroMutationRunner {
   static List<BenchmarkStats> runAll() {
     final statsList = <BenchmarkStats>[];
 
+    // Pre-flight JIT compilation warmup across all frameworks
+    {
+      final g = GraftSingleController();
+      for (int i = 0; i < 500; i++) g.increment();
+      g.dispose();
+
+      final c = riverpod_pkg.ProviderContainer();
+      final rn = c.read(riverpodSingleNotifierProvider.notifier);
+      for (int i = 0; i < 500; i++) rn.increment();
+      c.dispose();
+
+      final bc = BlocSingleCubit();
+      for (int i = 0; i < 500; i++) bc.increment();
+      bc.close();
+
+      final s = signals_pkg.signal(0);
+      for (int i = 0; i < 500; i++) s.value++;
+
+      final gx = GetXSingleController();
+      for (int i = 0; i < 500; i++) gx.increment();
+
+      final pm = ProviderSingleModel();
+      for (int i = 0; i < 500; i++) pm.increment();
+    }
+
     // A1: 10,000 Synchronous Increments
     statsList.addAll(runSingleIncrement(iterations: 10000, scenarioName: 'A1_10k_increments'));
 

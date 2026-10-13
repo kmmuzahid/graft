@@ -494,7 +494,7 @@ class ScenarioDCompositeRunner {
 
         // Mutate inside dialog
         ctrl.increment();
-        await tester.pump();
+        await tester.pumpAndSettle();
         expect(find.text('Dialog: 1'), findsOneWidget);
 
         // Pop dialog
