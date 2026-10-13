@@ -98,6 +98,9 @@ class Graft<S extends GraftState> extends ChangeNotifier {
   bool hasItemReceiver(int index) => _indexedItemReceivers?.containsKey(index) ?? false;
 
   /// Dispatches an update directly to the item slot at [index] with O(1) pointer dispatch.
+  /// Internal engine method: must not be called or overridden by user code.
+  @internal
+  @nonVirtual
   @pragma('vm:prefer-inline')
   void notifyItem(int index) {
     if (_isDisposed) return;
@@ -121,6 +124,7 @@ class Graft<S extends GraftState> extends ChangeNotifier {
   }
 
   /// Mutates state and notifies the item receiver at [index] directly in O(1) time.
+  @nonVirtual
   void updateItem(int index, [void Function()? mutate]) {
     mutate?.call();
     state.update(itemIndex: index);

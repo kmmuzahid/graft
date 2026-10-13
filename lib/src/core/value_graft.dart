@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'graft.dart';
 import 'graft_state.dart';
 
@@ -56,11 +57,13 @@ class ValueGraft<T> extends Graft<GraftValue<T>> {
   ValueGraft(T initialValue) : super(GraftValue<T>(initialValue));
 
   /// The current primitive value.
+  @nonVirtual
   T get value => state.value;
 
   /// Updates the value and triggers fine-grained reactive rebuilds.
   ///
   /// If [newValue] is equal to current [value], this operation is a no-op.
+  @nonVirtual
   set value(T newValue) {
     if (state.value == newValue) return;
     state.value = newValue;

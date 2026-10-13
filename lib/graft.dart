@@ -36,7 +36,6 @@ export 'src/core/graft_async.dart';
 export 'src/core/graft_change.dart';
 export 'src/core/graft_mask.dart';
 export 'src/core/graft_observer.dart';
-export 'src/core/graft_scope_tracker.dart';
 export 'src/core/graft_state.dart';
 export 'src/core/value_graft.dart';
 export 'src/di/graft_registry.dart';

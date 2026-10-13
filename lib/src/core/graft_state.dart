@@ -40,6 +40,7 @@ abstract class GraftState {
   int _version = 0;
 
   /// Returns the current version counter of this state instance.
+  @nonVirtual
   int get version => _version;
 
   /// Binds this state instance to its owning [Graft] controller.
@@ -211,6 +212,7 @@ abstract class GraftState {
   /// }
   /// ```
   @protected
+  @nonVirtual
   @pragma('vm:prefer-inline')
   GraftProps propsOf([
     Object? p0 = _undefined,
@@ -367,6 +369,7 @@ abstract class GraftState {
   ///
   /// Useful for states with dynamic or large sets of properties.
   @protected
+  @nonVirtual
   @pragma('vm:prefer-inline')
   GraftProps propsOfMany(Iterable<Object?> items) {
     if (items.isEmpty) return const _EmptyGraftProps();

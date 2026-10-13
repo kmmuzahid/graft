@@ -1,9 +1,11 @@
+import 'package:meta/meta.dart';
 import 'graft.dart';
 
 /// Ambient tracker that automatically records all [Graft] instances accessed
 /// via `.state` during the execution of a `GraftBoundary.builder`.
 ///
 /// Enables 100% zero-boilerplate multi-graft discovery without passing manual arrays.
+@internal
 class GraftScopeTracker {
   /// The currently active tracker on the execution callstack.
   static GraftScopeTracker? current;

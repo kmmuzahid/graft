@@ -25,7 +25,7 @@ typedef _DartVersion = int Function();
 /// Seamlessly utilizes ARM Neon (`vceqq_u64`) and x86 AVX2/SSE4 vector instructions
 /// via `dart:ffi`. When the native dynamic library is absent, transparently
 /// falls back to Graft's pure Dart 64-bit register bitmask engine with 0 behavioral divergence.
-class GraftSimd {
+abstract final class GraftSimd {
   static DynamicLibrary? _dylib;
   static _DartDiffProps? _nativeDiff;
   static _DartVersion? _nativeVersion;
