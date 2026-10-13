@@ -23,20 +23,6 @@ void main() {
   });
 
   // ---------------------------------------------------------------------------
-  // SCENARIO A: MICRO MUTATION SPEED (RUN FIRST WITH PRISTINE HEAP)
-  // ---------------------------------------------------------------------------
-  test('Scenario A: Micro Mutation Speed', () {
-    // ignore: avoid_print
-    print('▶ Running Scenario A: Micro Mutation Speed...');
-    final statsA = ScenarioAMicroMutationRunner.runAll();
-    for (final s in statsA) {
-      collector.add(s);
-    }
-    // ignore: avoid_print
-    print('✔ Scenario A completed (\${statsA.length} benchmark targets).');
-  });
-
-  // ---------------------------------------------------------------------------
   // SCENARIO B: FINE-GRAINED REBUILD ISOLATION (120 FRAMES)
   // ---------------------------------------------------------------------------
   testWidgets('Scenario B: Fine-Grained Rebuild Isolation (120 Frames)', (WidgetTester tester) async {
@@ -90,6 +76,20 @@ void main() {
     }
     // ignore: avoid_print
     print('✔ Scenario E completed (\${statsE.length} benchmark targets).');
+  });
+
+  // ---------------------------------------------------------------------------
+  // SCENARIO A: MICRO MUTATION SPEED
+  // ---------------------------------------------------------------------------
+  test('Scenario A: Micro Mutation Speed', () {
+    // ignore: avoid_print
+    print('▶ Running Scenario A: Micro Mutation Speed...');
+    final statsA = ScenarioAMicroMutationRunner.runAll();
+    for (final s in statsA) {
+      collector.add(s);
+    }
+    // ignore: avoid_print
+    print('✔ Scenario A completed (\${statsA.length} benchmark targets).');
   });
 
   // ---------------------------------------------------------------------------

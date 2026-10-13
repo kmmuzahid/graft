@@ -370,7 +370,7 @@ class ProviderDepth8Model extends ChangeNotifier {
 // SCENARIO A RUNNER
 // =============================================================================
 class ScenarioAMicroMutationRunner {
-  static const int warmUpRuns = 3;
+  static const int warmUpRuns = 5;
   static const int measuredRuns = 15;
 
   static List<BenchmarkStats> runAll() {
@@ -424,6 +424,14 @@ class ScenarioAMicroMutationRunner {
     required String scenarioName,
   }) {
     final results = <BenchmarkStats>[];
+
+    // Pre-flight unmeasured loop to absorb any cross-scenario GC pauses and JIT compilation
+    {
+      int dummy = 0;
+      final dummyCtrl = ChangeNotifier()..addListener(() => dummy++);
+      for (int i = 0; i < iterations; i++) dummyCtrl.notifyListeners();
+      dummyCtrl.dispose();
+    }
 
     // 1. Graft
     {
@@ -615,6 +623,14 @@ class ScenarioAMicroMutationRunner {
     required String scenarioName,
   }) {
     final results = <BenchmarkStats>[];
+
+    // Pre-flight unmeasured loop to absorb any cross-scenario GC pauses and JIT compilation
+    {
+      int dummy = 0;
+      final dummyCtrl = ChangeNotifier()..addListener(() => dummy++);
+      for (int i = 0; i < iterations; i++) dummyCtrl.notifyListeners();
+      dummyCtrl.dispose();
+    }
 
     // 1. Graft
     {
@@ -808,6 +824,14 @@ class ScenarioAMicroMutationRunner {
     required String scenarioName,
   }) {
     final results = <BenchmarkStats>[];
+
+    // Pre-flight unmeasured loop to absorb any cross-scenario GC pauses and JIT compilation
+    {
+      int dummy = 0;
+      final dummyCtrl = ChangeNotifier()..addListener(() => dummy++);
+      for (int i = 0; i < iterations; i++) dummyCtrl.notifyListeners();
+      dummyCtrl.dispose();
+    }
 
     // 1. Graft
     {
