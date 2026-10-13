@@ -1,4 +1,3 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:graft/graft.dart';
 import 'package:flutter_bloc/flutter_bloc.dart' as bloc_pkg;
 import 'package:flutter_riverpod/flutter_riverpod.dart' as riverpod_pkg;

@@ -23,21 +23,7 @@ void main() {
   });
 
   // ---------------------------------------------------------------------------
-  // SCENARIO A: MICRO MUTATION SPEED
-  // ---------------------------------------------------------------------------
-  test('Scenario A: Micro Mutation Speed', () {
-    // ignore: avoid_print
-    print('▶ Running Scenario A: Micro Mutation Speed...');
-    final statsA = ScenarioAMicroMutationRunner.runAll();
-    for (final s in statsA) {
-      collector.add(s);
-    }
-    // ignore: avoid_print
-    print('✔ Scenario A completed (${statsA.length} benchmark targets).');
-  });
-
-  // ---------------------------------------------------------------------------
-  // SCENARIO B: FINE-GRAINED REBUILD ISOLATION
+  // SCENARIO B: FINE-GRAINED REBUILD ISOLATION (RUN FIRST WITH FRESH HEAP)
   // ---------------------------------------------------------------------------
   testWidgets('Scenario B: Fine-Grained Rebuild Isolation (120 Frames)', (WidgetTester tester) async {
     // ignore: avoid_print
@@ -93,6 +79,20 @@ void main() {
   });
 
   // ---------------------------------------------------------------------------
+  // SCENARIO A: MICRO MUTATION SPEED
+  // ---------------------------------------------------------------------------
+  test('Scenario A: Micro Mutation Speed', () {
+    // ignore: avoid_print
+    print('▶ Running Scenario A: Micro Mutation Speed...');
+    final statsA = ScenarioAMicroMutationRunner.runAll();
+    for (final s in statsA) {
+      collector.add(s);
+    }
+    // ignore: avoid_print
+    print('✔ Scenario A completed (${statsA.length} benchmark targets).');
+  });
+
+  // ---------------------------------------------------------------------------
   // TEARDOWN: EXPORT DELIVERABLES & PRINT EXECUTIVE SUMMARY
   // ---------------------------------------------------------------------------
   tearDownAll(() {
@@ -124,11 +124,12 @@ void main() {
       grouped.putIfAbsent(r.scenario, () => []).add(r);
     }
 
-    for (final entry in grouped.entries) {
-      final sorted = List<BenchmarkStats>.from(entry.value)
+    final sortedScenarioKeys = grouped.keys.toList()..sort();
+    for (final scenarioKey in sortedScenarioKeys) {
+      final sorted = List<BenchmarkStats>.from(grouped[scenarioKey]!)
         ..sort((a, b) => a.meanMs.compareTo(b.meanMs));
       // ignore: avoid_print
-      print('\nScenario: ${entry.key}');
+      print('\nScenario: $scenarioKey');
       // ignore: avoid_print
       print('  ${"Framework".padRight(24)} ${"Mean (ms)".padLeft(10)} ${"Median (ms)".padLeft(12)} ${"p95 (ms)".padLeft(10)} ${"Static Builds".padLeft(14)}');
       // ignore: avoid_print

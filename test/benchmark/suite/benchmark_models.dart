@@ -84,7 +84,13 @@ class BenchmarkReportCollector {
     sb.writeln(
       'Scenario,Framework,Samples,Mean (ms),Median (ms),p95 (ms),Min (ms),Max (ms),StdDev (ms),Target Rebuilds,Static Rebuilds,Allocations,Notes',
     );
-    for (final r in results) {
+    final sorted = List<BenchmarkStats>.from(results)
+      ..sort((a, b) {
+        final c = a.scenario.compareTo(b.scenario);
+        if (c != 0) return c;
+        return a.meanMs.compareTo(b.meanMs);
+      });
+    for (final r in sorted) {
       sb.writeln(
         '"${r.scenario}","${r.framework}",${r.count},'
         '${r.meanMs.toStringAsFixed(3)},${r.medianMs.toStringAsFixed(3)},${r.p95Ms.toStringAsFixed(3)},'
@@ -150,9 +156,9 @@ class BenchmarkReportCollector {
     sb.writeln('## 📊 Benchmark Results by Scenario');
     sb.writeln();
 
-    for (final entry in grouped.entries) {
-      final scenarioName = entry.key;
-      final scenarioResults = List<BenchmarkStats>.from(entry.value)
+    final sortedScenarioKeys = grouped.keys.toList()..sort();
+    for (final scenarioName in sortedScenarioKeys) {
+      final scenarioResults = List<BenchmarkStats>.from(grouped[scenarioName]!)
         ..sort((a, b) => a.meanMs.compareTo(b.meanMs));
 
       sb.writeln('### 🔹 Scenario: $scenarioName');
