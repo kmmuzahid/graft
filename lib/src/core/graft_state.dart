@@ -233,12 +233,12 @@ abstract class GraftState {
     // ⚡ 1. Single Property Fast-Path:
     if (identical(p1, _undefined)) {
       _pendingSingle = p0;
+      final view = _singleView;
+      if (view != null) {
+        view.value = p0;
+        return view;
+      }
       if (p0 is num || p0 is String || p0 is bool || p0 is Enum) {
-        final view = _singleView;
-        if (view != null) {
-          view.value = p0;
-          return view;
-        }
         return _singleView = _GraftPropsSingle(p0);
       }
       if (p0 is List) {
@@ -250,11 +250,6 @@ abstract class GraftState {
         return _GraftPropsListView(List<Object?>.of(p0, growable: false));
       }
       if (identical(p0, _undefined)) return const _EmptyGraftProps();
-      final view = _singleView;
-      if (view != null) {
-        view.value = p0;
-        return view;
-      }
       return _singleView = _GraftPropsSingle(p0);
     }
 

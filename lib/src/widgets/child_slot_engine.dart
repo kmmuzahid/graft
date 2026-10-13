@@ -611,6 +611,7 @@ class _GraftMultiChildDiffEngineState<S extends GraftState>
       (i) {
         final slot = _slotTable[i];
         if (slot.isStatic) {
+          slot.notifier.attachElement();
           return slot.currentWidget;
         }
         return _ChildSlotScope(
@@ -624,6 +625,9 @@ class _GraftMultiChildDiffEngineState<S extends GraftState>
 
   void _disposeSlots() {
     for (final slot in _slotTable) {
+      if (slot.isStatic) {
+        slot.notifier.detachElement();
+      }
       slot.dispose();
     }
     _slotTable = [];
@@ -1015,11 +1019,6 @@ class _ChildSlotElement extends ComponentElement implements GraftFastReceiver {
     super.mount(parent, newSlot);
     widget.slot.element = this;
     widget.slot.notifier.attachElement();
-    final dynamic g = widget.slot.graft;
-    if (g is Graft && g.fastDirectReceiver == null) {
-      g.fastDirectReceiver = this;
-      g.fastDirectMask = GraftMask.allDirty;
-    }
   }
 
   @override
@@ -1036,11 +1035,6 @@ class _ChildSlotElement extends ComponentElement implements GraftFastReceiver {
       }
     }
     newWidget.slot.element = this;
-    final dynamic newG = newWidget.slot.graft;
-    if (newG is Graft && newG.fastDirectReceiver == null) {
-      newG.fastDirectReceiver = this;
-      newG.fastDirectMask = GraftMask.allDirty;
-    }
     _isDirty = false;
     rebuild(force: true);
   }
@@ -1134,12 +1128,46 @@ class _GraftSingleSlotElement<S extends GraftState> extends ComponentElement
 
   @override
   void mount(Element? parent, Object? newSlot) {
+    _currentWidget = GraftScopeGuard.run(
+      widget.graft,
+      widget.caller,
+      () => widget.builder(widget.graft.state),
+    );
+    super.mount(parent, newSlot);
     assert(() {
-      GraftScopeGuard.verifyNotActive(widget.graft, widget.caller);
+      visitAncestorElements((ancestor) {
+        if (ancestor is _GraftSingleSlotElement &&
+            identical(ancestor.widget.graft, widget.graft)) {
+          throw FlutterError(
+            '\n════════════════════════════════════════════════════════════════════════════════\n'
+            '⚠️ GRAFT ANTI-PATTERN DETECTED: NESTED ELEMENT TREE SCOPE ON ${widget.graft.runtimeType}\n'
+            '════════════════════════════════════════════════════════════════════════════════\n'
+            'A widget inside "${ancestor.widget.caller}" is trying to observe the exact same ${widget.graft.runtimeType} with "${widget.caller}"!\n'
+            'This creates duplicate element listeners on the same controller and degrades performance.\n\n'
+            'Fix: Return widgets directly inside "${ancestor.widget.caller}" without wrapping them in ${widget.caller}().\n'
+            '════════════════════════════════════════════════════════════════════════════════\n',
+          );
+        }
+        if (ancestor is StatefulElement &&
+            ancestor.state is _GraftMultiChildDiffEngineState) {
+          final diffEngine =
+              (ancestor.state as _GraftMultiChildDiffEngineState).widget;
+          if (identical(diffEngine.graft, widget.graft)) {
+            throw FlutterError(
+              '\n════════════════════════════════════════════════════════════════════════════════\n'
+              '⚠️ GRAFT ANTI-PATTERN DETECTED: NESTED ELEMENT TREE SCOPE ON ${widget.graft.runtimeType}\n'
+              '════════════════════════════════════════════════════════════════════════════════\n'
+              'A widget inside "graft.slots" is trying to observe the exact same ${widget.graft.runtimeType} with "${widget.caller}"!\n'
+              'This creates duplicate element listeners on the same controller and degrades performance.\n\n'
+              'Fix: Return widgets directly inside "graft.slots" without wrapping them in ${widget.caller}().\n'
+              '════════════════════════════════════════════════════════════════════════════════\n',
+            );
+          }
+        }
+        return true;
+      });
       return true;
     }());
-    _currentWidget = widget.builder(widget.graft.state);
-    super.mount(parent, newSlot);
     widget.graft.addMaskListener(_onMaskDirty);
     if (!_fastPathActive && widget.graft.fastDirectReceiver == null) {
       widget.graft.fastDirectReceiver = this;
@@ -1160,7 +1188,11 @@ class _GraftSingleSlotElement<S extends GraftState> extends ComponentElement
       }
       _fastPathActive = false;
       _ignoredMask = GraftMask.empty;
-      _currentWidget = widget.builder(widget.graft.state);
+      _currentWidget = GraftScopeGuard.run(
+        widget.graft,
+        widget.caller,
+        () => widget.builder(widget.graft.state),
+      );
       newWidget.graft.addMaskListener(_onMaskDirty);
       if (newWidget.graft.fastDirectReceiver == null) {
         newWidget.graft.fastDirectReceiver = this;
@@ -1290,6 +1322,7 @@ class GraftItemSlot<S extends GraftState, T> extends StatefulWidget implements G
 
 class _GraftItemSlotState<S extends GraftState, T> extends State<GraftItemSlot<S, T>>
     implements GraftItemReceiver {
+  Element? _element;
   T? _item;
   Widget? _cachedWidget;
   bool _hasInitialItem = false;
@@ -1297,6 +1330,7 @@ class _GraftItemSlotState<S extends GraftState, T> extends State<GraftItemSlot<S
   @override
   void initState() {
     super.initState();
+    _element = context as Element;
     _resolveInitialItem();
     widget.graft.addMaskListener(_onMaskChange);
     if (widget.index != null) {
@@ -1305,6 +1339,7 @@ class _GraftItemSlotState<S extends GraftState, T> extends State<GraftItemSlot<S
   }
 
   @override
+  @pragma('vm:prefer-inline')
   void markItemDirty() {
     if (!mounted) return;
     final T nextItem;
@@ -1323,7 +1358,7 @@ class _GraftItemSlotState<S extends GraftState, T> extends State<GraftItemSlot<S
     _item = nextItem;
     _hasInitialItem = true;
     _cachedWidget = null;
-    (context as Element).markNeedsBuild();
+    (_element ?? (context as Element)).markNeedsBuild();
   }
 
   void _resolveInitialItem() {
@@ -1661,7 +1696,9 @@ abstract final class GraftScopeGuard {
   /// Throws a descriptive [FlutterError] in debug mode if [graft] is already being built
   /// by another builder.
   static R run<R>(Graft graft, String caller, R Function() action) {
+    bool isDebug = false;
     assert(() {
+      isDebug = true;
       if (_activeBuilders.contains(graft)) {
         final existing = _activeCallers[graft] ?? 'another builder';
         throw FlutterError(
@@ -1692,14 +1729,15 @@ abstract final class GraftScopeGuard {
       return true;
     }());
 
+    if (!isDebug) {
+      return action();
+    }
+
     try {
       return action();
     } finally {
-      assert(() {
-        _activeBuilders.remove(graft);
-        _activeCallers.remove(graft);
-        return true;
-      }());
+      _activeBuilders.remove(graft);
+      _activeCallers.remove(graft);
     }
   }
 

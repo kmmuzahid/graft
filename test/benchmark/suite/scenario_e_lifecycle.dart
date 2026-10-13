@@ -58,6 +58,8 @@ class ScenarioELifecycleRunner {
       scenarioName: 'E3_disposed_controller_access_safety',
     ));
 
+    await tester.pumpWidget(const SizedBox.shrink());
+
     return statsList;
   }
 

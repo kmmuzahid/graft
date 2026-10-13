@@ -269,20 +269,7 @@ class Graft<S extends GraftState> extends ChangeNotifier {
   void notifyMask(GraftMask dirtyMask, {GraftChange<dynamic>? change}) {
     if (_isDisposed) return;
 
-    final single = _singleListener;
-    if (single != null && fastDirectReceiver == null && observer == null && _singleMaskListener == null) {
-      single();
-      final extra = _extraListeners;
-      if (extra != null && extra.isNotEmpty) {
-        final len = extra.length;
-        for (int i = 0; i < len; i++) {
-          extra[i]();
-        }
-      }
-      return;
-    }
-
-    // ⚡ Ultra-fast direct element path.
+    // ⚡ Ultra-fast direct element path (Scenario B1, B2, A1 with leaf slots).
     // Active post-warmup when exactly one single-slot scope is subscribed and
     // its field dependency mask has been confirmed. Bypasses the entire
     // listener chain with a single markFastDirty() call — same depth as Signals.
@@ -299,6 +286,19 @@ class Graft<S extends GraftState> extends ChangeNotifier {
       // Element unmounted but not yet cleared — do cleanup and fall through.
       fastDirectReceiver = null;
       fastDirectMask = GraftMask.empty;
+    }
+
+    final single = _singleListener;
+    if (single != null && fe == null && observer == null && _singleMaskListener == null) {
+      single();
+      final extra = _extraListeners;
+      if (extra != null && extra.isNotEmpty) {
+        final len = extra.length;
+        for (int i = 0; i < len; i++) {
+          extra[i]();
+        }
+      }
+      return;
     }
 
     final sml = _singleMaskListener;

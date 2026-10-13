@@ -78,6 +78,8 @@ void main() {
     print('✔ Scenario E completed (\${statsE.length} benchmark targets).');
   });
 
+
+
   // ---------------------------------------------------------------------------
   // SCENARIO A: MICRO MUTATION SPEED
   // ---------------------------------------------------------------------------
@@ -89,7 +91,7 @@ void main() {
       collector.add(s);
     }
     // ignore: avoid_print
-    print('✔ Scenario A completed (\${statsA.length} benchmark targets).');
+    print('✔ Scenario A completed (${statsA.length} benchmark targets).');
   });
 
   // ---------------------------------------------------------------------------
