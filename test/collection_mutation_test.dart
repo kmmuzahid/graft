@@ -73,12 +73,12 @@ void main() {
           home: Scaffold(
             body: graft.slots(
               layout: (children) => Column(children: children),
-              slots: [
-                (s) => _TrackedWidget(
+              slots: (s) => [
+                _TrackedWidget(
                   text: 'Name: ${s.name}',
                   onBuild: () => nameBuildCount++,
                 ),
-                (s) => _TrackedWidget(
+                _TrackedWidget(
                   text: 'Tasks: ${s.tasks.map((t) => t.title).join(", ")}',
                   onBuild: () => listBuildCount++,
                 ),
@@ -113,17 +113,17 @@ void main() {
           home: Scaffold(
             body: graft.slots(
               layout: (children) => Column(children: children),
-              slots: [
-                (s) {
-                  listBuildCount++;
-                  return Column(
+              slots: (s) {
+                listBuildCount++;
+                return [
+                  Column(
                     children: [
-                      for (final t in (s as CollectionState).tasks)
+                      for (final t in s.tasks)
                         Text(t.title),
                     ],
-                  );
-                },
-              ],
+                  ),
+                ];
+              },
             ),
           ),
         ),

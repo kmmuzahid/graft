@@ -59,9 +59,9 @@ void main() {
                 layoutBuilds++;
                 return Column(children: children);
               },
-              slots: [
-                (s) => IsolatedThemedCard(title: s.title),
-                (s) => Text('Count: ${s.count}'),
+              slots: (s) => [
+                IsolatedThemedCard(title: s.title),
+                Text('Count: ${s.count}'),
               ],
             ),
           ),

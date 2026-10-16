@@ -55,11 +55,11 @@ void main() {
             body: SingleChildScrollView(
               child: graft.slots(
                 layout: Column(children: slots),
-                slots: [
-                  (s) => TrackedStressWidget(
-                        'Dynamic: ${s.dynamicCounter}',
-                        onBuild: () => dynamicBuildCount++,
-                      ),
+                slots: (s) => [
+                  TrackedStressWidget(
+                    'Dynamic: ${s.dynamicCounter}',
+                    onBuild: () => dynamicBuildCount++,
+                  ),
                   for (int i = 0; i < staticSlotsCount; i++)
                     TrackedStressWidget(
                       'Static #$i',

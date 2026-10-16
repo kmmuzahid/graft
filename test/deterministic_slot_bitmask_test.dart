@@ -58,15 +58,15 @@ void main() {
           home: Scaffold(
             body: graft.slots(
               layout: (children) => Column(children: children),
-              slots: [
+              slots: (s) => [
                 // Slot 0: firstName & lastName (indices 0, 1)
-                (s) => Text('Name: ${s.firstName} ${s.lastName}'),
+                Text('Name: ${s.firstName} ${s.lastName}'),
                 // Slot 1: age (index 2)
-                (s) => Text('Age: ${s.age}'),
+                Text('Age: ${s.age}'),
                 // Slot 2: email (index 3)
-                (s) => Text('Email: ${s.email}'),
+                Text('Email: ${s.email}'),
                 // Slot 3: phone (index 4)
-                (s) => Text('Phone: ${s.phone}'),
+                Text('Phone: ${s.phone}'),
               ],
             ),
           ),

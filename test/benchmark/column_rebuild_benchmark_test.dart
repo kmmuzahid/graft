@@ -71,8 +71,8 @@ void main() {
         home: Scaffold(
           body: graft.slots(
             layout: Column(children: slots),
-            slots: [
-              (s) => BenchmarkTrackingWidget(
+            slots: (s) => [
+              BenchmarkTrackingWidget(
                 label: 'Changing: ${s.counter}',
                 onBuild: () => changingSlotBuildCount++,
               ),

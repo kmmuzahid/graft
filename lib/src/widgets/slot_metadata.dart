@@ -7,7 +7,7 @@ import '../core/graft_mask.dart';
 /// dirty state in 1 CPU clock cycle and bypass clean slots with 0 element rebuilds.
 class SlotMetadata {
   /// Positional index in the layout array (0, 1, 2...)
-  final int slotIndex;
+  int slotIndex;
 
   /// Whether this slot contains a static/const widget.
   /// If true, permanently bypassed with 0 CPU cycles.

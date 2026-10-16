@@ -94,8 +94,8 @@ Universal layout diffing (`Column`, `Row`, `Wrap`, `Stack`, `Flex`). Each child 
 
 ```dart
 graft.slots(
-  layout: (children) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: children),
-  children: (s) => [
+  layout: Column(crossAxisAlignment: CrossAxisAlignment.start, children: slots),
+  slots: (s) => [
     ProfileHeader(), // 0 rebuilds (even though it is not const)
     Text('Name: ${s.name}'), // 0 rebuilds when name is unchanged
     Text('Email: ${s.email}'), // 0 rebuilds when email is unchanged
@@ -111,8 +111,8 @@ When placed inside heavy layout containers or inside `graft.slots(...)`, it auto
 
 ```dart
 dashboardGraft.slots(
-  layout: (children) => Column(children: children),
-  children: (s) => [
+  layout: Column(children: slots),
+  slots: (s) => [
     const HeaderBanner(), // 0 rebuilds (const pointer match)
     Text('Section: ${s.title}'), // Slot 1: Diffed by dashboardGraft
 
@@ -185,8 +185,8 @@ class UserScreen extends StatelessWidget {
         title: graft((s) => Text(s.name)), // Surgical leaf title
       ),
       body: graft.slots(
-        layout: (children) => Column(children: children),
-        children: (s) => [
+        layout: Column(children: slots),
+        slots: (s) => [
           const ProfileHeader(),
           Text('Email: ${s.email}'),
           Text('Points: ${s.points}'),
@@ -235,13 +235,13 @@ AppBar(
 )
 ```
 
-#### 2. `graft.slots({required layout, required children, key})`
+#### 2. `graft.slots({required layout, required slots})`
 The universal multi-child slot diffing engine. Evaluates child widgets against learned `fieldDependenciesMask` and `ignoredMask`, bypassing unchanged slots with 0 element rebuilds:
 
 ```dart
 graft.slots(
-  layout: (children) => Column(children: children),
-  children: (s) => [
+  layout: Column(children: slots),
+  slots: (s) => [
     const HeaderBanner(), // 0 rebuilds (const pointer match)
     Text('Name: ${s.name}'), // 0 rebuilds when name is unchanged
     Text('Email: ${s.email}'), // 0 rebuilds when email is unchanged
@@ -257,8 +257,8 @@ When used inside layout containers or complex multi-child `graft.slots(...)`, it
 
 ```dart
 dashboardGraft.slots(
-  layout: (children) => Column(children: children),
-  children: (s) => [
+  layout: Column(children: slots),
+  slots: (s) => [
     HeaderBanner(), // 0 rebuilds (even though it is not const)
     Text('Section: ${s.title}'), // Slot 1: Diffed by dashboardGraft
 

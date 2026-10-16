@@ -69,9 +69,9 @@ void main() {
               home: Scaffold(
                 body: graft.slots(
                   layout: Column(children: slots),
-                  slots: [
-                    (s) => ThemedCustomCard(label: s.title),
-                    (s) => Text('Count: ${s.count}'),
+                  slots: (s) => [
+                    ThemedCustomCard(label: s.title),
+                    Text('Count: ${s.count}'),
                   ],
                 ),
               ),
@@ -109,9 +109,9 @@ void main() {
           home: Scaffold(
             body: graft.slots(
               layout: Column(children: slots),
-              slots: [
+              slots: (s) => [
                 const KeyedCustomTile(key: ValueKey('static_tile'), text: 'Static'),
-                (s) => Text('Count: ${s.count}'),
+                Text('Count: ${s.count}'),
               ],
             ),
           ),

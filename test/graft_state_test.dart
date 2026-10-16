@@ -163,10 +163,10 @@ void main() {
           home: Scaffold(
             body: graft.slots(
               layout: Column(children: slots),
-              slots: [
+              slots: (s) => [
                 const _ConstHeaderWidget(),
-                (s) => _DynamicFieldWidget(label: 'Name', value: s.name),
-                (s) => _DynamicFieldWidget(label: 'Age', value: s.age.toString(), isAge: true),
+                _DynamicFieldWidget(label: 'Name', value: s.name),
+                _DynamicFieldWidget(label: 'Age', value: s.age.toString(), isAge: true),
               ],
             ),
           ),

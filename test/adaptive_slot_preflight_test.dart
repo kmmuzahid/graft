@@ -58,16 +58,14 @@ void main() {
           home: Scaffold(
             body: controller.slots(
               layout: (children) => Column(children: children),
-              slots: [
-                (s) {
-                  titleSlotCalls++;
-                  return TrackedTextWidget(s.title, onBuild: () => titleBuildCount++);
-                },
-                (s) {
-                  counterSlotCalls++;
-                  return TrackedTextWidget('Count: ${s.counter}', onBuild: () => counterBuildCount++);
-                },
-              ],
+              slots: (s) {
+                titleSlotCalls++;
+                counterSlotCalls++;
+                return [
+                  TrackedTextWidget(s.title, onBuild: () => titleBuildCount++),
+                  TrackedTextWidget('Count: ${s.counter}', onBuild: () => counterBuildCount++),
+                ];
+              },
             ),
           ),
         ),
@@ -130,8 +128,8 @@ void main() {
           home: Scaffold(
             body: controller.slots(
               layout: (children) => Column(children: children),
-              slots: [
-                (s) => TrackedTextWidget('Count: ${s.counter}', onBuild: () => counterBuildCount++),
+              slots: (s) => [
+                TrackedTextWidget('Count: ${s.counter}', onBuild: () => counterBuildCount++),
               ],
             ),
           ),

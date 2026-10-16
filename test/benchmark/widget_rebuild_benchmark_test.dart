@@ -146,8 +146,8 @@ void main() {
           home: Scaffold(
             body: graft.slots(
               layout: Column(children: slots),
-              slots: [
-                (s) => BuildCounterWidget(
+              slots: (s) => [
+                BuildCounterWidget(
                   label: 'Dynamic: ${s.count}',
                   onBuild: () => dynamicBuilds++,
                 ),

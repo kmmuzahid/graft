@@ -140,7 +140,6 @@ extension GraftWidgetsX<S extends GraftState> on Graft<S> {
   ///
   /// Creates a multi-child layout where each slot in [slots] is isolated and diffed independently.
   ///
-  /// Supports both:
   /// 1. Direct layout widgets with the [slots] token:
   /// ```dart
   /// graft.slots(
@@ -149,12 +148,14 @@ extension GraftWidgetsX<S extends GraftState> on Graft<S> {
   ///     crossAxisAlignment: CrossAxisAlignment.stretch,
   ///     children: slots, // 👈 Clean direct layout widget syntax!
   ///   ),
-  ///   slots: [
-  ///     (s) => Text(s.name),
-  ///     (s) => Text(s.email),
+  ///   slots: (s) => [
+  ///     Text(s.name),
+  ///     Text(s.email),
   ///     const SizedBox(height: 16),
-  ///     const Divider(),
-  ///     (s) => Text(s.phone),
+  ///     if (s.isVerified)
+  ///       Chip(label: Text('Verified: ${s.name}')),
+  ///     for (final tag in s.tags)
+  ///       Badge(tag),
   ///   ],
   /// )
   /// ```
@@ -162,12 +163,16 @@ extension GraftWidgetsX<S extends GraftState> on Graft<S> {
   /// ```dart
   /// graft.slots(
   ///   layout: (children) => Column(children: children),
-  ///   slots: [ ... ],
+  ///   slots: (s) => [
+  ///     Text(s.name),
+  ///     Text(s.email),
+  ///     if (s.isVerified) Chip(label: Text(s.name)),
+  ///   ],
   /// )
   /// ```
   Widget slots({
     required dynamic layout,
-    required List<Object> slots,
+    required List<Widget> Function(S state) slots,
   }) {
     GraftScopeGuard.verifyNotActive(this, 'graft.slots');
     return GraftMultiChildDiffEngine<S>(

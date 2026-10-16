@@ -132,8 +132,8 @@ class ScenarioBRebuildIsolationRunner {
           home: Scaffold(
             body: warmSlotsCtrl.slots(
               layout: Column(children: slots),
-              slots: [
-                (s) => TrackingWidget(label: 'W: ${s.count}', onBuild: () {}),
+              slots: (s) => [
+                TrackingWidget(label: 'W: ${s.count}', onBuild: () {}),
                 for (int i = 0; i < staticCount; i++)
                   TrackingWidget(label: 'Static $i', onBuild: () {}),
               ],
@@ -247,8 +247,8 @@ class ScenarioBRebuildIsolationRunner {
             home: Scaffold(
               body: ctrl.slots(
                 layout: Column(children: slots),
-                slots: [
-                  (s) => TrackingWidget(
+                slots: (s) => [
+                  TrackingWidget(
                     label: 'Dynamic: ${s.count}',
                     onBuild: () => counter.dynamicBuilds++,
                   ),

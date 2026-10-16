@@ -65,8 +65,8 @@ void main() {
             body: showSlots
                 ? graft.slots(
                     layout: Column(children: slots),
-                    slots: [
-                      (s) => Text('Text: ${s.text}'),
+                    slots: (s) => [
+                      Text('Text: ${s.text}'),
                       const Text('Static Header'),
                     ],
                   )

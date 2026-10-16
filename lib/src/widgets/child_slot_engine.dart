@@ -42,11 +42,11 @@ abstract interface class GraftEquivalent {
 ///     mainAxisAlignment: MainAxisAlignment.center,
 ///     children: slots, // 👈 Clean direct layout widget syntax!
 ///   ),
-///   slots: [
-///     (s) => Text(s.name),
+///   slots: (s) => [
+///     Text(s.name),
 ///     const SizedBox(height: 16),
 ///     const Divider(),
-///     (s) => Text(s.phone),
+///     Text(s.phone),
 ///   ],
 /// )
 /// ```
@@ -92,8 +92,8 @@ class GraftMultiChildDiffEngine<S extends GraftState> extends StatefulWidget
   /// or a builder function `(children) => Column(children: children)`.
   final dynamic layout;
 
-  /// Independent slots (reactive closures `(s) => Widget` or static [Widget]s).
-  final List<Object> slots;
+  /// Unified slot list builder: `(s) => [ Text(s.name), if (s.isVerified) ... ]`.
+  final List<Widget> Function(S state) slots;
 
   /// Creates a [GraftMultiChildDiffEngine] that manages isolated slot rebuilds.
   const GraftMultiChildDiffEngine({
@@ -508,7 +508,6 @@ class GraftMultiChildDiffEngine<S extends GraftState> extends StatefulWidget
 class _GraftMultiChildDiffEngineState<S extends GraftState>
     extends State<GraftMultiChildDiffEngine<S>> {
   late List<SlotMetadata> _slotTable;
-  late List<SlotMetadata> _dynamicSlotTable;
   late List<Widget> _wrappedChildren;
   bool _contractVerified = false;
 
@@ -526,100 +525,34 @@ class _GraftMultiChildDiffEngineState<S extends GraftState>
     widget.graft.addMaskListener(_onStateDirty);
   }
 
-  @pragma('vm:prefer-inline')
-  Widget _evaluateSlot(Object item) {
-    if (item is Widget Function(S state)) {
-      return item(widget.graft.state);
-    }
-    if (item is Widget Function(dynamic state)) {
-      return item(widget.graft.state);
-    }
-    if (item is Widget Function()) {
-      return item();
-    }
-    if (item is Function) {
-      try {
-        return (item as dynamic)(widget.graft.state) as Widget;
-      } on NoSuchMethodError {
-        return (item as dynamic)() as Widget;
-      }
-    }
-    if (item is Widget) {
-      return item;
-    }
-    throw ArgumentError(
-      'Invalid slot: $item. Each slot must either be a Widget or a function returning a Widget.',
-    );
-  }
-
   void _initSlots() {
-    final slots = widget.slots;
+    final initialWidgets = GraftScopeGuard.run(
+      widget.graft,
+      'graft.slots',
+      () => widget.slots(widget.graft.state),
+    );
     _slotTable = List.generate(
-      slots.length,
+      initialWidgets.length,
       (i) {
-        final item = slots[i];
-        if (item is Widget) {
-          return SlotMetadata(
-            slotIndex: i,
-            isStatic: true,
-            widgetType: item.runtimeType,
-            contentFingerprint: SlotMetadata.computeFingerprint(item),
-            initialWidget: item,
-          );
-        }
-        Widget Function(dynamic state)? evaluator;
-        if (item is Widget Function(S state)) {
-          evaluator = (dynamic s) => item(s as S);
-        } else if (item is Widget Function(dynamic state)) {
-          evaluator = item;
-        } else if (item is Widget Function()) {
-          evaluator = (dynamic _) => item();
-        } else if (item is Function) {
-          evaluator = (dynamic s) {
-            try {
-              return (item as dynamic)(s) as Widget;
-            } on NoSuchMethodError {
-              return (item as dynamic)() as Widget;
-            }
-          };
-        }
-        final evaluate = () => evaluator != null
-            ? evaluator(widget.graft.state)
-            : _evaluateSlot(item);
-        final w = GraftScopeGuard.run(
-          widget.graft,
-          'graft.slots',
-          evaluate,
-        );
+        final w = initialWidgets[i];
         return SlotMetadata(
           slotIndex: i,
           isStatic: false,
           widgetType: w.runtimeType,
           contentFingerprint: SlotMetadata.computeFingerprint(w),
           initialWidget: w,
-          evaluator: evaluator,
-          evaluate: evaluate,
           graft: widget.graft,
         );
       },
-      growable: false,
+      growable: true,
     );
-    _dynamicSlotTable =
-        _slotTable.where((s) => !s.isStatic).toList(growable: false);
     _wrappedChildren = List.generate(
       _slotTable.length,
-      (i) {
-        final slot = _slotTable[i];
-        if (slot.isStatic) {
-          slot.notifier.attachElement();
-          return slot.currentWidget;
-        }
-        return _ChildSlotScope(
-          key: ValueKey(i),
-          slot: slot,
-        );
-      },
-      growable: false,
+      (i) => _ChildSlotScope(
+        key: _slotTable[i].currentWidget.key ?? ObjectKey(_slotTable[i]),
+        slot: _slotTable[i],
+      ),
+      growable: true,
     );
   }
 
@@ -631,7 +564,6 @@ class _GraftMultiChildDiffEngineState<S extends GraftState>
       slot.dispose();
     }
     _slotTable = [];
-    _dynamicSlotTable = [];
   }
 
   @override
@@ -646,134 +578,190 @@ class _GraftMultiChildDiffEngineState<S extends GraftState>
   @override
   void didUpdateWidget(covariant GraftMultiChildDiffEngine<S> oldWidget) {
     super.didUpdateWidget(oldWidget);
-    final countChanged = widget.slots.length != oldWidget.slots.length;
     if (widget.layout != oldWidget.layout) {
       _contractVerified = false;
     }
 
-    if (oldWidget.graft != widget.graft || countChanged) {
-      if (oldWidget.graft != widget.graft) {
-        if (_dynamicSlotTable.isNotEmpty &&
-            identical(oldWidget.graft.fastDirectReceiver, _dynamicSlotTable[0].element)) {
-          oldWidget.graft.fastDirectReceiver = null;
-          oldWidget.graft.fastDirectMask = GraftMask.empty;
-        }
-        oldWidget.graft.removeMaskListener(_onStateDirty);
-      }
+    if (oldWidget.graft != widget.graft) {
+      oldWidget.graft.removeMaskListener(_onStateDirty);
       _disposeSlots();
       _initSlots();
-      if (oldWidget.graft != widget.graft) {
-        widget.graft.addMaskListener(_onStateDirty);
-      }
-    } else {
-      for (int i = 0; i < widget.slots.length; i++) {
-        final item = widget.slots[i];
-        final slot = _slotTable[i];
-        if (item is Widget && slot.isStatic) {
-          if (!identical(slot.currentWidget, item) &&
-              !GraftMultiChildDiffEngine.isWidgetEquivalent(
-                  slot.currentWidget, item, context)) {
-            slot.notifier.value = item;
-            slot.currentWidget = item;
-            _wrappedChildren[i] = item;
-          }
-        }
-      }
-      for (final slot in _slotTable) {
-        slot.ignoredMask = GraftMask.empty;
-      }
-      _onStateDirty(GraftMask.allDirty);
+      widget.graft.addMaskListener(_onStateDirty);
+      return;
     }
+
+    _onStateDirty(GraftMask.allDirty);
   }
 
   void _onStateDirty(GraftMask dirtyMask) {
     if (!mounted) return;
 
-    final dynamicSlots = _dynamicSlotTable;
-    final len = dynamicSlots.length;
-    if (len == 1) {
-      final slot = dynamicSlots[0];
-      if (!dirtyMask.isAllDirty && slot.ignoredMask.isNotEmpty && dirtyMask.isSubsetOf(slot.ignoredMask)) {
-        return;
-      }
-      slot.rebuildCount++;
-      final el = slot.element;
-      if (el is _ChildSlotElement) {
-        el.markSlotDirty();
-        if (widget.graft.fastDirectReceiver == null) {
-          widget.graft.fastDirectReceiver = el;
-          widget.graft.fastDirectMask = GraftMask.allDirty;
+    // Whole-layout pre-flight short-circuiting:
+    // If every slot has learned that it ignores this dirtyMask, skip calling widget.slots completely!
+    if (!dirtyMask.isEmpty &&
+        !dirtyMask.isAllDirty &&
+        _slotTable.isNotEmpty &&
+        _slotTable.every((s) => s.ignoredMask.isNotEmpty && dirtyMask.isSubsetOf(s.ignoredMask))) {
+      return;
+    }
+
+    final newWidgets = widget.slots(widget.graft.state);
+
+    if (newWidgets.length == _slotTable.length) {
+      final len = newWidgets.length;
+      for (int i = 0; i < len; i++) {
+        final slot = _slotTable[i];
+        final oldWidget = slot.currentWidget;
+        final newWidget = newWidgets[i];
+
+        if (identical(oldWidget, newWidget)) continue;
+
+        if (GraftMultiChildDiffEngine.isWidgetEquivalent(
+            oldWidget, newWidget, context)) {
+          if (!dirtyMask.isEmpty && !dirtyMask.isAllDirty) {
+            final single = dirtyMask.singleBitIndex;
+            if (single != null) {
+              slot.ignoredMask = slot.ignoredMask.withBit(single);
+            } else {
+              slot.ignoredMask = slot.ignoredMask.union(dirtyMask);
+            }
+          }
+          continue;
         }
-      } else {
-        el?.markNeedsBuild();
+
+        if (Graft.observer != null) {
+          slot.contentFingerprint = SlotMetadata.computeFingerprint(newWidget);
+        }
+        slot.rebuildCount++;
+        slot.updateWidget(newWidget);
+        Graft.observer?.onSlotRebuild(widget.graft, slot.slotIndex, newWidget);
+
+        if (!dirtyMask.isEmpty && !dirtyMask.isAllDirty) {
+          final singleField = dirtyMask.singleBitIndex;
+          if (singleField != null) {
+            slot.fieldDependenciesMask =
+                slot.fieldDependenciesMask.withBit(singleField);
+          } else if (slot.fieldDependenciesMask.isEmpty) {
+            slot.fieldDependenciesMask = dirtyMask;
+          }
+        }
       }
       return;
     }
 
-    for (int i = 0; i < len; i++) {
-      final slot = dynamicSlots[i];
+    _reconcileDynamicSlots(newWidgets, dirtyMask);
+  }
 
-      if (!dirtyMask.isAllDirty) {
-        if (slot.ignoredMask.isNotEmpty &&
-            dirtyMask.isSubsetOf(slot.ignoredMask)) {
-          continue;
-        }
-      }
+  void _reconcileDynamicSlots(List<Widget> newWidgets, GraftMask dirtyMask) {
+    final oldSlots = List<SlotMetadata?>.from(_slotTable);
+    final reconciled = List<SlotMetadata?>.filled(newWidgets.length, null);
 
-      final isKnownDynamic = slot.fieldDependenciesMask.isNotEmpty &&
-          !dirtyMask.isEmpty &&
-          !dirtyMask.isAllDirty &&
-          dirtyMask.isSubsetOf(slot.fieldDependenciesMask);
-
-      if (isKnownDynamic) {
-        slot.rebuildCount++;
-        final el = slot.element;
-        if (el is _ChildSlotElement) {
-          el.markSlotDirty();
-        } else {
-          el?.markNeedsBuild();
-        }
-        continue;
-      }
-
-      final oldWidget = slot.currentWidget;
-      final newWidget = slot.evaluator != null
-          ? slot.evaluator!(widget.graft.state)
-          : _evaluateSlot(widget.slots[slot.slotIndex]);
-
-      if (identical(oldWidget, newWidget)) continue;
-
-      if (!isKnownDynamic &&
-          GraftMultiChildDiffEngine.isWidgetEquivalent(
-              oldWidget, newWidget, context)) {
-        if (!dirtyMask.isEmpty && !dirtyMask.isAllDirty) {
-          final single = dirtyMask.singleBitIndex;
-          if (single != null) {
-            slot.ignoredMask = slot.ignoredMask.withBit(single);
-          } else {
-            slot.ignoredMask = slot.ignoredMask.union(dirtyMask);
+    // Pass 1: Match by explicit Key
+    for (int i = 0; i < newWidgets.length; i++) {
+      final newKey = newWidgets[i].key;
+      if (newKey != null) {
+        for (int j = 0; j < oldSlots.length; j++) {
+          final oldSlot = oldSlots[j];
+          if (oldSlot != null && oldSlot.currentWidget.key == newKey) {
+            reconciled[i] = oldSlot;
+            oldSlots[j] = null;
+            break;
           }
-        }
-        continue;
-      }
-
-      if (Graft.observer != null) {
-        slot.contentFingerprint = SlotMetadata.computeFingerprint(newWidget);
-      }
-      slot.rebuildCount++;
-      slot.updateWidget(newWidget);
-      Graft.observer?.onSlotRebuild(widget.graft, slot.slotIndex, newWidget);
-
-      if (!isKnownDynamic && !dirtyMask.isEmpty && !dirtyMask.isAllDirty) {
-        final singleField = dirtyMask.singleBitIndex;
-        if (singleField != null) {
-          slot.fieldDependenciesMask =
-              slot.fieldDependenciesMask.withBit(singleField);
-        } else if (slot.fieldDependenciesMask.isEmpty) {
-          slot.fieldDependenciesMask = dirtyMask;
         }
       }
     }
+
+    // Pass 2: Match by exact content equivalence
+    for (int i = 0; i < newWidgets.length; i++) {
+      if (reconciled[i] == null) {
+        for (int j = 0; j < oldSlots.length; j++) {
+          final oldSlot = oldSlots[j];
+          if (oldSlot != null &&
+              GraftMultiChildDiffEngine.isWidgetEquivalent(
+                  oldSlot.currentWidget, newWidgets[i], context)) {
+            reconciled[i] = oldSlot;
+            oldSlots[j] = null;
+            break;
+          }
+        }
+      }
+    }
+
+    // Pass 3: Match by runtimeType
+    for (int i = 0; i < newWidgets.length; i++) {
+      if (reconciled[i] == null) {
+        for (int j = 0; j < oldSlots.length; j++) {
+          final oldSlot = oldSlots[j];
+          if (oldSlot != null &&
+              oldSlot.currentWidget.runtimeType == newWidgets[i].runtimeType) {
+            reconciled[i] = oldSlot;
+            oldSlots[j] = null;
+            break;
+          }
+        }
+      }
+    }
+
+    // Pass 4: Build new slots or update matched slots
+    for (int i = 0; i < newWidgets.length; i++) {
+      final matchedSlot = reconciled[i];
+      if (matchedSlot == null) {
+        reconciled[i] = SlotMetadata(
+          slotIndex: i,
+          isStatic: false,
+          widgetType: newWidgets[i].runtimeType,
+          contentFingerprint: SlotMetadata.computeFingerprint(newWidgets[i]),
+          initialWidget: newWidgets[i],
+          graft: widget.graft,
+        );
+      } else {
+        matchedSlot.slotIndex = i;
+        if (!GraftMultiChildDiffEngine.isWidgetEquivalent(
+            matchedSlot.currentWidget, newWidgets[i], context)) {
+          if (Graft.observer != null) {
+            matchedSlot.contentFingerprint =
+                SlotMetadata.computeFingerprint(newWidgets[i]);
+          }
+          matchedSlot.rebuildCount++;
+          matchedSlot.updateWidget(newWidgets[i]);
+          Graft.observer?.onSlotRebuild(
+              widget.graft, matchedSlot.slotIndex, newWidgets[i]);
+
+          if (!dirtyMask.isEmpty && !dirtyMask.isAllDirty) {
+            final singleField = dirtyMask.singleBitIndex;
+            if (singleField != null) {
+              matchedSlot.fieldDependenciesMask =
+                  matchedSlot.fieldDependenciesMask.withBit(singleField);
+            } else if (matchedSlot.fieldDependenciesMask.isEmpty) {
+              matchedSlot.fieldDependenciesMask = dirtyMask;
+            }
+          }
+        }
+      }
+    }
+
+    // Pass 5: Dispose unmatched old slots
+    for (final oldSlot in oldSlots) {
+      if (oldSlot != null) {
+        if (oldSlot.isStatic) {
+          oldSlot.notifier.detachElement();
+        }
+        oldSlot.dispose();
+      }
+    }
+
+    // Pass 6: Assemble updated wrapped children and trigger parent layout update
+    _slotTable = reconciled.cast<SlotMetadata>();
+    _wrappedChildren = List.generate(
+      _slotTable.length,
+      (i) => _ChildSlotScope(
+        key: _slotTable[i].currentWidget.key ?? ObjectKey(_slotTable[i]),
+        slot: _slotTable[i],
+      ),
+      growable: true,
+    );
+
+    setState(() {});
   }
 
   @override

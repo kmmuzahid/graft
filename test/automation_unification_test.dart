@@ -108,9 +108,9 @@ void main() {
           home: Scaffold(
             body: graft.slots(
               layout: (children) => Column(children: children),
-              slots: [
-                (s) => Text('Title: ${s.title}'),
-                (s) => Text('Count: ${s.count}'),
+              slots: (s) => [
+                Text('Title: ${s.title}'),
+                Text('Count: ${s.count}'),
               ],
             ),
           ),

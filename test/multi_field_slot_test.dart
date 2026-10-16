@@ -89,17 +89,17 @@ void main() {
         home: Scaffold(
           body: graft.slots(
             layout: (children) => Column(children: children),
-            slots: [
+            slots: (s) => [
               // Slot 0: Depends on BOTH firstName (field 0) AND lastName (field 1)
-              (s) => TrackedSlotWidget('Full: ${s.firstName} ${s.lastName}',
+              TrackedSlotWidget('Full: ${s.firstName} ${s.lastName}',
                   onBuild: () => multiFieldBuilds++),
               // Slot 1: Depends only on score (field 2)
-              (s) => TrackedSlotWidget('Score: ${s.score}',
+              TrackedSlotWidget('Score: ${s.score}',
                   onBuild: () => scoreBuilds++),
               // Slot 2: Static banner (0 fields)
-              (_) => TrackedSlotWidget('STATIC BANNER', onBuild: () => staticBuilds++),
+              TrackedSlotWidget('STATIC BANNER', onBuild: () => staticBuilds++),
               // Slot 3: Depends only on email (field 3)
-              (s) => TrackedSlotWidget('Email: ${s.email}',
+              TrackedSlotWidget('Email: ${s.email}',
                   onBuild: () => emailBuilds++),
             ],
           ),

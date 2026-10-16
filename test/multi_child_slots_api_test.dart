@@ -34,12 +34,12 @@ void main() {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: slots,
               ),
-              slots: [
-                (s) => Text(s.name),
-                (s) => Text(s.email),
+              slots: (s) => [
+                Text(s.name),
+                Text(s.email),
                 const SizedBox(height: 16),
                 const Divider(),
-                (s) => Text(s.phone),
+                Text(s.phone),
               ],
             ),
           ),
@@ -125,10 +125,10 @@ void main() {
               layout: Row(
                 children: slots,
               ),
-              slots: [
+              slots: (s) => [
                 const Text('Static Label:'),
                 const SizedBox(width: 8),
-                (s) => Text(s.name),
+                Text(s.name),
                 const SizedBox(width: 8),
                 Text('Direct Non-Const Widget'),
               ],
@@ -145,11 +145,11 @@ void main() {
         find.byType(GraftMultiChildDiffEngine<UserState>),
       ) as dynamic;
       final slotTable = engineState.slotTable as List<SlotMetadata>;
-      expect(slotTable[0].isStatic, isTrue);
-      expect(slotTable[1].isStatic, isTrue);
-      expect(slotTable[2].isStatic, isFalse);
-      expect(slotTable[3].isStatic, isTrue);
-      expect(slotTable[4].isStatic, isTrue);
+      expect(slotTable[0].rebuildCount, 0);
+      expect(slotTable[1].rebuildCount, 0);
+      expect(slotTable[2].rebuildCount, 0);
+      expect(slotTable[3].rebuildCount, 0);
+      expect(slotTable[4].rebuildCount, 0);
 
       userGraft.dispose();
     });
@@ -166,8 +166,8 @@ void main() {
                 alignment: Alignment.center,
                 children: slots,
               ),
-              slots: [
-                (s) => Text(s.name),
+              slots: (s) => [
+                Text(s.name),
                 const Positioned(
                   bottom: 0,
                   child: Text('Footer'),
@@ -202,8 +202,8 @@ void main() {
                 mainAxisSize: MainAxisSize.min,
                 children: children,
               ),
-              slots: [
-                (s) => Text(s.name),
+              slots: (s) => [
+                Text(s.name),
                 const Divider(),
               ],
             ),

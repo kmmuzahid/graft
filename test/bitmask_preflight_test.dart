@@ -77,9 +77,9 @@ void main() {
           home: Scaffold(
             body: graft.slots(
               layout: (children) => Column(children: children),
-              slots: [
-                (s) => _TrackedSlot(text: 'Name: ${s.firstName}', onBuild: () => slot0Builds++),
-                (s) => _TrackedSlot(text: 'Score: ${s.score}', onBuild: () => slot1Builds++),
+              slots: (s) => [
+                _TrackedSlot(text: 'Name: ${s.firstName}', onBuild: () => slot0Builds++),
+                _TrackedSlot(text: 'Score: ${s.score}', onBuild: () => slot1Builds++),
               ],
             ),
           ),
@@ -127,12 +127,12 @@ void main() {
           home: Scaffold(
             body: graft.slots(
               layout: (children) => Column(children: children),
-              slots: [
-                (s) => _TrackedSlot(
+              slots: (s) => [
+                _TrackedSlot(
                   text: 'Full Name: ${s.firstName} ${s.lastName}',
                   onBuild: () => fullNameBuilds++,
                 ),
-                (s) => _TrackedSlot(
+                _TrackedSlot(
                   text: 'Email: ${s.email}',
                   onBuild: () => emailBuilds++,
                 ),

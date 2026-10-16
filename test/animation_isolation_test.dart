@@ -131,19 +131,19 @@ void main() {
                       layoutBuildCount++;
                       return Column(children: children);
                     },
-                    slots: [
+                    slots: (s) => [
                       // Slot 0: Static Heavy Widget
-                      (_) => HeavyTrackingWidget(
+                      HeavyTrackingWidget(
                         label: 'Heavy Static Header',
                         onBuild: () => heavyHeaderBuildCount++,
                       ),
                       // Slot 1: 60fps High-frequency animated spinner
-                      (_) => AnimatedSpinnerSlot(
+                      AnimatedSpinnerSlot(
                         controller: animationController,
                         onFrameBuild: () => animatedSlotFrameCount++,
                       ),
                       // Slot 2: Graft state text
-                      (s) => HeavyTrackingWidget(
+                      HeavyTrackingWidget(
                         label: 'Status: ${s.status}',
                         onBuild: () => reactiveTextBuildCount++,
                       ),
@@ -216,16 +216,16 @@ void main() {
               },
               child: graft.slots(
                 layout: (children) => Column(children: children),
-                slots: [
-                  (_) => HeavyTrackingWidget(
+                slots: (s) => [
+                  HeavyTrackingWidget(
                     label: 'Heavy Header',
                     onBuild: () => heavyHeaderBuildCount++,
                   ),
-                  (_) => AnimatedSpinnerSlot(
+                  AnimatedSpinnerSlot(
                     controller: animationController,
                     onFrameBuild: () => animatedSlotFrameCount++,
                   ),
-                  (s) => HeavyTrackingWidget(
+                  HeavyTrackingWidget(
                     label: 'Counter: ${s.counter}',
                     onBuild: () => reactiveTextBuildCount++,
                   ),
@@ -365,12 +365,12 @@ void main() {
           home: Scaffold(
             body: graft.slots(
               layout: (children) => Column(children: children),
-              slots: [
-                (_) => HeavyTrackingWidget(
+              slots: (s) => [
+                HeavyTrackingWidget(
                   label: 'Sibling Static Slot',
                   onBuild: () => siblingBuildCount++,
                 ),
-                (s) => AnimatedContainer(
+                AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
                   height: s.isExpanded ? 200.0 : 50.0,
                   child: const Text('Animated Box'),

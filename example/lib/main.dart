@@ -321,7 +321,7 @@ class HomeScreen extends StatelessWidget {
 
             graft.slots(
               layout: Column(children: slots),
-              slots: [
+              slots: (s) => [
                 // Const widget directly without wrapping: 0 rebuilds, 0 closure evaluations
                 const Card(
                   color: Colors.deepPurple,
@@ -338,28 +338,29 @@ class HomeScreen extends StatelessWidget {
                 ),
 
                 // Slot 1: Name
-                (s) => ListTile(
-                      leading:
-                          const Icon(Icons.person, color: Colors.deepPurple),
-                      title: Text('Name: ${s.name}'),
-                      subtitle: const Text('Rebuilds ONLY when name changes'),
-                    ),
+                ListTile(
+                  leading:
+                      const Icon(Icons.person, color: Colors.deepPurple),
+                  title: Text('Name: ${s.name}'),
+                  subtitle: const Text('Rebuilds ONLY when name changes'),
+                ),
 
                 // Slot 2: Email
-                (s) => ListTile(
-                      leading:
-                          const Icon(Icons.email, color: Colors.deepPurple),
-                      title: Text('Email: ${s.email}'),
-                      subtitle: const Text('0 rebuilds if email is unchanged'),
-                    ),
+                ListTile(
+                  leading:
+                      const Icon(Icons.email, color: Colors.deepPurple),
+                  title: Text('Email: ${s.email}'),
+                  subtitle: const Text('0 rebuilds if email is unchanged'),
+                ),
 
                 // Slot 3: Conditional Badge
-                (s) => s.isVerified
-                    ? const Chip(
-                        avatar: Icon(Icons.verified, color: Colors.green),
-                        label: Text('Verified User Account'),
-                      )
-                    : const SizedBox.shrink(),
+                if (s.isVerified)
+                  const Chip(
+                    avatar: Icon(Icons.verified, color: Colors.green),
+                    label: Text('Verified User Account'),
+                  )
+                else
+                  const SizedBox.shrink(),
               ],
             ),
 
@@ -629,39 +630,39 @@ class EditProfileScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: graft.slots(
           layout: (children) => Column(children: children),
-          slots: [
-            (_) => const Text(
-                  'This screen called context.use<UserGraft>() and borrowed the existing instance from HomeScreen.',
-                  style: TextStyle(fontSize: 15),
-                ),
-            (_) => const SizedBox(height: 16),
-            (s) => Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Current Name: ${s.name}',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 4),
-                        Text('Current Email: ${s.email}'),
-                        const SizedBox(height: 4),
-                        Text(
-                            'Status: ${s.isVerified ? "Verified" : "Unverified"}'),
-                      ],
+          slots: (s) => [
+            const Text(
+              'This screen called context.use<UserGraft>() and borrowed the existing instance from HomeScreen.',
+              style: TextStyle(fontSize: 15),
+            ),
+            const SizedBox(height: 16),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Current Name: ${s.name}',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
-                  ),
+                    const SizedBox(height: 4),
+                    Text('Current Email: ${s.email}'),
+                    const SizedBox(height: 4),
+                    Text(
+                        'Status: ${s.isVerified ? "Verified" : "Unverified"}'),
+                  ],
                 ),
-            (_) => const SizedBox(height: 16),
-            (_) => ElevatedButton(
-                  onPressed: () {
-                    graft.updateName('Edited by Second Screen!');
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text('Update Name & Pop Back to Home'),
-                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                graft.updateName('Edited by Second Screen!');
+                Navigator.of(context).pop();
+              },
+              child: const Text('Update Name & Pop Back to Home'),
+            ),
           ],
         ),
       ),
@@ -687,18 +688,18 @@ class IsolatedProfileScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: graft.slots(
           layout: (children) => Column(children: children),
-          slots: [
-            (_) => const Text(
-                  'This screen used context.create<UserGraft>() to create a completely independent instance.',
-                  style: TextStyle(fontSize: 15),
-                ),
-            (_) => const SizedBox(height: 16),
-            (s) => Text('Independent Name: ${s.name}'),
-            (_) => const SizedBox(height: 8),
-            (_) => ElevatedButton(
-                  onPressed: () => graft.updateName('Isolated Change'),
-                  child: const Text('Change (Does NOT Affect Home)'),
-                ),
+          slots: (s) => [
+            const Text(
+              'This screen used context.create<UserGraft>() to create a completely independent instance.',
+              style: TextStyle(fontSize: 15),
+            ),
+            const SizedBox(height: 16),
+            Text('Independent Name: ${s.name}'),
+            const SizedBox(height: 8),
+            ElevatedButton(
+              onPressed: () => graft.updateName('Isolated Change'),
+              child: const Text('Change (Does NOT Affect Home)'),
+            ),
           ],
         ),
       ),
@@ -956,138 +957,138 @@ class MultiGraftCompositionScreen extends StatelessWidget {
             const SizedBox(height: 16),
             userGraft.slots(
               layout: (children) => Column(children: children),
-              slots: [
+              slots: (userState) => [
                 // Slot 0: User Profile Card (Parent Graft)
-                (userState) => Card(
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                Card(
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Row(
                           children: [
-                            const Row(
-                              children: [
-                                Icon(
-                                  Icons.account_circle,
-                                  color: Colors.deepPurple,
-                                  size: 28,
-                                ),
-                                SizedBox(width: 8),
-                                Text(
-                                  'Parent Graft: UserGraft',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                              ],
+                            Icon(
+                              Icons.account_circle,
+                              color: Colors.deepPurple,
+                              size: 28,
                             ),
-                            const Divider(height: 20),
+                            SizedBox(width: 8),
                             Text(
-                              'Name: ${userState.name}',
-                              style: const TextStyle(
-                                fontSize: 18,
+                              'Parent Graft: UserGraft',
+                              style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Email: ${userState.email}',
-                              style: TextStyle(color: Colors.grey.shade700),
-                            ),
-                            const SizedBox(height: 12),
-                            ElevatedButton.icon(
-                              icon: const Icon(Icons.edit),
-                              label: const Text('Change Name'),
-                              onPressed: () => userGraft.updateName(
-                                userGraft.state.name == 'Alice Johnson'
-                                    ? 'Dr. John Doe'
-                                    : 'Alice Johnson',
+                                fontSize: 16,
                               ),
                             ),
                           ],
                         ),
-                      ),
+                        const Divider(height: 20),
+                        Text(
+                          'Name: ${userState.name}',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Email: ${userState.email}',
+                          style: TextStyle(color: Colors.grey.shade700),
+                        ),
+                        const SizedBox(height: 12),
+                        ElevatedButton.icon(
+                          icon: const Icon(Icons.edit),
+                          label: const Text('Change Name'),
+                          onPressed: () => userGraft.updateName(
+                            userGraft.state.name == 'Alice Johnson'
+                                ? 'Dr. John Doe'
+                                : 'Alice Johnson',
+                          ),
+                        ),
+                      ],
                     ),
+                  ),
+                ),
 
-                (_) => const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
                 // Slot 1: NESTED INDEPENDENT GRAFT (counterGraft.slots)
                 // Embedded inside a styled Container within UserGraft's slots!
                 // Thanks to GraftEquivalent, UserGraft updates do NOT rebuild this Container!
-                (_) => Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.amber.shade100,
-                        borderRadius: BorderRadius.circular(16),
-                        border:
-                            Border.all(color: Colors.amber.shade700, width: 2),
-                      ),
-                      child: counterGraft.slots(
-                        layout: (children) => Column(children: children),
-                        slots: [
-                          (_) => Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.bolt,
-                                      color: Colors.amber.shade900),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    'Nested Child Graft: LiveCounterGraft',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.brown.shade900,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                          (_) => const SizedBox(height: 8),
-                          (counterState) => Text(
-                                'Count: ${counterState.count}',
-                                style: TextStyle(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.brown.shade900,
-                                ),
-                              ),
-                          (_) => const SizedBox(height: 12),
-                          (_) => Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  IconButton.filled(
-                                    style: IconButton.styleFrom(
-                                      backgroundColor: Colors.amber.shade800,
-                                    ),
-                                    icon: const Icon(Icons.remove),
-                                    tooltip: 'Decrement',
-                                    onPressed: counterGraft.decrement,
-                                  ),
-                                  const SizedBox(width: 16),
-                                  IconButton.filled(
-                                    style: IconButton.styleFrom(
-                                      backgroundColor: Colors.amber.shade800,
-                                    ),
-                                    icon: const Icon(Icons.refresh),
-                                    tooltip: 'Reset to 0',
-                                    onPressed: counterGraft.reset,
-                                  ),
-                                  const SizedBox(width: 16),
-                                  IconButton.filled(
-                                    style: IconButton.styleFrom(
-                                      backgroundColor: Colors.amber.shade800,
-                                    ),
-                                    icon: const Icon(Icons.add),
-                                    tooltip: 'Increment',
-                                    onPressed: counterGraft.increment,
-                                  ),
-                                ],
-                              ),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.shade100,
+                    borderRadius: BorderRadius.circular(16),
+                    border:
+                        Border.all(color: Colors.amber.shade700, width: 2),
+                  ),
+                  child: counterGraft.slots(
+                    layout: (children) => Column(children: children),
+                    slots: (counterState) => [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.bolt,
+                              color: Colors.amber.shade900),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Nested Child Graft: LiveCounterGraft',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.brown.shade900,
+                            ),
+                          ),
                         ],
                       ),
-                    ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Count: ${counterState.count}',
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.brown.shade900,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          IconButton.filled(
+                            style: IconButton.styleFrom(
+                              backgroundColor: Colors.amber.shade800,
+                            ),
+                            icon: const Icon(Icons.remove),
+                            tooltip: 'Decrement',
+                            onPressed: counterGraft.decrement,
+                          ),
+                          const SizedBox(width: 16),
+                          IconButton.filled(
+                            style: IconButton.styleFrom(
+                              backgroundColor: Colors.amber.shade800,
+                            ),
+                            icon: const Icon(Icons.refresh),
+                            tooltip: 'Reset to 0',
+                            onPressed: counterGraft.reset,
+                          ),
+                          const SizedBox(width: 16),
+                          IconButton.filled(
+                            style: IconButton.styleFrom(
+                              backgroundColor: Colors.amber.shade800,
+                            ),
+                            icon: const Icon(Icons.add),
+                            tooltip: 'Increment',
+                            onPressed: counterGraft.increment,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ],

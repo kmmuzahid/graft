@@ -90,19 +90,19 @@ void main() {
         home: Scaffold(
           body: graft.slots(
             layout: (children) => Column(children: children),
-            slots: [
+            slots: (s) => [
               // Slot 0: email (field index 2)
-              (s) => TrackedSlotWidget('Email: ${s.email}',
+              TrackedSlotWidget('Email: ${s.email}',
                   onBuild: () => emailBuilds++),
               // Slot 1: name (field index 0)
-              (s) => TrackedSlotWidget('Name: ${s.name}', onBuild: () => nameBuilds++),
+              TrackedSlotWidget('Name: ${s.name}', onBuild: () => nameBuilds++),
               // Slot 2: static
-              (_) => TrackedSlotWidget('STATIC BANNER', onBuild: () => staticBuilds++),
+              TrackedSlotWidget('STATIC BANNER', onBuild: () => staticBuilds++),
               // Slot 3: score (field index 1)
-              (s) => TrackedSlotWidget('Score: ${s.score}',
+              TrackedSlotWidget('Score: ${s.score}',
                   onBuild: () => scoreBuilds++),
               // Slot 4: verified (field index 3)
-              (s) => TrackedSlotWidget('Verified: ${s.isVerified}',
+              TrackedSlotWidget('Verified: ${s.isVerified}',
                   onBuild: () => verifiedBuilds++),
             ],
           ),
@@ -201,19 +201,19 @@ void main() {
         home: Scaffold(
           body: graft.slots(
             layout: (children) => Column(children: children),
-            slots: [
+            slots: (s) => [
               // Slot 0: email (field index 3 in tracked)
-              (s) => TrackedSlotWidget('Email: ${s.email}',
+              TrackedSlotWidget('Email: ${s.email}',
                   onBuild: () => emailBuilds++),
               // Slot 1: name (field index 1 in tracked)
-              (s) => TrackedSlotWidget('Name: ${s.name}', onBuild: () => nameBuilds++),
+              TrackedSlotWidget('Name: ${s.name}', onBuild: () => nameBuilds++),
               // Slot 2: static
-              (_) => TrackedSlotWidget('STATIC BANNER', onBuild: () => staticBuilds++),
+              TrackedSlotWidget('STATIC BANNER', onBuild: () => staticBuilds++),
               // Slot 3: score (field index 0 in tracked)
-              (s) => TrackedSlotWidget('Score: ${s.score}',
+              TrackedSlotWidget('Score: ${s.score}',
                   onBuild: () => scoreBuilds++),
               // Slot 4: verified (field index 2 in tracked)
-              (s) => TrackedSlotWidget('Verified: ${s.isVerified}',
+              TrackedSlotWidget('Verified: ${s.isVerified}',
                   onBuild: () => verifiedBuilds++),
             ],
           ),

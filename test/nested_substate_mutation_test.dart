@@ -94,9 +94,9 @@ void main() {
           home: Scaffold(
             body: controller.slots(
               layout: Column(children: slots),
-              slots: [
-                (s) => TrackedTextWidget('User: ${s.userName}', onBuild: () => userBuilds++),
-                (s) => TrackedTextWidget('City: ${s.address.city}', onBuild: () => cityBuilds++),
+              slots: (s) => [
+                TrackedTextWidget('User: ${s.userName}', onBuild: () => userBuilds++),
+                TrackedTextWidget('City: ${s.address.city}', onBuild: () => cityBuilds++),
               ],
             ),
           ),

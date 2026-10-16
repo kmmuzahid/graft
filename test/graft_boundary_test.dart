@@ -224,10 +224,10 @@ void main() {
           home: Scaffold(
             body: dashboardGraft.slots(
               layout: Column(children: slots),
-              slots: [
+              slots: (s) => [
                 // ignore: prefer_const_constructors
                 Text('Dashboard Header'),
-                (s) => TrackedSlotWidget('Section: ${s.title}',
+                TrackedSlotWidget('Section: ${s.title}',
                     onBuild: () => slot1BuildCount++),
                 HeavyPaintContainer(
                   child: GraftBoundary(

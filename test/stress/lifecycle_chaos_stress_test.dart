@@ -111,8 +111,8 @@ void main() {
           home: Scaffold(
             body: graft.slots(
               layout: Column(children: slots),
-              slots: [
-                (s) => Text('Slot: ${s.count}'),
+              slots: (s) => [
+                Text('Slot: ${s.count}'),
                 const Text('Static'),
               ],
             ),

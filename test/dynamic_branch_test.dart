@@ -61,12 +61,12 @@ void main() {
         home: Scaffold(
           body: graft.slots(
             layout: (children) => Column(children: children),
-            slots: [
-              (s) => Text('Title: ${s.title}'),
-              if (showDetails) (_) => const Text('EXPANDED DETAILS BANNER'),
+            slots: (s) => [
+              Text('Title: ${s.title}'),
+              if (showDetails) const Text('EXPANDED DETAILS BANNER'),
               for (int i = 0; i < tagCount; i++)
-                (s) => Text('Tag: ${i < s.tags.length ? s.tags[i] : ""}'),
-              (_) => const Text('STATIC FOOTER'),
+                Text('Tag: ${i < s.tags.length ? s.tags[i] : ""}'),
+              const Text('STATIC FOOTER'),
             ],
           ),
         ),

@@ -126,12 +126,13 @@ void main() {
           home: Scaffold(
             body: accountGraft.slots(
               layout: Column(children: slots),
-              slots: [
+              slots: (s) => [
                 const Text('Header Banner'),
-                (s) => s.isLoggedIn
-                    ? Text('Logged as: ${s.firstName}')
-                    : const Text('Guest Mode'),
-                (s) => Text('Notifications: ${s.unreadNotifications}'),
+                if (s.isLoggedIn)
+                  Text('Logged as: ${s.firstName}')
+                else
+                  const Text('Guest Mode'),
+                Text('Notifications: ${s.unreadNotifications}'),
               ],
             ),
           ),
