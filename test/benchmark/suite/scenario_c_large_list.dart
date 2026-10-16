@@ -711,6 +711,17 @@ class ScenarioCLargeListRunner {
     final insertIndices = List.generate(ops, (_) => rng.nextInt(initialCount));
     final removeIndices = List.generate(ops, (_) => rng.nextInt(initialCount));
 
+    // Pre-flight JIT warmup of List array copy and memory shift routines
+    {
+      final dummyList = List<ItemData>.generate(initialCount, (i) => ItemData(id: i, title: 'Warm $i', value: 0));
+      for (int i = 0; i < ops; i++) {
+        dummyList.insert(insertIndices[i], ItemData(id: 10000 + i, title: 'New $i', value: i));
+      }
+      for (int i = 0; i < ops; i++) {
+        dummyList.removeAt(removeIndices[i].clamp(0, dummyList.length - 1));
+      }
+    }
+
     // 1. Graft
     {
       final samples = <double>[];

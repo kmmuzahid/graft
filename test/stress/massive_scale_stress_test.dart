@@ -6,7 +6,7 @@ class Massive128State extends GraftState {
   final List<int> values = List<int>.generate(128, (i) => i);
 
   @override
-  GraftProps get props => propsOf(values);
+  GraftProps get props => propsOfMany(values);
 }
 
 class Massive128Graft extends Graft<Massive128State> {

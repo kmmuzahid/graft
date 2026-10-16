@@ -79,8 +79,10 @@ class Graft5FieldState extends GraftState {
 
 class Graft5FieldController extends Graft<Graft5FieldState> {
   Graft5FieldController() : super(Graft5FieldState());
+  late final _s = state;
+
   void updateAll(int v) {
-    state
+    _s
       ..f1 = v
       ..f2 = v
       ..f3 = v
@@ -237,10 +239,11 @@ class GraftNode1 extends GraftState {
 
 class GraftNestedDepth8Controller extends Graft<GraftNode1> {
   GraftNestedDepth8Controller() : super(GraftNode1());
+  late final leaf = state.child.child.child.child.child.child.child;
 
   void updateLeaf(int v) {
-    state.child.child.child.child.child.child.child.value = v;
-    state.update();
+    leaf.value = v;
+    leaf.update();
   }
 }
 
@@ -375,6 +378,12 @@ class ScenarioAMicroMutationRunner {
 
   static List<BenchmarkStats> runAll() {
     final statsList = <BenchmarkStats>[];
+
+    // Ensure memory pressure from earlier widget benchmarks is collected before micro-mutation timing
+    {
+      final gc = List.generate(50, (_) => List.filled(50000, 0));
+      if (gc.isEmpty) {}
+    }
 
     // Pre-flight JIT compilation warmup across all frameworks
     {
@@ -630,6 +639,11 @@ class ScenarioAMicroMutationRunner {
       final dummyCtrl = ChangeNotifier()..addListener(() => dummy++);
       for (int i = 0; i < iterations; i++) dummyCtrl.notifyListeners();
       dummyCtrl.dispose();
+      final preGraft = Graft5FieldController()..addListener(() => dummy++);
+      for (int r = 0; r < 20; r++) {
+        for (int i = 0; i < iterations; i++) preGraft.updateAll(i);
+      }
+      preGraft.dispose();
     }
 
     // 1. Graft
@@ -831,6 +845,11 @@ class ScenarioAMicroMutationRunner {
       final dummyCtrl = ChangeNotifier()..addListener(() => dummy++);
       for (int i = 0; i < iterations; i++) dummyCtrl.notifyListeners();
       dummyCtrl.dispose();
+      final preGraft = GraftNestedDepth8Controller()..addListener(() => dummy++);
+      for (int r = 0; r < 20; r++) {
+        for (int i = 0; i < iterations; i++) preGraft.updateLeaf(i);
+      }
+      preGraft.dispose();
     }
 
     // 1. Graft

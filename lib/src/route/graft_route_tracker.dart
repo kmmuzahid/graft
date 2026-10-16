@@ -50,7 +50,11 @@ class GraftRouteTracker {
   ///
   /// Automatically disposes all [Graft] instances owned by [route].
   static void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    _routeStack.remove(route);
+    if (_routeStack.isNotEmpty && identical(_routeStack.last, route)) {
+      _routeStack.removeLast();
+    } else {
+      _routeStack.remove(route);
+    }
     _disposeOwnedGrafts(route);
   }
 
@@ -77,18 +81,21 @@ class GraftRouteTracker {
 
   /// Disposes all [Graft] instances owned by [route].
   static void _disposeOwnedGrafts(Route<dynamic> route) {
-    final ownedGrafts = _owners.entries
-        .where((entry) => entry.value == route)
-        .map((entry) => entry.key)
-        .toList();
-
-    for (final graft in ownedGrafts) {
-      if (!graft.isDisposed) {
-        graft.dispose();
+    if (_owners.isEmpty && _routeInstances.isEmpty) return;
+    if (_owners.isNotEmpty) {
+      final ownedGrafts = <Graft>[];
+      for (final entry in _owners.entries) {
+        if (identical(entry.value, route)) {
+          ownedGrafts.add(entry.key);
+        }
       }
-      _owners.remove(graft);
+      for (final graft in ownedGrafts) {
+        if (!graft.isDisposed) {
+          graft.dispose();
+        }
+        _owners.remove(graft);
+      }
     }
-
     _routeInstances.remove(route);
   }
 

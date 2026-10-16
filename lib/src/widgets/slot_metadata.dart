@@ -80,7 +80,9 @@ class SlotMetadata {
   @pragma('vm:prefer-inline')
   void updateWidget(Widget newWidget) {
     currentWidget = newWidget;
-    notifier.value = newWidget;
+    if (notifier.hasExternalListeners) {
+      notifier.value = newWidget;
+    }
     element?.markNeedsBuild();
   }
 
@@ -186,5 +188,8 @@ class SlotNotifier extends ValueNotifier<Widget> {
       super.value = newValue;
     }
   }
+
+  /// Whether external listeners are registered on this notifier.
+  bool get hasExternalListeners => super.hasListeners;
 }
 

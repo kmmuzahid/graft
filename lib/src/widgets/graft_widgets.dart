@@ -345,7 +345,7 @@ extension GraftWidgetsX<S extends GraftState> on Graft<S> {
       index: index,
       graft: this,
       selector: selector,
-      builder: (context, itm) => builder(itm),
+      valueBuilder: builder,
     );
   }
 

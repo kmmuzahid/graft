@@ -62,11 +62,20 @@ class Graft<S extends GraftState> extends ChangeNotifier {
 
   /// Direct fast receiver pointer for the ultra-fast single-slot dispatch path.
   /// Set by [_GraftSingleSlotElement] or single dynamic [_ChildSlotElement]
+  GraftFastReceiver? _fastDirectReceiver;
+
+  /// Single-element fast receiver pointer registered by [_GraftSingleSlotElement]
   /// after the first confirmed-dynamic rebuild.
   /// When non-null and conditions are met, [notifyMask] skips all listener
   /// machinery and calls [GraftFastReceiver.markFastDirty] directly.
   @internal
-  GraftFastReceiver? fastDirectReceiver;
+  GraftFastReceiver? get fastDirectReceiver => _fastDirectReceiver;
+
+  @internal
+  set fastDirectReceiver(GraftFastReceiver? r) {
+    _fastDirectReceiver = r;
+    _recomputeSingleListenerFlag();
+  }
 
   /// The dirty mask subset under which [fastDirectReceiver] applies.
   @internal
@@ -170,6 +179,22 @@ class Graft<S extends GraftState> extends ChangeNotifier {
 
   VoidCallback? _singleListener;
   List<VoidCallback>? _extraListeners;
+  bool _hasOnlySingle = false;
+  bool _hasOnlySingleListener = false;
+  bool _hasOnlyFastDirectReceiver = false;
+
+  void _recomputeSingleListenerFlag() {
+    _hasOnlySingle = _singleListener != null &&
+        (_extraListeners == null || _extraListeners!.isEmpty) &&
+        _singleMaskListener == null;
+    _hasOnlySingleListener = _hasOnlySingle &&
+        _fastDirectReceiver == null &&
+        observer == null;
+    _hasOnlyFastDirectReceiver = _fastDirectReceiver != null &&
+        (_extraMaskListeners == null || _extraMaskListeners!.isEmpty) &&
+        _singleListener == null &&
+        observer == null;
+  }
 
   /// Whether this [Graft] has any registered listeners.
   @override
@@ -201,9 +226,12 @@ class Graft<S extends GraftState> extends ChangeNotifier {
     if (!_isDisposed) {
       if (_singleListener == null) {
         _singleListener = listener;
+        _recomputeSingleListenerFlag();
         return;
       }
       (_extraListeners ??= []).add(listener);
+      _hasOnlySingle = false;
+      _recomputeSingleListenerFlag();
     }
   }
 
@@ -216,9 +244,11 @@ class Graft<S extends GraftState> extends ChangeNotifier {
         if (_extraListeners != null && _extraListeners!.isNotEmpty) {
           _singleListener = _extraListeners!.removeLast();
         }
+        _recomputeSingleListenerFlag();
         return;
       }
       _extraListeners?.remove(listener);
+      _recomputeSingleListenerFlag();
     }
   }
 
@@ -228,9 +258,13 @@ class Graft<S extends GraftState> extends ChangeNotifier {
     if (!_isDisposed) {
       if (_singleMaskListener == null) {
         _singleMaskListener = listener;
+        _recomputeSingleListenerFlag();
         return;
       }
       (_extraMaskListeners ??= []).add(listener);
+      _fastDirectReceiver = null;
+      fastDirectMask = GraftMask.empty;
+      _recomputeSingleListenerFlag();
     }
   }
 
@@ -243,11 +277,24 @@ class Graft<S extends GraftState> extends ChangeNotifier {
         if (_extraMaskListeners != null && _extraMaskListeners!.isNotEmpty) {
           _singleMaskListener = _extraMaskListeners!.removeLast();
         }
+        _recomputeSingleListenerFlag();
         return;
       }
       _extraMaskListeners?.remove(listener);
+      _recomputeSingleListenerFlag();
     }
   }
+
+  @internal
+  VoidCallback? get singleListener => _singleListener;
+
+  @internal
+  @pragma('vm:prefer-inline')
+  bool get hasOnlySingleListener => _hasOnlySingleListener;
+
+  @internal
+  @pragma('vm:prefer-inline')
+  bool get hasOnlyFastDirectReceiver => _hasOnlyFastDirectReceiver;
 
   @override
   void notifyListeners() {
@@ -273,27 +320,40 @@ class Graft<S extends GraftState> extends ChangeNotifier {
   void notifyMask(GraftMask dirtyMask, {GraftChange<dynamic>? change}) {
     if (_isDisposed) return;
 
+    // ⚡ 0-cycle fast return if no listeners whatsoever (Scenario D1, D2, C3)
+    if (_singleListener == null &&
+        _singleMaskListener == null &&
+        fastDirectReceiver == null &&
+        observer == null) {
+      return;
+    }
+
+    // ⚡ Fast direct single VoidCallback listener (Scenario A1, A2, A3, A4, B)
+    final single = _singleListener;
+    if (single != null &&
+        observer == null &&
+        _extraListeners == null &&
+        _singleMaskListener == null &&
+        fastDirectReceiver == null) {
+      single();
+      return;
+    }
+
     // ⚡ Ultra-fast direct element path (Scenario B1, B2, A1 with leaf slots).
     // Active post-warmup when exactly one single-slot scope is subscribed and
     // its field dependency mask has been confirmed. Bypasses the entire
     // listener chain with a single markFastDirty() call — same depth as Signals.
-    final fe = fastDirectReceiver;
-    if (fe != null &&
-        observer == null &&
-        _singleListener == null &&
-        _extraMaskListeners == null &&
-        dirtyMask.isSubsetOf(fastDirectMask)) {
+    if (hasOnlyFastDirectReceiver) {
+      final fe = fastDirectReceiver!;
       if (fe.mounted) {
         fe.markFastDirty();
         return;
       }
-      // Element unmounted but not yet cleared — do cleanup and fall through.
       fastDirectReceiver = null;
       fastDirectMask = GraftMask.empty;
     }
 
-    final single = _singleListener;
-    if (single != null && fe == null && observer == null && _singleMaskListener == null) {
+    if (single != null && fastDirectReceiver == null && observer == null && _singleMaskListener == null) {
       single();
       final extra = _extraListeners;
       if (extra != null && extra.isNotEmpty) {
@@ -515,6 +575,7 @@ class Graft<S extends GraftState> extends ChangeNotifier {
     _isDisposed = true;
     _singleListener = null;
     _extraListeners?.clear();
+    _hasOnlySingle = false;
     _singleMaskListener = null;
     _extraMaskListeners?.clear();
     fastDirectReceiver = null;

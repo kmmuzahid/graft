@@ -33,7 +33,7 @@ void main() {
       collector.add(s);
     }
     // ignore: avoid_print
-    print('✔ Scenario B completed (\${statsB.length} benchmark targets).');
+    print('✔ Scenario B completed (${statsB.length} benchmark targets).');
   });
 
   // ---------------------------------------------------------------------------
@@ -47,7 +47,7 @@ void main() {
       collector.add(s);
     }
     // ignore: avoid_print
-    print('✔ Scenario C completed (\${statsC.length} benchmark targets).');
+    print('✔ Scenario C completed (${statsC.length} benchmark targets).');
   });
 
   // ---------------------------------------------------------------------------
@@ -61,7 +61,7 @@ void main() {
       collector.add(s);
     }
     // ignore: avoid_print
-    print('✔ Scenario D completed (\${statsD.length} benchmark targets).');
+    print('✔ Scenario D completed (${statsD.length} benchmark targets).');
   });
 
   // ---------------------------------------------------------------------------
@@ -75,10 +75,8 @@ void main() {
       collector.add(s);
     }
     // ignore: avoid_print
-    print('✔ Scenario E completed (\${statsE.length} benchmark targets).');
+    print('✔ Scenario E completed (${statsE.length} benchmark targets).');
   });
-
-
 
   // ---------------------------------------------------------------------------
   // SCENARIO A: MICRO MUTATION SPEED

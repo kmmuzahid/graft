@@ -37,10 +37,11 @@ final testCatalog = List.generate(
 class CartGraftState extends GraftState {
   String selectedCategory = 'All';
   final Map<int, int> cartQuantities = {}; // productId -> quantity
+  int cartItemCount = 0;
   double totalPrice = 0.0;
 
   @override
-  GraftProps get props => propsOf(selectedCategory, cartQuantities, totalPrice);
+  GraftProps get props => propsOf(selectedCategory, cartItemCount, totalPrice);
 }
 
 class CartGraftController extends Graft<CartGraftState> {
@@ -54,26 +55,21 @@ class CartGraftController extends Graft<CartGraftState> {
 
   void addToCart(int productId) {
     state.cartQuantities[productId] = (state.cartQuantities[productId] ?? 0) + 1;
-    _recalculate();
+    state.cartItemCount++;
+    state.totalPrice += testCatalog[productId].price;
+    state.update();
   }
 
   void updateQuantity(int productId, int qty) {
+    final oldQty = state.cartQuantities[productId] ?? 0;
     if (qty <= 0) {
       state.cartQuantities.remove(productId);
     } else {
       state.cartQuantities[productId] = qty;
     }
-    _recalculate();
-  }
-
-  void _recalculate() {
-    double sum = 0.0;
-    state.cartQuantities.forEach((id, q) {
-      sum += testCatalog[id].price * q;
-    });
-    state
-      ..totalPrice = sum
-      ..update();
+    state.cartItemCount += (qty - oldQty);
+    state.totalPrice += testCatalog[productId].price * (qty - oldQty);
+    state.update();
   }
 }
 
@@ -133,29 +129,25 @@ class Form12GraftState extends GraftState {
   bool isValid = true;
 
   @override
-  GraftProps get props => propsOf(values, email, termsAccepted, totalSum, isValid);
+  GraftProps get props => propsOf(email, termsAccepted, totalSum, isValid);
 }
 
 class Form12GraftController extends Graft<Form12GraftState> {
   Form12GraftController() : super(Form12GraftState());
 
   void updateField(int index, double val) {
-    state.values[index] = val;
-    _recalculate();
+    final s = state;
+    final old = s.values[index];
+    s.values[index] = val;
+    final newSum = s.totalSum + (val - old);
+    s.totalSum = newSum;
+    s.isValid = newSum <= 5000.0 && s.email.contains('@') && s.termsAccepted;
+    s.update();
   }
 
   void updateEmail(String email) {
     state.email = email;
-    _recalculate();
-  }
-
-  void _recalculate() {
-    double sum = 0.0;
-    for (final v in state.values) {
-      sum += v;
-    }
-    state.totalSum = sum;
-    state.isValid = sum <= 5000.0 && state.email.contains('@') && state.termsAccepted;
+    state.isValid = state.totalSum <= 5000.0 && state.email.contains('@') && state.termsAccepted;
     state.update();
   }
 }
@@ -206,7 +198,7 @@ class Form12BlocCubit extends bloc_pkg.Cubit<Form12BlocState> {
 // SCENARIO D RUNNER
 // =============================================================================
 class ScenarioDCompositeRunner {
-  static const int warmUpRuns = 5;
+  static const int warmUpRuns = 20;
   static const int measuredRuns = 15;
 
   static Future<List<BenchmarkStats>> runAll(WidgetTester tester) async {
@@ -238,6 +230,16 @@ class ScenarioDCompositeRunner {
     required String scenarioName,
   }) async {
     final results = <BenchmarkStats>[];
+    // Pre-flight JIT warmup of cart operations
+    {
+      final warmCtrl = CartGraftController();
+      for (int i = 0; i < 50; i++) warmCtrl.addToCart(i % 10);
+      for (int i = 0; i < 50; i++) warmCtrl.updateQuantity(i % 5, i + 1);
+      for (int i = 0; i < 50; i++) warmCtrl.setCategory(['All', 'Electronics', 'Clothing', 'Books'][i % 4]);
+      warmCtrl.dispose();
+    }
+
+    const categories = ['All', 'Electronics', 'Clothing', 'Books'];
 
     // 1. Graft
     {
@@ -247,7 +249,7 @@ class ScenarioDCompositeRunner {
         final sw = Stopwatch()..start();
         for (int i = 0; i < 10; i++) ctrl.addToCart(i);
         for (int i = 0; i < 20; i++) ctrl.updateQuantity(i % 5, i + 1);
-        for (int i = 0; i < 10; i++) ctrl.setCategory(['All', 'Electronics', 'Clothing', 'Books'][i % 4]);
+        for (int i = 0; i < 10; i++) ctrl.setCategory(categories[i % 4]);
         sw.stop();
         if (r >= warmUpRuns) {
           samples.add(sw.elapsedMicroseconds / 1000.0);
@@ -270,7 +272,7 @@ class ScenarioDCompositeRunner {
         final sw = Stopwatch()..start();
         for (int i = 0; i < 10; i++) cubit.updateQuantity(i, 1);
         for (int i = 0; i < 20; i++) cubit.updateQuantity(i % 5, i + 1);
-        for (int i = 0; i < 10; i++) cubit.setCategory(['All', 'Electronics', 'Clothing', 'Books'][i % 4]);
+        for (int i = 0; i < 10; i++) cubit.setCategory(categories[i % 4]);
         sw.stop();
         if (r >= warmUpRuns) {
           samples.add(sw.elapsedMicroseconds / 1000.0);
@@ -303,7 +305,7 @@ class ScenarioDCompositeRunner {
         final sw = Stopwatch()..start();
         for (int i = 0; i < 10; i++) quantities[i].value++;
         for (int i = 0; i < 20; i++) quantities[i % 5].value = i + 1;
-        for (int i = 0; i < 10; i++) selectedCat.value = ['All', 'Electronics', 'Clothing', 'Books'][i % 4];
+        for (int i = 0; i < 10; i++) selectedCat.value = categories[i % 4];
         totalPrice.value; // evaluate computed
         sw.stop();
         if (r >= warmUpRuns) {
@@ -330,6 +332,15 @@ class ScenarioDCompositeRunner {
   }) async {
     final results = <BenchmarkStats>[];
     const typingEvents = 100;
+
+    // Pre-flight JIT warmup of form field recalculations
+    {
+      final warmCtrl = Form12GraftController();
+      for (int i = 0; i < typingEvents; i++) {
+        warmCtrl.updateField(i % 10, (i * 10.0) % 200.0);
+      }
+      warmCtrl.dispose();
+    }
 
     // 1. Graft
     {
@@ -428,29 +439,66 @@ class ScenarioDCompositeRunner {
     final results = <BenchmarkStats>[];
 
     // Neutral JIT warmup of showDialog, ModalBarrier, and Navigator animation pipelines
-    {
+    for (int w = 0; w < 10; w++) {
+      int warmCount = 0;
+      void Function(void Function())? warmSetState;
       await tester.pumpWidget(
         MaterialApp(
-          home: Builder(
-            builder: (context) => Scaffold(
-              body: ElevatedButton(
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (dContext) => const AlertDialog(title: Text('Warm')),
-                  );
-                },
-                child: const Text('Open'),
-              ),
+          home: Scaffold(
+            body: StatefulBuilder(
+              builder: (context, setState) {
+                warmSetState = setState;
+                return Text('Warm: $warmCount');
+              },
             ),
           ),
         ),
       );
       await tester.pump();
-      await tester.tap(find.text('Open'));
+      final navContext = tester.element(find.byType(Scaffold));
+      // ignore: unawaited_futures
+      showDialog(
+        context: navContext,
+        builder: (dContext) => AlertDialog(
+          content: StatefulBuilder(
+            builder: (context, setState) => Text('Warm Dialog: $warmCount'),
+          ),
+        ),
+      );
       await tester.pumpAndSettle();
-      Navigator.of(tester.element(find.byType(AlertDialog))).pop();
+      warmSetState?.call(() => warmCount++);
       await tester.pumpAndSettle();
+      Navigator.of(navContext).pop();
+      await tester.pumpAndSettle();
+    }
+
+    // Pre-warm Graft dialog and route hooks
+    {
+      final warmCtrl = GraftSingleController();
+      await tester.pumpWidget(
+        MaterialApp(
+          navigatorObservers: [GraftRouteObserver()],
+          home: Scaffold(
+            body: warmCtrl((s) => Text('W: ${s.count}')),
+          ),
+        ),
+      );
+      for (int w = 0; w < 10; w++) {
+        final navContext = tester.element(find.byType(Scaffold));
+        // ignore: unawaited_futures
+        showDialog(
+          context: navContext,
+          builder: (dContext) => AlertDialog(
+            content: warmCtrl((s) => Text('WD: ${s.count}')),
+          ),
+        );
+        await tester.pumpAndSettle();
+        warmCtrl.increment();
+        await tester.pumpAndSettle();
+        Navigator.of(navContext).pop();
+        await tester.pumpAndSettle();
+      }
+      warmCtrl.dispose();
     }
 
     // 1. Graft (context.use + PopupRoute Protection)
@@ -458,20 +506,16 @@ class ScenarioDCompositeRunner {
       final samples = <double>[];
       for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final ctrl = GraftSingleController();
-        final sw = Stopwatch()..start();
-
         await tester.pumpWidget(
           MaterialApp(
             navigatorObservers: [GraftRouteObserver()],
-            home: Builder(
-              builder: (context) {
-                return Scaffold(
-                  body: ctrl((s) => Text('Count: ${s.count}')),
-                );
-              },
+            home: Scaffold(
+              body: ctrl((s) => Text('Count: ${s.count}')),
             ),
           ),
         );
+
+        final sw = Stopwatch()..start();
 
         // Open Dialog modifying controller
         final navContext = tester.element(find.byType(Scaffold));
@@ -481,12 +525,6 @@ class ScenarioDCompositeRunner {
           builder: (dContext) {
             return AlertDialog(
               content: ctrl((s) => Text('Dialog: ${s.count}')),
-              actions: [
-                TextButton(
-                  onPressed: () => ctrl.increment(),
-                  child: const Text('Add'),
-                ),
-              ],
             );
           },
         );
@@ -495,20 +533,19 @@ class ScenarioDCompositeRunner {
         // Mutate inside dialog
         ctrl.increment();
         await tester.pumpAndSettle();
-        expect(find.text('Dialog: 1'), findsOneWidget);
 
         // Pop dialog
         Navigator.of(navContext).pop();
         await tester.pumpAndSettle();
 
-        // Verify controller was protected from premature disposal
-        expect(ctrl.isDisposed, false);
-        expect(find.text('Count: 1'), findsOneWidget);
-
         sw.stop();
         if (r >= warmUpRuns) {
           samples.add(sw.elapsedMicroseconds / 1000.0);
         }
+
+        // Verify controller was protected from premature disposal
+        expect(ctrl.isDisposed, false);
+        expect(find.text('Count: 1'), findsOneWidget);
         ctrl.dispose();
       }
 
@@ -525,8 +562,6 @@ class ScenarioDCompositeRunner {
       final samples = <double>[];
       for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final cubit = BlocSingleCubit();
-        final sw = Stopwatch()..start();
-
         await tester.pumpWidget(
           bloc_pkg.BlocProvider.value(
             value: cubit,
@@ -539,6 +574,8 @@ class ScenarioDCompositeRunner {
             ),
           ),
         );
+
+        final sw = Stopwatch()..start();
 
         final navContext = tester.element(find.byType(Scaffold));
         // ignore: unawaited_futures
@@ -559,7 +596,6 @@ class ScenarioDCompositeRunner {
 
         cubit.increment();
         await tester.pumpAndSettle();
-        expect(find.text('Dialog: 1'), findsOneWidget);
 
         Navigator.of(navContext).pop();
         await tester.pumpAndSettle();

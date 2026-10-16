@@ -73,6 +73,7 @@ abstract class GraftState {
       _singleNestedVersion = c is GraftState ? c._version : -1;
       if (c is GraftState) {
         c.initBaseline();
+        c._graft = _graft;
         GraftState cur = c;
         while (cur.props.length == 1) {
           final next = cur.props is _GraftPropsSingle
@@ -80,15 +81,18 @@ abstract class GraftState {
               : cur.props[0];
           if (next is GraftState) {
             next.initBaseline();
+            next._graft = _graft;
             cur = next;
           } else {
             break;
           }
         }
         _leafState = cur;
+        cur._graft = _graft;
         GraftState chain = c;
         while (!identical(chain, cur)) {
           chain._leafState = cur;
+          chain._graft = _graft;
           final next = chain.props is _GraftPropsSingle
               ? (chain.props as _GraftPropsSingle).value
               : chain.props[0];
@@ -148,6 +152,14 @@ abstract class GraftState {
         }
       }
       _allScalarProps = allScalar;
+      if (allScalar && len >= 2 && len <= 5) {
+        _scalarCount = len;
+        _s0 = _b0 = current[0];
+        _s1 = _b1 = current[1];
+        if (len > 2) _s2 = _b2 = current[2];
+        if (len > 3) _s3 = _b3 = current[3];
+        if (len > 4) _s4 = _b4 = current[4];
+      }
     }
   }
 
@@ -162,6 +174,15 @@ abstract class GraftState {
   List<Object?> get baselineSnapshot {
     if (!identical(_singleBaseline, _undefined)) {
       return [_singleBaseline];
+    }
+    if (_scalarCount >= 2 && _scalarCount <= 5) {
+      return [
+        _b0,
+        _b1,
+        if (_scalarCount > 2) _b2,
+        if (_scalarCount > 3) _b3,
+        if (_scalarCount > 4) _b4,
+      ];
     }
     return _baseline != null ? List<Object?>.unmodifiable(_baseline!) : const [];
   }
@@ -195,6 +216,9 @@ abstract class GraftState {
   /// Whether all properties are scalar primitives (num, String, bool, Enum).
   /// Enables zero-branch pure scalar diff fast-paths.
   bool _allScalarProps = false;
+  int _scalarCount = 0;
+  Object? _s0, _s1, _s2, _s3, _s4;
+  Object? _b0, _b1, _b2, _b3, _b4;
 
   /// High-performance zero-allocation register slot builder.
   ///
@@ -234,22 +258,23 @@ abstract class GraftState {
   ]) {
     // ⚡ 1. Single Property Fast-Path:
     if (identical(p1, _undefined)) {
+      if (p0 is num || p0 is String || p0 is bool || p0 is Enum) {
+        _pendingSingle = p0;
+        final view = _singleView;
+        if (view != null) {
+          view.value = p0;
+          return view;
+        }
+        return _singleView = _GraftPropsSingle(p0);
+      }
+      if (p0 is List && p0.isNotEmpty && p0[0] is GraftState) {
+        return _GraftPropsListView(p0);
+      }
       _pendingSingle = p0;
       final view = _singleView;
       if (view != null) {
         view.value = p0;
         return view;
-      }
-      if (p0 is num || p0 is String || p0 is bool || p0 is Enum) {
-        return _singleView = _GraftPropsSingle(p0);
-      }
-      if (p0 is List) {
-        if (p0.isEmpty) return const _EmptyGraftProps();
-        return _GraftPropsListView(p0);
-      }
-      if (p0 is Iterable) {
-        if (p0.isEmpty) return const _EmptyGraftProps();
-        return _GraftPropsListView(List<Object?>.of(p0, growable: false));
       }
       if (identical(p0, _undefined)) return const _EmptyGraftProps();
       return _singleView = _GraftPropsSingle(p0);
@@ -296,26 +321,26 @@ abstract class GraftState {
     final len = view._length;
     switch (len) {
       case 2:
-        buf[0] = p0;
-        buf[1] = p1;
+        _s0 = buf[0] = p0;
+        _s1 = buf[1] = p1;
         break;
       case 3:
-        buf[0] = p0;
-        buf[1] = p1;
-        buf[2] = p2;
+        _s0 = buf[0] = p0;
+        _s1 = buf[1] = p1;
+        _s2 = buf[2] = p2;
         break;
       case 4:
-        buf[0] = p0;
-        buf[1] = p1;
-        buf[2] = p2;
-        buf[3] = p3;
+        _s0 = buf[0] = p0;
+        _s1 = buf[1] = p1;
+        _s2 = buf[2] = p2;
+        _s3 = buf[3] = p3;
         break;
       case 5:
-        buf[0] = p0;
-        buf[1] = p1;
-        buf[2] = p2;
-        buf[3] = p3;
-        buf[4] = p4;
+        _s0 = buf[0] = p0;
+        _s1 = buf[1] = p1;
+        _s2 = buf[2] = p2;
+        _s3 = buf[3] = p3;
+        _s4 = buf[4] = p4;
         break;
       case 6:
         buf[0] = p0;
@@ -1597,6 +1622,27 @@ abstract class GraftState {
     return mask;
   }
 
+  @pragma('vm:prefer-inline')
+  void _dispatchNotification(GraftMask mask) {
+    final g = _graft;
+    if (g != null) {
+      if (g.hasOnlyFastDirectReceiver) {
+        final fast = g.fastDirectReceiver!;
+        if (fast.mounted) {
+          fast.markFastDirty();
+          return;
+        }
+        g.fastDirectReceiver = null;
+      }
+      if (g.hasOnlySingleListener) {
+        g.singleListener!();
+        return;
+      }
+      _dirtyMask = mask;
+      g.notifyMask(mask);
+    }
+  }
+
   /// Triggers fine-grained slot diffing and notifies all listeners synchronously.
   /// When [itemIndex] is provided, dispatches directly to the item slot at [itemIndex]
   /// with 0 closure overhead on other list items.
@@ -1612,65 +1658,136 @@ abstract class GraftState {
         return;
       }
     }
-    final leaf = _leafState;
-    if (leaf != null && Graft.observer == null) {
-      if (leaf._allScalarProps) {
-        leaf.props;
-        final c = leaf._pendingSingle;
-        if (leaf._singleBaseline == c) return;
-        _version++;
-        leaf._version++;
-        leaf._singleBaseline = c;
-        _dirtyMask = GraftMask.bit0;
-        final g = _graft;
-        if (g != null) g.notifyMask(GraftMask.bit0);
-        return;
-      }
-    }
     final p = _singleBaseline;
-    if (_baseline == null && !identical(p, _undefined) && Graft.observer == null) {
-      if (_allScalarProps) {
-        props;
-        final c = _pendingSingle;
-        if (p == c) return;
-        _version++;
-        _singleBaseline = c;
-        _dirtyMask = GraftMask.bit0;
-        final g = _graft;
-        if (g != null) g.notifyMask(GraftMask.bit0);
-        return;
-      }
-      if (p is num || p is String || p is bool || p is Enum) {
-        props;
-        final c = _pendingSingle;
-        if (p == c) return;
-        if (c is num || c is String || c is bool || c is Enum) {
-          _version++;
-          _singleBaseline = c;
-          _dirtyMask = GraftMask.bit0;
-          final g = _graft;
-          if (g != null) g.notifyMask(GraftMask.bit0);
+    if (_allScalarProps && _baseline == null && !identical(p, _undefined) && Graft.observer == null) {
+      props;
+      final c = _pendingSingle;
+      if (p == c) return;
+      _version++;
+      _singleBaseline = c;
+      final g = _graft;
+      if (g != null) {
+        if (g.hasOnlyFastDirectReceiver) {
+          final fast = g.fastDirectReceiver!;
+          if (fast.mounted) {
+            fast.markFastDirty();
+            return;
+          }
+          g.fastDirectReceiver = null;
+        }
+        if (g.hasOnlySingleListener) {
+          g.singleListener!();
           return;
         }
-      } else if (p is List) {
+        _dirtyMask = GraftMask.bit0;
+        g.notifyMask(GraftMask.bit0);
+      }
+      return;
+    }
+    final sc = _scalarCount;
+    if (sc == 5 && Graft.observer == null) {
+      props;
+      final c0 = _s0, c1 = _s1, c2 = _s2, c3 = _s3, c4 = _s4;
+      final p0 = _b0, p1 = _b1, p2 = _b2, p3 = _b3, p4 = _b4;
+      int w = 0;
+      if (p0 != c0) { _b0 = c0; w |= 1; }
+      if (p1 != c1) { _b1 = c1; w |= 2; }
+      if (p2 != c2) { _b2 = c2; w |= 4; }
+      if (p3 != c3) { _b3 = c3; w |= 8; }
+      if (p4 != c4) { _b4 = c4; w |= 16; }
+      if (w == 0) return;
+      _version++;
+      final g = _graft;
+      if (g != null) {
+        if (g.hasOnlyFastDirectReceiver) {
+          final fast = g.fastDirectReceiver!;
+          if (fast.mounted) {
+            fast.markFastDirty();
+            return;
+          }
+          g.fastDirectReceiver = null;
+        }
+        if (g.hasOnlySingleListener) {
+          g.singleListener!();
+          return;
+        }
+        final mask = w == 31 ? GraftMask.allBitsUpTo(5) : GraftMask.fromWords(w, 0);
+        _dirtyMask = mask;
+        g.notifyMask(mask);
+      }
+      return;
+    }
+    if (sc >= 2 && sc < 5 && Graft.observer == null) {
+      props;
+      final c0 = _s0, c1 = _s1;
+      final p0 = _b0, p1 = _b1;
+      int w = 0;
+      if (p0 != c0) { _b0 = c0; w |= 1; }
+      if (p1 != c1) { _b1 = c1; w |= 2; }
+      if (sc > 2) {
+        final c2 = _s2, p2 = _b2;
+        if (p2 != c2) { _b2 = c2; w |= 4; }
+        if (sc > 3) {
+          final c3 = _s3, p3 = _b3;
+          if (p3 != c3) { _b3 = c3; w |= 8; }
+        }
+      }
+      if (w == 0) return;
+      _version++;
+      final g = _graft;
+      if (g != null) {
+        if (g.hasOnlyFastDirectReceiver) {
+          final fast = g.fastDirectReceiver!;
+          if (fast.mounted) {
+            fast.markFastDirty();
+            return;
+          }
+          g.fastDirectReceiver = null;
+        }
+        if (g.hasOnlySingleListener) {
+          g.singleListener!();
+          return;
+        }
+        final mask = w == ((1 << sc) - 1)
+            ? GraftMask.allBitsUpTo(sc)
+            : GraftMask.fromWords(w, 0);
+        _dirtyMask = mask;
+        g.notifyMask(mask);
+      }
+      return;
+    }
+    final leaf = _leafState;
+    if (leaf != null && Graft.observer == null) {
+      _version++;
+      leaf.update();
+      return;
+    }
+    if (_baseline == null && !identical(p, _undefined) && Graft.observer == null) {
+      if (p is List) {
         props;
         final c = _pendingSingle;
         if (c is List) {
           final clen = c.length;
           if (_prevListLength != clen) {
             _prevListLength = clen;
+            _baselineNeedsSync = true;
             _version++;
-            _singleBaseline = List<Object?>.of(c, growable: false);
             _dirtyMask = GraftMask.bit0;
-            final g = _graft;
-            if (g != null) g.notifyMask(GraftMask.bit0);
+            _dispatchNotification(GraftMask.bit0);
+            return;
+          }
+          if (_baselineNeedsSync) {
+            _singleBaseline = List<Object?>.of(c, growable: false);
+            _baselineNeedsSync = false;
+            _version++;
+            _dirtyMask = GraftMask.bit0;
+            _dispatchNotification(GraftMask.bit0);
             return;
           }
           if (_diffListAndUpdate(p, c)) {
             _version++;
             _dirtyMask = GraftMask.bit0;
-            final g = _graft;
-            if (g != null) g.notifyMask(GraftMask.bit0);
+            _dispatchNotification(GraftMask.bit0);
             return;
           }
         }
@@ -1722,8 +1839,7 @@ abstract class GraftState {
           if (p4 != c4) { prev[4] = c4; w |= 16; }
           if (w == 0) return;
           final mask = w == 31 ? GraftMask.allBitsUpTo(5) : GraftMask.fromWords(w, 0);
-          _dirtyMask = mask;
-          _graft?.notifyMask(mask);
+          _dispatchNotification(mask);
           return;
         } else if (len == 2) {
           final c0 = buf[0], c1 = buf[1];
@@ -1733,8 +1849,7 @@ abstract class GraftState {
           if (p1 != c1) { prev[1] = c1; w |= 2; }
           if (w == 0) return;
           final mask = w == 3 ? GraftMask.allBitsUpTo(2) : (w == 1 ? GraftMask.bit0 : GraftMask.bit1);
-          _dirtyMask = mask;
-          _graft?.notifyMask(mask);
+          _dispatchNotification(mask);
           return;
         } else if (len == 3) {
           final c0 = buf[0], c1 = buf[1], c2 = buf[2];
@@ -1745,8 +1860,7 @@ abstract class GraftState {
           if (p2 != c2) { prev[2] = c2; w |= 4; }
           if (w == 0) return;
           final mask = w == 7 ? GraftMask.allBitsUpTo(3) : GraftMask.fromWords(w, 0);
-          _dirtyMask = mask;
-          _graft?.notifyMask(mask);
+          _dispatchNotification(mask);
           return;
         } else if (len == 4) {
           final c0 = buf[0], c1 = buf[1], c2 = buf[2], c3 = buf[3];
@@ -1758,8 +1872,7 @@ abstract class GraftState {
           if (p3 != c3) { prev[3] = c3; w |= 8; }
           if (w == 0) return;
           final mask = w == 15 ? GraftMask.allBitsUpTo(4) : GraftMask.fromWords(w, 0);
-          _dirtyMask = mask;
-          _graft?.notifyMask(mask);
+          _dispatchNotification(mask);
           return;
         }
       }
@@ -1882,9 +1995,11 @@ final class _GraftPropsIterator implements Iterator<Object?> {
 }
 
 final class _GraftPropsListView extends GraftProps {
-  final List<Object?> _list;
+  List<Object?> _list;
 
-  const _GraftPropsListView(this._list);
+  _GraftPropsListView(this._list);
+
+  set list(List<Object?> l) => _list = l;
 
   @override
   Object? operator [](int index) => _list[index];

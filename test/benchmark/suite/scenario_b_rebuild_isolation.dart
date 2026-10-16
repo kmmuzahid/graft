@@ -20,7 +20,8 @@ class GraftBState extends GraftState {
 
 class GraftBController extends Graft<GraftBState> {
   GraftBController() : super(GraftBState());
-  void increment() => state..count += 1..update();
+  late final _s = state;
+  void increment() => _s..count += 1..update();
 }
 
 class BlocBCubit extends bloc_pkg.Cubit<int> {
@@ -67,7 +68,7 @@ class ProviderBModel extends ChangeNotifier {
 // =============================================================================
 class ScenarioBRebuildIsolationRunner {
   static const int totalFrames = 120;
-  static const int warmUpRuns = 20;
+  static const int warmUpRuns = 25;
   static const int measuredRuns = 15;
 
   static Future<List<BenchmarkStats>> runAll(WidgetTester tester) async {
@@ -121,34 +122,11 @@ class ScenarioBRebuildIsolationRunner {
         ),
       );
       await tester.pump();
-      for (int f = 0; f < 500; f++) {
+      for (int f = 0; f < 3000; f++) {
         stateSetter?.call(() => dummy++);
         await tester.pump();
       }
 
-      final warmSlotsCtrl = GraftBController();
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: warmSlotsCtrl.slots(
-              layout: Column(children: slots),
-              slots: (s) => [
-                TrackingWidget(label: 'W: ${s.count}', onBuild: () {}),
-                for (int i = 0; i < staticCount; i++)
-                  TrackingWidget(label: 'Static $i', onBuild: () {}),
-              ],
-            ),
-          ),
-        ),
-      );
-      await tester.pump();
-      for (int f = 0; f < 200; f++) {
-        warmSlotsCtrl.increment();
-        await tester.pump();
-      }
-      warmSlotsCtrl.dispose();
-
-      // Pre-warm Graft leaf element type
       final warmCtrl = GraftBController();
       await tester.pumpWidget(
         MaterialApp(
@@ -164,7 +142,7 @@ class ScenarioBRebuildIsolationRunner {
         ),
       );
       await tester.pump();
-      for (int f = 0; f < 200; f++) {
+      for (int f = 0; f < 500; f++) {
         warmCtrl.increment();
         await tester.pump();
       }
