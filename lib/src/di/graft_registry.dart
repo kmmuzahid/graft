@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import '../core/graft.dart';
 
 /// Type-safe factory registry for resolving, instantiating, and scoping [Graft] instances.
@@ -28,6 +29,7 @@ class GraftRegistry {
   GraftRegistry._();
 
   /// Internal constructor test helper.
+  @visibleForTesting
   static GraftRegistry createForTest() => GraftRegistry._();
 
   static final Map<Type, Object Function()> _factories = {};
@@ -117,16 +119,15 @@ class GraftRegistry {
   /// Whether new instances can be created for [T]. Returns `false` if registered as singleton.
   ///
   /// Used internally by `context.use<T>()` and `context.create<T>()` to enforce singleton guarantees.
+  @internal
   static bool canCreateNew<T extends Graft>() {
     return !_isNewCreateDisabled.contains(T);
   }
 
   /// Returns the singleton instance for [T], creating it on first access if registered lazily.
   ///
-  /// ### Example:
-  /// ```dart
-  /// final authGraft = GraftRegistry.getOrCreateSingleton<AuthGraft>();
-  /// ```
+  /// Internal engine method used by `context.use<T>()`.
+  @internal
   static T getOrCreateSingleton<T extends Graft>() {
     if (_singletons.containsKey(T)) {
       return _singletons[T] as T;
@@ -203,6 +204,7 @@ class GraftRegistry {
   ///   GraftRegistry.reset();
   /// });
   /// ```
+  @visibleForTesting
   static void reset() {
     _factories.clear();
     for (final singleton in _singletons.values) {

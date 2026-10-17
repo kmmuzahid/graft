@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import '../core/graft.dart';
 
@@ -26,6 +27,7 @@ class GraftRouteTracker {
   GraftRouteTracker._();
 
   /// Internal constructor test helper.
+  @visibleForTesting
   static GraftRouteTracker createForTest() => GraftRouteTracker._();
 
   static final List<Route<dynamic>> _routeStack = [];
@@ -40,6 +42,7 @@ class GraftRouteTracker {
   static List<Route<dynamic>> get routeStack => List.unmodifiable(_routeStack);
 
   /// Called when a route is pushed onto the navigator stack.
+  @internal
   static void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
     if (!_routeStack.contains(route)) {
       _routeStack.add(route);
@@ -49,6 +52,7 @@ class GraftRouteTracker {
   /// Called when a route is popped from the navigator stack.
   ///
   /// Automatically disposes all [Graft] instances owned by [route].
+  @internal
   static void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
     if (_routeStack.isNotEmpty && identical(_routeStack.last, route)) {
       _routeStack.removeLast();
@@ -61,6 +65,7 @@ class GraftRouteTracker {
   /// Called when a route is removed from the navigator.
   ///
   /// Automatically disposes all [Graft] instances owned by [route].
+  @internal
   static void didRemove(Route<dynamic> route, Route<dynamic>? previousRoute) {
     _routeStack.remove(route);
     _disposeOwnedGrafts(route);
@@ -69,6 +74,7 @@ class GraftRouteTracker {
   /// Called when a route is replaced in the navigator.
   ///
   /// Automatically disposes any [Graft] instances owned by [oldRoute].
+  @internal
   static void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
     if (oldRoute != null) {
       _routeStack.remove(oldRoute);
@@ -104,6 +110,7 @@ class GraftRouteTracker {
   /// If [requestedRoute] is a transient route (such as a [PopupRoute] used for
   /// Dialogs, Menus, or BottomSheets), walks backwards through the navigation stack
   /// to anchor ownership to the underlying persistent [PageRoute].
+  @internal
   static Route<dynamic> resolveOwnerRoute(Route<dynamic> requestedRoute) {
     if (requestedRoute is PopupRoute) {
       final currentIndex = _routeStack.lastIndexOf(requestedRoute);
@@ -122,6 +129,7 @@ class GraftRouteTracker {
   /// in the active navigation stack.
   ///
   /// Returns `null` if no active instance is found.
+  @internal
   static T? findInStack<T extends Graft>(Route<dynamic>? currentRoute) {
     if (currentRoute == null) return null;
 
@@ -160,6 +168,7 @@ class GraftRouteTracker {
   /// Registers [graft] as owned by [ownerRoute].
   ///
   /// When [ownerRoute] pops, [graft] will be disposed automatically.
+  @internal
   static void registerOwned<T extends Graft>(Route<dynamic> ownerRoute, T graft) {
     final effectiveOwner = resolveOwnerRoute(ownerRoute);
 
@@ -181,6 +190,7 @@ class GraftRouteTracker {
   }
 
   /// Checks if [graft] is currently registered to an active owner route.
+  @visibleForTesting
   static bool hasOwner(Graft graft) => _owners.containsKey(graft);
 
   /// Resets all route tracking state and disposes tracked instances.
@@ -191,6 +201,7 @@ class GraftRouteTracker {
   ///   GraftRouteTracker.reset();
   /// });
   /// ```
+  @visibleForTesting
   static void reset() {
     _routeStack.clear();
     for (final graft in _owners.keys) {
