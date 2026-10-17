@@ -2,7 +2,7 @@
 import 'package:analyzer/error/error.dart' show ErrorSeverity;
 import 'package:graft_lint/graft_lint.dart';
 import 'package:graft_lint/src/rules/avoid_nested_graft_slot.dart';
-import 'package:graft_lint/src/rules/prefer_tracked_in_graft_state.dart';
+import 'package:graft_lint/src/rules/prefer_props_in_graft_state.dart';
 import 'package:graft_lint/src/rules/require_graft_route_observer.dart';
 import 'package:test/test.dart';
 
@@ -14,7 +14,7 @@ void main() {
     });
 
     test('AvoidNestedGraftSlotRule has correct code, name, and error severity', () {
-      final rule = AvoidNestedGraftSlotRule();
+      const rule = AvoidNestedGraftSlotRule();
       expect(rule.code.name, 'avoid_nested_graft_slot');
       expect(rule.code.problemMessage, contains('Avoid nesting'));
       expect(rule.code.correctionMessage, contains('Return regular widgets'));
@@ -23,14 +23,14 @@ void main() {
     });
 
     test('RequireGraftRouteObserverRule has correct code and name', () {
-      final rule = RequireGraftRouteObserverRule();
+      const rule = RequireGraftRouteObserverRule();
       expect(rule.code.name, 'require_graft_route_observer');
       expect(rule.code.problemMessage, contains('GraftRouteTracker.observer'));
       expect(rule.code.correctionMessage, contains('Add GraftRouteTracker.observer'));
     });
 
     test('PreferPropsInGraftStateRule has correct code, name, and info severity', () {
-      final rule = PreferPropsInGraftStateRule();
+      const rule = PreferPropsInGraftStateRule();
       expect(rule.code.name, 'prefer_props_in_graft_state');
       expect(rule.code.problemMessage, contains('does not override "props"'));
       expect(rule.code.correctionMessage, contains('hardware bitmask'));

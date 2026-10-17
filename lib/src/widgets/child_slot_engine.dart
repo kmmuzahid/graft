@@ -598,7 +598,7 @@ class _GraftMultiChildDiffEngineState<S extends GraftState>
 
     // Whole-layout pre-flight short-circuiting:
     // If every slot has learned that it ignores this dirtyMask, skip calling widget.slots completely!
-    if (!dirtyMask.isEmpty &&
+    if (dirtyMask.isNotEmpty &&
         !dirtyMask.isAllDirty &&
         _slotTable.isNotEmpty &&
         _slotTable.every((s) => s.ignoredMask.isNotEmpty && dirtyMask.isSubsetOf(s.ignoredMask))) {
@@ -623,7 +623,7 @@ class _GraftMultiChildDiffEngineState<S extends GraftState>
 
         if (GraftMultiChildDiffEngine.isWidgetEquivalent(
             oldWidget, newWidget, context)) {
-          if (!dirtyMask.isEmpty && !dirtyMask.isAllDirty) {
+          if (dirtyMask.isNotEmpty && !dirtyMask.isAllDirty) {
             final single = dirtyMask.singleBitIndex;
             if (single != null) {
               slot.ignoredMask = slot.ignoredMask.withBit(single);
@@ -641,7 +641,7 @@ class _GraftMultiChildDiffEngineState<S extends GraftState>
         slot.updateWidget(newWidget);
         Graft.observer?.onSlotRebuild(widget.graft, slot.slotIndex, newWidget);
 
-        if (!dirtyMask.isEmpty && !dirtyMask.isAllDirty) {
+        if (dirtyMask.isNotEmpty && !dirtyMask.isAllDirty) {
           final singleField = dirtyMask.singleBitIndex;
           if (singleField != null) {
             slot.fieldDependenciesMask =
@@ -732,7 +732,7 @@ class _GraftMultiChildDiffEngineState<S extends GraftState>
           Graft.observer?.onSlotRebuild(
               widget.graft, matchedSlot.slotIndex, newWidgets[i]);
 
-          if (!dirtyMask.isEmpty && !dirtyMask.isAllDirty) {
+          if (dirtyMask.isNotEmpty && !dirtyMask.isAllDirty) {
             final singleField = dirtyMask.singleBitIndex;
             if (singleField != null) {
               matchedSlot.fieldDependenciesMask =
@@ -1239,7 +1239,7 @@ class _GraftSingleSlotElement<S extends GraftState> extends ComponentElement
       }
     }
 
-    if (widget.caller != 'graft.async' && !dirtyMask.isAllDirty && !dirtyMask.isEmpty) {
+    if (widget.caller != 'graft.async' && !dirtyMask.isAllDirty && dirtyMask.isNotEmpty) {
       final props = _graft.state.props;
       bool allAsync = true;
       for (int i = 0; i < props.length; i++) {
@@ -1259,7 +1259,7 @@ class _GraftSingleSlotElement<S extends GraftState> extends ComponentElement
     if (identical(oldWidget, newWidget)) return;
 
     if (GraftMultiChildDiffEngine.isWidgetEquivalent(oldWidget, newWidget, this)) {
-      if (!dirtyMask.isEmpty && !dirtyMask.isAllDirty) {
+      if (dirtyMask.isNotEmpty && !dirtyMask.isAllDirty) {
         final single = dirtyMask.singleBitIndex;
         if (single != null) {
           _ignoredMask = _ignoredMask.withBit(single);

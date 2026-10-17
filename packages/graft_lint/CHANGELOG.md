@@ -2,6 +2,14 @@
 
 All notable changes to `graft_lint` will be documented in this file.
 
+## 1.0.0
+
+* **Graft 1.0.0 Architecture Alignment:**
+  * Updated `prefer_props_in_graft_state` rule to enforce `GraftProps get props => propsOf(...)`.
+  * Expanded `avoid_nested_graft_slot` to inspect `async()` alongside `slot()`, `slots()`, and `builder()`.
+  * Fully aligned diagnostic codes and messages with Graft 1.0.0 zero-allocation bitmask contracts.
+  * Marked rule constructors as `const` for optimal analyzer plugin performance.
+
 ## 0.1.2-alpha.1
 
 * **New Rule (`prefer_tracked_in_graft_state`):** Warns developers when a domain state class extending `GraftState` declares fields without overriding `tracked`. Guides developers to declare `List<Object?> get tracked => [...]` to enable 1-cycle hardware bitmask diffing and 0 GC heap allocations.

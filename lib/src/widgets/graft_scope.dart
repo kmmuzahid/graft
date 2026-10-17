@@ -23,10 +23,9 @@ class GraftScope extends StatefulWidget {
   GraftScope.single({
     super.key,
     required Graft graft,
-    required Widget child,
+    required this.child,
   })  : factories = const [],
-        instances = [graft],
-        child = child;
+        instances = [graft];
 
   @override
   State<GraftScope> createState() => GraftScopeState();

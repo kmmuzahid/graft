@@ -5,7 +5,7 @@ import 'package:analyzer/error/listener.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
 class RequireGraftRouteObserverRule extends DartLintRule {
-  RequireGraftRouteObserverRule() : super(code: _code);
+  const RequireGraftRouteObserverRule() : super(code: _code);
 
   static const _code = LintCode(
     name: 'require_graft_route_observer',

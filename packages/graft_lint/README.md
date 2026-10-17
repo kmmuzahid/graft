@@ -11,8 +11,8 @@ Official analyzer plugin and custom lint rules for the [Graft](https://pub.dev/p
 
 | Rule | Severity | Description |
 |---|---|---|
-| [`avoid_nested_graft_slot`](#1-avoid_nested_graft_slot) | **Error** | Flags illegal nesting of `graft.slot()` or `slots()` inside another slot of the same Graft instance. |
-| [`prefer_tracked_in_graft_state`](#2-prefer_tracked_in_graft_state) | **Info** | Recommends overriding `List<Object?> get tracked => [...]` in `GraftState` subclasses for 1-cycle hardware bitmask diffing. |
+| [`avoid_nested_graft_slot`](#1-avoid_nested_graft_slot) | **Error** | Flags illegal nesting of `graft.slot()`, `slots()`, `async()`, or `builder()` inside another slot of the same Graft instance. |
+| [`prefer_props_in_graft_state`](#2-prefer_props_in_graft_state) | **Info** | Recommends overriding `GraftProps get props => propsOf(...)` in `GraftState` subclasses for 1-cycle hardware bitmask diffing and zero heap allocations. |
 | [`require_graft_route_observer`](#3-require_graft_route_observer) | **Info** | Recommends registering `GraftRouteTracker.observer` in `MaterialApp.navigatorObservers` for automatic route scoping. |
 
 ---
@@ -29,7 +29,7 @@ Or manually add them to your `pubspec.yaml`:
 ```yaml
 dev_dependencies:
   custom_lint: ^0.8.1
-  graft_lint: ^0.1.1-alpha.1
+  graft_lint: ^1.0.0
 ```
 
 ### 2. Enable in `analysis_options.yaml`
@@ -104,16 +104,16 @@ graft.slots(
 
 ---
 
-### 2. `prefer_tracked_in_graft_state`
+### 2. `prefer_props_in_graft_state`
 * **Severity:** `Info`
-* **Why:** Subclasses of `GraftState` that declare domain fields should override `List<Object?> get tracked => [...]`. This enables Graft's hardware-aligned 64-bit integer dirty bitmask, evaluated in CPU registers with 0 GC heap allocations during diff passes.
+* **Why:** Subclasses of `GraftState` that declare domain fields should override `GraftProps get props => propsOf(...)`. This enables Graft's hardware-aligned 64-bit integer dirty bitmask, evaluated in CPU registers with 0 GC heap allocations during diff passes.
 
 #### ❌ Bad
 ```dart
 class UserState extends GraftState {
   String name = '';
   int score = 0;
-  // Missing tracked getter: falls back to dynamic structural diffing
+  // Missing props getter
 }
 ```
 
@@ -124,7 +124,7 @@ class UserState extends GraftState {
   int score = 0;
 
   @override
-  List<Object?> get tracked => [name, score]; // ⚡ 1-cycle bitmask enabled!
+  GraftProps get props => propsOf(name, score); // ⚡ Zero heap allocations!
 }
 ```
 

@@ -109,7 +109,7 @@ class _GraftBoundaryState extends State<GraftBoundary> {
     }
 
     // Output changed! Accumulate active fields into learned bitmask
-    if (!dirtyMask.isEmpty && !dirtyMask.isAllDirty) {
+    if (dirtyMask.isNotEmpty && !dirtyMask.isAllDirty) {
       final single = dirtyMask.singleBitIndex;
       if (single != null) {
         _learnedDependencies[graft] =

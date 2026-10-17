@@ -57,7 +57,7 @@ void main(List<String> args) {
 File? _findSnippetFile(String fileName) {
   final candidatePaths = [
     'tool/snippets/$fileName',
-    '${Platform.script.resolve('../tool/snippets/$fileName').toFilePath()}',
+    Platform.script.resolve('../tool/snippets/$fileName').toFilePath(),
     '${Directory.current.path}/tool/snippets/$fileName',
   ];
 

@@ -1423,8 +1423,12 @@ abstract class GraftState {
           } else if (c0 is GraftState) {
             if (!identical(p0, c0) || c0.diffChanges().isNotEmpty) { prev[0] = c0; w |= 1; }
           } else if (p0 is List && c0 is List) {
-            if (p0.length != c0.length) { prev[0] = List<Object?>.of(c0, growable: false); w |= 1; }
-            else if (_diffListAndUpdate(p0, c0)) w |= 1;
+            if (p0.length != c0.length) {
+              prev[0] = List<Object?>.of(c0, growable: false);
+              w |= 1;
+            } else if (_diffListAndUpdate(p0, c0)) {
+              w |= 1;
+            }
           } else if (p0 is Map && c0 is Map) {
             if (_diffMapAndUpdate(p0, c0)) w |= 1;
           } else if (_isPropertyDirty(p0, c0)) {
@@ -1441,8 +1445,12 @@ abstract class GraftState {
           } else if (c1 is GraftState) {
             if (!identical(p1, c1) || c1.diffChanges().isNotEmpty) { prev[1] = c1; w |= 2; }
           } else if (p1 is List && c1 is List) {
-            if (p1.length != c1.length) { prev[1] = List<Object?>.of(c1, growable: false); w |= 2; }
-            else if (_diffListAndUpdate(p1, c1)) w |= 2;
+            if (p1.length != c1.length) {
+              prev[1] = List<Object?>.of(c1, growable: false);
+              w |= 2;
+            } else if (_diffListAndUpdate(p1, c1)) {
+              w |= 2;
+            }
           } else if (p1 is Map && c1 is Map) {
             if (_diffMapAndUpdate(p1, c1)) w |= 2;
           } else if (_isPropertyDirty(p1, c1)) {
@@ -1459,8 +1467,12 @@ abstract class GraftState {
           } else if (c2 is GraftState) {
             if (!identical(p2, c2) || c2.diffChanges().isNotEmpty) { prev[2] = c2; w |= 4; }
           } else if (p2 is List && c2 is List) {
-            if (p2.length != c2.length) { prev[2] = List<Object?>.of(c2, growable: false); w |= 4; }
-            else if (_diffListAndUpdate(p2, c2)) w |= 4;
+            if (p2.length != c2.length) {
+              prev[2] = List<Object?>.of(c2, growable: false);
+              w |= 4;
+            } else if (_diffListAndUpdate(p2, c2)) {
+              w |= 4;
+            }
           } else if (p2 is Map && c2 is Map) {
             if (_diffMapAndUpdate(p2, c2)) w |= 4;
           } else if (_isPropertyDirty(p2, c2)) {
@@ -1477,8 +1489,12 @@ abstract class GraftState {
           } else if (c3 is GraftState) {
             if (!identical(p3, c3) || c3.diffChanges().isNotEmpty) { prev[3] = c3; w |= 8; }
           } else if (p3 is List && c3 is List) {
-            if (p3.length != c3.length) { prev[3] = List<Object?>.of(c3, growable: false); w |= 8; }
-            else if (_diffListAndUpdate(p3, c3)) w |= 8;
+            if (p3.length != c3.length) {
+              prev[3] = List<Object?>.of(c3, growable: false);
+              w |= 8;
+            } else if (_diffListAndUpdate(p3, c3)) {
+              w |= 8;
+            }
           } else if (p3 is Map && c3 is Map) {
             if (_diffMapAndUpdate(p3, c3)) w |= 8;
           } else if (_isPropertyDirty(p3, c3)) {
@@ -1495,8 +1511,12 @@ abstract class GraftState {
           } else if (c4 is GraftState) {
             if (!identical(p4, c4) || c4.diffChanges().isNotEmpty) { prev[4] = c4; w |= 16; }
           } else if (p4 is List && c4 is List) {
-            if (p4.length != c4.length) { prev[4] = List<Object?>.of(c4, growable: false); w |= 16; }
-            else if (_diffListAndUpdate(p4, c4)) w |= 16;
+            if (p4.length != c4.length) {
+              prev[4] = List<Object?>.of(c4, growable: false);
+              w |= 16;
+            } else if (_diffListAndUpdate(p4, c4)) {
+              w |= 16;
+            }
           } else if (p4 is Map && c4 is Map) {
             if (_diffMapAndUpdate(p4, c4)) w |= 16;
           } else if (_isPropertyDirty(p4, c4)) {
@@ -1891,7 +1911,7 @@ abstract class GraftState {
       prevSnapshot = baselineSnapshot;
     }
     final mask = diffChanges();
-    if (!mask.isEmpty) {
+    if (mask.isNotEmpty) {
       if (hasObserver) {
         _graft?.notifyMask(
           mask,

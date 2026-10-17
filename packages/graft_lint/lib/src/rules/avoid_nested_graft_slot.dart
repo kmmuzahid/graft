@@ -6,7 +6,7 @@ import 'package:analyzer/error/listener.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
 class AvoidNestedGraftSlotRule extends DartLintRule {
-  AvoidNestedGraftSlotRule() : super(code: _code);
+  const AvoidNestedGraftSlotRule() : super(code: _code);
 
   static const _code = LintCode(
     name: 'avoid_nested_graft_slot',
@@ -17,7 +17,7 @@ class AvoidNestedGraftSlotRule extends DartLintRule {
     errorSeverity: ErrorSeverity.ERROR,
   );
 
-  static const _slotMethodNames = {'slot', 'slots', 'compute', 'builder', 'item'};
+  static const _slotMethodNames = {'slot', 'slots', 'compute', 'builder', 'item', 'async'};
 
   @override
   void run(

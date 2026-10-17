@@ -10,7 +10,7 @@ import 'package:custom_lint_builder/custom_lint_builder.dart';
 /// Overriding `GraftProps get props => propsOf(...)` allows Graft to compute
 /// an unbounded dirty bitmask in CPU registers and achieve 0 GC heap allocations during diff passes.
 class PreferPropsInGraftStateRule extends DartLintRule {
-  PreferPropsInGraftStateRule() : super(code: _code);
+  const PreferPropsInGraftStateRule() : super(code: _code);
 
   static const _code = LintCode(
     name: 'prefer_props_in_graft_state',
@@ -52,4 +52,3 @@ class PreferPropsInGraftStateRule extends DartLintRule {
     });
   }
 }
-
