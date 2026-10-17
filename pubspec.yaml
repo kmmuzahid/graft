@@ -3,7 +3,7 @@ description: >-
   Self-optimizing state management engine for Flutter: clean domain architecture
   of BLoC, micro-rebuild precision of Signals, and register-level diffing speed
   of a hardware bitmask.
-version: 0.1.2-alpha.4
+version: 1.0.0
 homepage: https://github.com/kmmuzahid/graft
 repository: https://github.com/kmmuzahid/graft
 issue_tracker: https://github.com/kmmuzahid/graft/issues
@@ -22,10 +22,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  flutter_test:
-    sdk: flutter
 
 dev_dependencies:
+  flutter_test:
+    sdk: flutter
   flutter_lints: ^3.0.0
   flutter_bloc: ^8.1.6
   flutter_riverpod: ^2.5.1

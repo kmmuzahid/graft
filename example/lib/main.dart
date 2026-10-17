@@ -323,7 +323,7 @@ class HomeScreen extends StatelessWidget {
               layout: Column(children: slots),
               slots: (s) => [
                 // Const widget directly without wrapping: 0 rebuilds, 0 closure evaluations
-                const Card(
+                Card(
                   color: Colors.deepPurple,
                   child: Padding(
                     padding: EdgeInsets.all(12),
@@ -337,18 +337,22 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ),
 
+                Container(
+                  child: Container(
+                    child: GraftBoundary(builder: (_) => Text(s.name)),
+                  ),
+                ),
+
                 // Slot 1: Name
                 ListTile(
-                  leading:
-                      const Icon(Icons.person, color: Colors.deepPurple),
+                  leading: const Icon(Icons.person, color: Colors.deepPurple),
                   title: Text('Name: ${s.name}'),
                   subtitle: const Text('Rebuilds ONLY when name changes'),
                 ),
 
                 // Slot 2: Email
                 ListTile(
-                  leading:
-                      const Icon(Icons.email, color: Colors.deepPurple),
+                  leading: const Icon(Icons.email, color: Colors.deepPurple),
                   title: Text('Email: ${s.email}'),
                   subtitle: const Text('0 rebuilds if email is unchanged'),
                 ),
@@ -629,7 +633,7 @@ class EditProfileScreen extends StatelessWidget {
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: graft.slots(
-          layout: (children) => Column(children: children),
+          layout: Column(children: slots),
           slots: (s) => [
             const Text(
               'This screen called context.use<UserGraft>() and borrowed the existing instance from HomeScreen.',
@@ -649,8 +653,7 @@ class EditProfileScreen extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text('Current Email: ${s.email}'),
                     const SizedBox(height: 4),
-                    Text(
-                        'Status: ${s.isVerified ? "Verified" : "Unverified"}'),
+                    Text('Status: ${s.isVerified ? "Verified" : "Unverified"}'),
                   ],
                 ),
               ),
@@ -687,7 +690,7 @@ class IsolatedProfileScreen extends StatelessWidget {
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: graft.slots(
-          layout: (children) => Column(children: children),
+          layout: Column(children: slots),
           slots: (s) => [
             const Text(
               'This screen used context.create<UserGraft>() to create a completely independent instance.',
@@ -956,7 +959,7 @@ class MultiGraftCompositionScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             userGraft.slots(
-              layout: (children) => Column(children: children),
+              layout: Column(children: slots),
               slots: (userState) => [
                 // Slot 0: User Profile Card (Parent Graft)
                 Card(
@@ -1024,17 +1027,15 @@ class MultiGraftCompositionScreen extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: Colors.amber.shade100,
                     borderRadius: BorderRadius.circular(16),
-                    border:
-                        Border.all(color: Colors.amber.shade700, width: 2),
+                    border: Border.all(color: Colors.amber.shade700, width: 2),
                   ),
                   child: counterGraft.slots(
-                    layout: (children) => Column(children: children),
+                    layout: Column(children: slots),
                     slots: (counterState) => [
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.bolt,
-                              color: Colors.amber.shade900),
+                          Icon(Icons.bolt, color: Colors.amber.shade900),
                           const SizedBox(width: 6),
                           Text(
                             'Nested Child Graft: LiveCounterGraft',

@@ -500,14 +500,6 @@ class Graft<S extends GraftState> extends ChangeNotifier {
     observer?.onError(this, error, stackTrace ?? StackTrace.current);
   }
 
-  /// Executes an asynchronous [task], managing loading and error state transitions via [onUpdate].
-  ///
-  /// ### Example:
-  /// ```dart
-  /// await runAsync<User>(
-  ///   task: () => api.fetchUser(),
-  ///   onUpdate: (asyncState) => state..user = asyncState..update(),
-  /// );
   int _currentAsyncTaskId = 0;
 
   /// Executes an asynchronous [task], managing loading and error state transitions via [onUpdate].

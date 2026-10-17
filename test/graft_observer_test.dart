@@ -89,7 +89,7 @@ void main() {
     });
 
     test('GraftDevObserver formats and logs lifecycle events and slot rebuilds', () {
-      final devObserver = GraftDevObserver(logRebuilds: true);
+      final devObserver = GraftDevObserver(logRebuilds: true, enableTimeline: true);
       Graft.observer = devObserver;
 
       final graft = CounterGraft();

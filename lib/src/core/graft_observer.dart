@@ -1,3 +1,4 @@
+import 'dart:developer' as developer;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'graft.dart';
@@ -78,19 +79,21 @@ abstract class GraftObserver {
   void onSlotRebuild(dynamic graft, int slotIndex, Widget widget) {}
 }
 
-/// Out-of-the-box development observer featuring high-visibility ANSI colorized terminal logs.
+/// Out-of-the-box development observer featuring high-visibility ANSI colorized terminal logs
+/// and Flutter DevTools Timeline integration.
 ///
 /// ### Why use GraftDevObserver?
 /// - Formats lifecycle events with distinctive emoji badges and terminal colors.
 /// - Clearly prints current vs next state differences on every transition.
 /// - Formats stack traces when [Graft.addError] is caught.
+/// - Emits Flutter DevTools Timeline performance events when [enableTimeline] is true.
 /// - Automatically disables output outside of `kDebugMode` (0 overhead in release builds).
 ///
 /// ### Example:
 /// ```dart
 /// void main() {
 ///   if (kDebugMode) {
-///     Graft.observer = GraftDevObserver(logRebuilds: true);
+///     Graft.observer = GraftDevObserver(logRebuilds: true, enableTimeline: true);
 ///   }
 ///   runApp(const MyApp());
 /// }
@@ -99,7 +102,16 @@ class GraftDevObserver extends GraftObserver {
   /// Whether to print diagnostics on fine-grained slot rebuilds.
   final bool logRebuilds;
 
-  GraftDevObserver({this.logRebuilds = false});
+  /// Whether to emit DevTools Timeline events for performance profiling.
+  ///
+  /// When enabled, state transitions, controller lifecycles, and slot rebuilds
+  /// appear directly in the Flutter DevTools Performance view / Timeline trace.
+  final bool enableTimeline;
+
+  GraftDevObserver({
+    this.logRebuilds = false,
+    this.enableTimeline = false,
+  });
 
   static const _reset = '\x1B[0m';
   static const _bold = '\x1B[1m';
@@ -111,6 +123,16 @@ class GraftDevObserver extends GraftObserver {
 
   @override
   void onSlotRebuild(dynamic graft, int slotIndex, Widget widget) {
+    if (enableTimeline && !kReleaseMode) {
+      developer.Timeline.instantSync(
+        'Graft: ${graft.runtimeType} Slot #$slotIndex rebuild',
+        arguments: <String, dynamic>{
+          'graft': '${graft.runtimeType}',
+          'slotIndex': slotIndex,
+          'widget': '${widget.runtimeType}',
+        },
+      );
+    }
     if (kDebugMode && logRebuilds) {
       debugPrint(
         '$_bold$_cyan[🔄 GRAFT SLOT REBUILD]$_reset | '
@@ -122,6 +144,12 @@ class GraftDevObserver extends GraftObserver {
 
   @override
   void onCreate(dynamic graft) {
+    if (enableTimeline && !kReleaseMode) {
+      developer.Timeline.instantSync(
+        'Graft: ${graft.runtimeType}.onCreate()',
+        arguments: <String, dynamic>{'graft': '${graft.runtimeType}'},
+      );
+    }
     if (kDebugMode) {
       debugPrint(
         '$_bold$_green[🌱 GRAFT CREATED]$_reset | $_cyan${graft.runtimeType}$_reset',
@@ -131,6 +159,16 @@ class GraftDevObserver extends GraftObserver {
 
   @override
   void onChange(dynamic graft, GraftChange change) {
+    if (enableTimeline && !kReleaseMode) {
+      developer.Timeline.instantSync(
+        'Graft: ${graft.runtimeType}.update()',
+        arguments: <String, dynamic>{
+          'graft': '${graft.runtimeType}',
+          'currentState': '${change.currentState}',
+          'nextState': '${change.nextState}',
+        },
+      );
+    }
     if (kDebugMode) {
       debugPrint(
         '$_bold$_yellow[⚡ GRAFT CHANGE]$_reset | '
@@ -143,6 +181,15 @@ class GraftDevObserver extends GraftObserver {
 
   @override
   void onError(dynamic graft, Object error, StackTrace stackTrace) {
+    if (enableTimeline && !kReleaseMode) {
+      developer.Timeline.instantSync(
+        'Graft: ${graft.runtimeType}.onError()',
+        arguments: <String, dynamic>{
+          'graft': '${graft.runtimeType}',
+          'error': '$error',
+        },
+      );
+    }
     if (kDebugMode) {
       debugPrint(
         '$_bold$_red[💥 GRAFT ERROR]$_reset | '
@@ -153,6 +200,12 @@ class GraftDevObserver extends GraftObserver {
 
   @override
   void onDispose(dynamic graft) {
+    if (enableTimeline && !kReleaseMode) {
+      developer.Timeline.instantSync(
+        'Graft: ${graft.runtimeType}.onDispose()',
+        arguments: <String, dynamic>{'graft': '${graft.runtimeType}'},
+      );
+    }
     if (kDebugMode) {
       debugPrint(
         '$_bold$_red[🗑️ GRAFT DISPOSED]$_reset | $_cyan${graft.runtimeType}$_reset',
