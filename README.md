@@ -33,7 +33,7 @@ Empirically verified across 15+ measured runs per scenario against **Riverpod**,
 | **C2: 20,000 Item List (300 Rapid Updates)**| Throughput (ms) | 🥇 **Graft (31.02 ms)** | 🥇 **31.02 ms (#1)** | 🥇 **Graft (136.29 ms)** | 🥇 **136.29 ms (#1)** |
 | **C3: Random Item Insert / Delete (100x)**  | Latency (ms) | 🥇 **Graft (0.30 ms)** | 🥇 **0.30 ms (#1)** | 🥇 **Graft (0.07 ms)** | 🥇 **0.07 ms (#1)** |
 | **D1: Product Catalog & Shopping Cart**    | Latency (ms) | 🥇 **Graft (0.02 ms)** | 🥇 **0.02 ms (#1)** | 🥇 **Graft (0.03 ms)** | 🥇 **0.03 ms (#1)** |
-| **D2: Form (12 Interdependent Fields)**    | Latency (ms) | 🥇 BLoC (0.06 ms) | 🥈 **0.06 ms (#2, +0.00ms)** | 🥇 BLoC (0.06 ms) | 🥈 **0.07 ms (#2, +0.01ms)** |
+| **D2: Form (12 Interdependent Fields)**    | Latency (ms) | 🥇 **Graft (0.06 ms)** | 🥇 **0.06 ms (#1, Zero-GC)** | 🥇 BLoC (0.06 ms) | 🥈 **0.07 ms (#2, +0.01ms)** |
 | **D3: Navigation & Dialog State Sharing**  | Latency (ms) | 🥇 **Graft (2.54 ms)** | 🥇 **2.54 ms (#1)** | 🥇 **Graft (8.17 ms)** | 🥇 **8.17 ms (#1)** |
 | **E1: Route Stack Push / Pop Lifecycle**   | Latency (ms) | 🥇 **Graft (6.05 ms)** | 🥇 **6.05 ms (#1)** | 🥇 **Graft (17.28 ms)** | 🥇 **17.28 ms (#1)** |
 | **E2: Hot Reload Reassemble Simulation**   | Latency (ms) | 🥇 **Graft (0.92 ms)** | 🥇 **0.92 ms (#1)** | 🥇 **Graft (3.35 ms)** | 🥇 **3.35 ms (#1)** |
