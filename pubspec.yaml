@@ -22,10 +22,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
-dev_dependencies:
   flutter_test:
     sdk: flutter
+
+dev_dependencies:
   flutter_lints: ^3.0.0
   flutter_bloc: ^8.1.6
   flutter_riverpod: ^2.5.1

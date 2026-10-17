@@ -1,4 +1,4 @@
-import 'package:meta/meta.dart';
+import 'package:flutter/foundation.dart';
 import 'graft.dart';
 
 /// Ambient tracker that automatically records all [Graft] instances accessed
