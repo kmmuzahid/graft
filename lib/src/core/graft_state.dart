@@ -390,9 +390,17 @@ abstract class GraftState {
     return view;
   }
 
-  /// Adapts an arbitrary [Iterable] or list of properties into [GraftProps].
+  /// Unpacks an arbitrary [Iterable] or list of properties into individual bitmask property slots.
   ///
-  /// Useful for states with dynamic or large sets of properties.
+  /// ### Why use `propsOfMany` instead of `propsOf`?
+  /// 1. **Massive or Dynamic States (>16 Fields):**
+  ///    [propsOf] accepts up to 16 comma-separated arguments via CPU registers. If your state
+  ///    has more than 16 fields (e.g. 50 form fields, dynamic grids, or 1000 items), pass the
+  ///    collection here.
+  /// 2. **Prevents Ambiguity with List Fields:**
+  ///    When a property in [propsOf] is a `List` (e.g. `propsOf(name, items)`), it is treated as
+  ///    a single property. Use [propsOfMany] only when each item in the collection should be
+  ///    tracked as an independent bitmask slot.
   @protected
   @nonVirtual
   @pragma('vm:prefer-inline')
