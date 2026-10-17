@@ -17,22 +17,27 @@
 
 ## 🏆 Late-2026 Flutter State Management Benchmark Scorecard
 
-Empirically verified on Flutter 3.x stable across 15+ measured runs per scenario against **Riverpod**, **flutter_bloc / Cubit**, **Signals**, **GetX**, and **Provider**:
+Empirically verified across 15+ measured runs per scenario against **Riverpod**, **flutter_bloc / Cubit**, **Signals**, **GetX**, and **Provider** on both Native IO and Web.
 
-| Scenario Category | Specific Benchmark Scenario | Graft Result & Rank | Nearest Competitor | Performance Margin |
-| :--- | :--- | :---: | :---: | :---: |
-| **A. Pure State Mutation** | **A1:** 10,000 Synchronous Increments | 🥇 **#1 (0.10 ms)** | GetX (0.13 ms) | **23% faster** |
-| | **A2:** 100,000 Micro-State Mutations | 🥇 **#1 (1.12 ms)** | Provider (1.27 ms) | **12% faster** |
-| | **A3:** 5-Field Multi-Property Atomic Batch | 🥇 **#1 (0.11 ms)** | BLoC (0.16 ms) | **31% faster** |
-| | **A4:** Depth-8 Nested Sub-State Mutation | 🥇 **#1 (0.08 ms)** | GetX (0.09 ms) | **11% faster** |
-| **B. Subtree Rebuild Isolation** | **B1:** 10-Slot Column Layout (120 Frames) | 🥇 **#1 (11.8 ms)** | Riverpod (13.2 ms) | **11% faster** (0 static rebuilds) |
-| | **B2:** 50-Slot Heavy Layout (120 Frames) | 🥇 **#1 (20.9 ms)** | Riverpod (22.2 ms) | **6% faster** (0 static rebuilds) |
-| **C. Collection Scaling** | **C1:** 5,000 Item List Mutation | 🥇 **#1 (26.2 ms)** | Signals (31.4 ms) | **17% faster** |
-| | **C2:** 20,000 Item List Mutation | 🥇 **#1 (28.1 ms)** | Signals (34.2 ms) | **18% faster** |
-| | **C3:** Random Insert & Delete | 🥇 **#1 (0.64 ms)** | Riverpod (0.78 ms) | **18% faster** |
-| **D & E. Lifecycle & Architecture** | **D3:** Dialog & PopupRoute State Borrowing | 🥇 **#1 (0.01 ms)** | BLoC (0.02 ms) | **0 memory leaks** |
-| | **E1:** Route Stack Navigation Push / Pop | 🥇 **#1 (0.03 ms)** | GetX (0.05 ms) | **Automatic disposal** |
-| | **E3:** Disposed Controller Safety Protection | 🥇 **#1 (0.00 ms)** | N/A | **Zero crash guarantee** |
+> 📊 For the complete statistical breakdown (Mean, Median, p95, Min, Max, StdDev, Rebuilds), see [`BENCHMARK_REPORT.md`](file:///Users/km/Documents/km%20muzahid/graft/BENCHMARK_REPORT.md).
+
+| Benchmark Scenario | Metric | Native IO Winner | Native IO Graft Time | Web Browser Winner | Web Browser Graft Time |
+| :--- | :--- | :---: | :---: | :---: | :---: |
+| **A1: 10,000 Synchronous Increments** | Latency (ms) | 🥇 **Graft** | **0.10 ms** | 🥇 Provider | **1.21 ms** (3rd) |
+| **A2: 100,000 Micro-State Mutations** | Latency (ms) | 🥇 **Graft** | **0.66 ms** | 🥇 Provider | **13.10 ms** (3rd) |
+| **A3: 5-Field Atomic Batch Mutation** | Latency (ms) | 🥇 **Graft** | **0.12 ms** | 🥇 Provider | **3.69 ms** (4th) |
+| **A4: Depth-8 Nested Sub-State Mutation** | Latency (ms) | 🥇 **Graft** | **0.01 ms** | 🥇 Provider | **0.13 ms** (2nd) |
+| **B1: 10-Slot Column Layout (120 Frames)** | Render (ms) | 🥇 Provider | **23.36 ms** (2nd) | 🥇 Riverpod | **78.29 ms** (4th) |
+| **B2: 50-Slot Heavy Layout (120 Frames)** | Render (ms) | 🥇 Riverpod | **24.83 ms** (2nd) | 🥇 **Graft** | **168.55 ms** (1st) |
+| **C1: 5,000 Item List (300 Rapid Updates)** | Throughput (ms) | 🥇 **Graft** | **28.99 ms** | 🥇 **Graft** | **136.11 ms** (1st) |
+| **C2: 20,000 Item List (300 Rapid Updates)**| Throughput (ms) | 🥇 **Graft** | **31.02 ms** | 🥇 **Graft** | **136.29 ms** (1st) |
+| **C3: Random Item Insert / Delete (100x)**  | Latency (ms) | 🥇 **Graft** | **0.30 ms** | 🥇 **Graft** | **0.07 ms** (1st) |
+| **D1: Product Catalog & Shopping Cart**    | Latency (ms) | 🥇 **Graft** | **0.02 ms** | 🥇 **Graft** | **0.03 ms** (1st) |
+| **D2: Form (12 Interdependent Fields)**    | Latency (ms) | 🥇 BLoC | **0.06 ms** (2nd) | 🥇 BLoC | **0.07 ms** (2nd) |
+| **D3: Navigation & Dialog State Sharing**  | Latency (ms) | 🥇 **Graft** | **2.54 ms** | 🥇 **Graft** | **8.17 ms** (1st) |
+| **E1: Route Stack Push / Pop Lifecycle**   | Latency (ms) | 🥇 **Graft** | **6.05 ms** | 🥇 **Graft** | **17.28 ms** (1st) |
+| **E2: Hot Reload Reassemble Simulation**   | Latency (ms) | 🥇 **Graft** | **0.92 ms** | 🥇 **Graft** | **3.35 ms** (1st) |
+| **E3: Disposed Controller Access Safety**  | Safety (ms)  | 🥇 **Graft** | **0.00 ms** (Safe) | 🥇 **Graft** | **0.00 ms** (Safe) |
 
 ---
 

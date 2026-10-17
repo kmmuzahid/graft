@@ -1,6 +1,6 @@
-import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'benchmark_models.dart';
+import 'save_report.dart';
 import 'scenario_a_micro_mutation.dart';
 import 'scenario_b_rebuild_isolation.dart';
 import 'scenario_c_large_list.dart';
@@ -107,7 +107,7 @@ void main() {
       reportPath,
       flutterVersion: 'Flutter 3.47.6 (stable channel)',
       dartVersion: 'Dart 3.13.5 (stable)',
-      platform: Platform.operatingSystemVersion,
+      platform: getBenchmarkPlatform(),
     );
     // ignore: avoid_print
     print('📄 Saved comprehensive report to: $reportPath');
@@ -147,7 +147,7 @@ void main() {
 ================================================================================
 ''');
 
-    expect(File(csvPath).existsSync(), true);
-    expect(File(reportPath).existsSync(), true);
+    expect(benchmarkFileExists(csvPath), true);
+    expect(benchmarkFileExists(reportPath), true);
   });
 }

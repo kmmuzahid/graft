@@ -1,5 +1,5 @@
-import 'dart:io';
 import 'dart:math' as math;
+import 'save_report.dart';
 
 /// Represents the statistical summary of multiple measured runs for a benchmark scenario.
 class BenchmarkStats {
@@ -103,7 +103,7 @@ class BenchmarkReportCollector {
 
   /// Saves the results to CSV file.
   void saveCsv(String filePath) {
-    File(filePath).writeAsStringSync(toCsv());
+    saveBenchmarkFile(filePath, toCsv());
   }
 
   /// Generates the comprehensive Markdown report.
@@ -122,7 +122,7 @@ class BenchmarkReportCollector {
     sb.writeln('## 📋 Executive Summary');
     sb.writeln();
     sb.writeln('This benchmark suite evaluates **Graft** against the six primary Flutter state management paradigms:');
-    sb.writeln('1. **Graft** (`0.1.2-alpha.4`) — Self-optimizing bitmask diff engine with zero-wrapper domain state');
+    sb.writeln('1. **Graft** (`1.0.0`) — Self-optimizing bitmask diff engine with zero-wrapper domain state');
     sb.writeln('2. **Riverpod (Notifier / Codegen-style)** — Class-based `Notifier` with immutable transitions');
     sb.writeln('3. **Riverpod (StateNotifier / Legacy)** — `StateNotifier` without code generation');
     sb.writeln('4. **flutter_bloc + Cubit** (`8.1.6`) — Stream/Equatable domain state with `BlocSelector`');
@@ -204,7 +204,8 @@ class BenchmarkReportCollector {
     required String dartVersion,
     required String platform,
   }) {
-    File(filePath).writeAsStringSync(
+    saveBenchmarkFile(
+      filePath,
       toMarkdownReport(
         flutterVersion: flutterVersion,
         dartVersion: dartVersion,
