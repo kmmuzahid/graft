@@ -1,15 +1,14 @@
-import 'dart:typed_data';
 import '../core/graft_mask.dart';
 
 /// Web & WASM fallback implementation of [GraftSimd].
 ///
 /// On Web and non-FFI platforms, transparently utilizes Graft's high-speed
-/// 64-bit pure Dart bitmask diffing engine with 0 behavioral divergence.
+/// 32-bit chunked pure Dart bitmask diffing engine with 0 behavioral divergence.
 abstract final class GraftSimd {
   /// Always null on Web platforms.
   static Object? get dylib => null;
 
-  /// Always false on Web platforms (uses pure Dart 64-bit engine).
+  /// Always false on Web platforms (uses pure Dart bitmask engine).
   static bool get isAvailable => false;
 
   /// Always -1 on Web platforms.
@@ -18,36 +17,29 @@ abstract final class GraftSimd {
   /// No-op on Web platforms.
   static bool loadFrom(String dylibPath) => false;
 
-  /// Compares two 64-bit integer property buffers using pure Dart 64-bit word diffing.
+  /// Compares two integer property buffers using pure Dart 32-bit chunked diffing (100% web-safe).
   ///
   /// Returns a [GraftMask] bitset where dirty indices are set to 1.
-  static GraftMask diffInt64(Int64List oldProps, Int64List newProps) {
+  static GraftMask diffInt64(List<int> oldProps, List<int> newProps) {
     final count = oldProps.length < newProps.length ? oldProps.length : newProps.length;
     if (count <= 0) return GraftMask.empty;
 
-    final numWords = (count + 63) >> 6;
+    final numWords = (count + 31) >> 5;
     final words = List<int>.filled(numWords, 0);
     bool hasDiff = false;
 
     for (int i = 0; i < count; i++) {
       if (oldProps[i] != newProps[i]) {
-        words[i >> 6] |= (1 << (i & 63));
+        words[i >> 5] |= (1 << (i & 31));
         hasDiff = true;
       }
     }
 
     if (!hasDiff) return GraftMask.empty;
 
-    final w0 = words[0] & 0xFFFFFFFF;
-    final w1 = (words[0] >> 32) & 0xFFFFFFFF;
-    List<int>? extra;
-    if (words.length > 1) {
-      extra = <int>[];
-      for (int i = 1; i < words.length; i++) {
-        extra.add(words[i] & 0xFFFFFFFF);
-        extra.add((words[i] >> 32) & 0xFFFFFFFF);
-      }
-    }
+    final w0 = words[0];
+    final w1 = numWords > 1 ? words[1] : 0;
+    final extra = numWords > 2 ? words.sublist(2) : null;
     return GraftMask.fromWords(w0, w1, extra);
   }
 }

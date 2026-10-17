@@ -1,6 +1,5 @@
 import 'dart:ffi';
 import 'dart:io';
-import 'dart:typed_data';
 import '../core/graft_mask.dart';
 
 typedef _NativeDiffProps = Int32 Function(
@@ -137,10 +136,10 @@ abstract final class GraftSimd {
     }
   }
 
-  /// Compares two 64-bit integer property buffers using SIMD acceleration.
+  /// Compares two integer property buffers using SIMD acceleration or 64-bit Dart VM fast path.
   ///
   /// Returns a [GraftMask] bitset where dirty indices are set to 1.
-  static GraftMask diffInt64(Int64List oldProps, Int64List newProps) {
+  static GraftMask diffInt64(List<int> oldProps, List<int> newProps) {
     final count = oldProps.length < newProps.length ? oldProps.length : newProps.length;
     if (count <= 0) return GraftMask.empty;
 
@@ -175,7 +174,7 @@ abstract final class GraftSimd {
   }
 
   /// Pure Dart fallback implementation for bitmask diffing
-  static GraftMask _diffPureDart(Int64List oldProps, Int64List newProps, int count) {
+  static GraftMask _diffPureDart(List<int> oldProps, List<int> newProps, int count) {
     final numWords = (count + 63) >> 6;
     final words = List<int>.filled(numWords, 0);
     bool hasDiff = false;
