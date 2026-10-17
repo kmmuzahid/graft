@@ -25,23 +25,23 @@ This benchmark suite empirically evaluates **Graft** (`1.0.0`) against the prima
 
 ## ⚖️ Cross-Platform Executive Comparison: Native IO vs. Web
 
-| Benchmark Scenario | Metric / Unit | Native IO Winner (Time) | Native IO Graft (Rank & Time) | Web Browser Winner (Time) | Web Browser Graft (Rank & Time) |
+| Benchmark Scenario | Metric / Unit | Native IO Winner | Native IO Graft (Rank & Gap) | Web Browser Winner | Web Browser Graft (Rank & Gap) |
 | :--- | :--- | :---: | :---: | :---: | :---: |
-| **A1: 10,000 Synchronous Increments** | Latency (ms) | 🥇 **Graft (0.10 ms)** | 🥇 **0.10 ms (#1)** | 🥇 Provider (0.62 ms) | 🥉 **1.21 ms (#3, +0.59ms)** |
-| **A2: 100,000 Micro-State Mutations** | Latency (ms) | 🥇 **Graft (0.66 ms)** | 🥇 **0.66 ms (#1)** | 🥇 Provider (4.77 ms) | 🥉 **13.10 ms (#3, +8.33ms)** |
-| **A3: 5-Field Atomic Batch Mutation** | Latency (ms) | 🥇 **Graft (0.12 ms)** | 🥇 **0.12 ms (#1)** | 🥇 Provider (0.72 ms) | 4th · **3.69 ms (#4, +2.97ms)** |
-| **A4: Depth-8 Nested Sub-State Mutation** | Latency (ms) | 🥇 **Graft (0.01 ms)** | 🥇 **0.01 ms (#1)** | 🥇 Provider (0.11 ms) | 🥈 **0.13 ms (#2, +0.02ms)** |
+| **A1: 10,000 Synchronous Increments** | Latency (ms) | 🥇 **Graft (0.10 ms)** | — | 🥇 Provider (0.62 ms) | 🥉 **1.21 ms (#3, +0.59ms)** |
+| **A2: 100,000 Micro-State Mutations** | Latency (ms) | 🥇 **Graft (0.66 ms)** | — | 🥇 Provider (4.77 ms) | 🥉 **13.10 ms (#3, +8.33ms)** |
+| **A3: 5-Field Atomic Batch Mutation** | Latency (ms) | 🥇 **Graft (0.12 ms)** | — | 🥇 Provider (0.72 ms) | 4th · **3.69 ms (#4, +2.97ms)** |
+| **A4: Depth-8 Nested Sub-State Mutation** | Latency (ms) | 🥇 **Graft (0.01 ms)** | — | 🥇 Provider (0.11 ms) | 🥈 **0.13 ms (#2, +0.02ms)** |
 | **B1: 10-Slot Column Layout (120 Frames)** | Render Time (ms) | 🥇 Provider (16.06 ms) | 🥈 **23.36 ms (#2, +7.30ms)** | 🥇 Riverpod (76.37 ms) | 4th · **78.29 ms (#4, +1.92ms)** |
-| **B2: 50-Slot Heavy Layout (120 Frames)** | Render Time (ms) | 🥇 Riverpod (24.74 ms) | 🥈 **24.83 ms (#2, +0.09ms)** | 🥇 **Graft (168.55 ms)** | 🥇 **168.55 ms (#1)** |
-| **C1: 5,000 Item List (300 Rapid Updates)** | Throughput (ms) | 🥇 **Graft (28.99 ms)** | 🥇 **28.99 ms (#1)** | 🥇 **Graft (136.11 ms)** | 🥇 **136.11 ms (#1)** |
-| **C2: 20,000 Item List (300 Rapid Updates)**| Throughput (ms) | 🥇 **Graft (31.02 ms)** | 🥇 **31.02 ms (#1)** | 🥇 **Graft (136.29 ms)** | 🥇 **136.29 ms (#1)** |
-| **C3: Random Item Insert / Delete (100x)**  | Latency (ms) | 🥇 **Graft (0.30 ms)** | 🥇 **0.30 ms (#1)** | 🥇 **Graft (0.07 ms)** | 🥇 **0.07 ms (#1)** |
-| **D1: Product Catalog & Shopping Cart**    | Latency (ms) | 🥇 **Graft (0.02 ms)** | 🥇 **0.02 ms (#1)** | 🥇 **Graft (0.03 ms)** | 🥇 **0.03 ms (#1)** |
-| **D2: Form (12 Interdependent Fields)**    | Latency (ms) | 🥇 **Graft (0.06 ms)** | 🥇 **0.06 ms (#1, Zero-GC)** | 🥇 BLoC (0.06 ms) | 🥈 **0.07 ms (#2, +0.01ms)** |
-| **D3: Navigation & Dialog State Sharing**  | Latency (ms) | 🥇 **Graft (2.54 ms)** | 🥇 **2.54 ms (#1)** | 🥇 **Graft (8.17 ms)** | 🥇 **8.17 ms (#1)** |
-| **E1: Route Stack Push / Pop Lifecycle**   | Latency (ms) | 🥇 **Graft (6.05 ms)** | 🥇 **6.05 ms (#1)** | 🥇 **Graft (17.28 ms)** | 🥇 **17.28 ms (#1)** |
-| **E2: Hot Reload Reassemble Simulation**   | Latency (ms) | 🥇 **Graft (0.92 ms)** | 🥇 **0.92 ms (#1)** | 🥇 **Graft (3.35 ms)** | 🥇 **3.35 ms (#1)** |
-| **E3: Disposed Controller Access Safety**  | Safety (ms)  | 🥇 **Graft (0.00 ms)** | 🥇 **0.00 ms (#1, Safe)** | 🥇 **Graft (0.00 ms)** | 🥇 **0.00 ms (#1, Safe)** |
+| **B2: 50-Slot Heavy Layout (120 Frames)** | Render Time (ms) | 🥇 Riverpod (24.74 ms) | 🥈 **24.83 ms (#2, +0.09ms)** | 🥇 **Graft (168.55 ms)** | — |
+| **C1: 5,000 Item List (300 Rapid Updates)** | Throughput (ms) | 🥇 **Graft (28.99 ms)** | — | 🥇 **Graft (136.11 ms)** | — |
+| **C2: 20,000 Item List (300 Rapid Updates)**| Throughput (ms) | 🥇 **Graft (31.02 ms)** | — | 🥇 **Graft (136.29 ms)** | — |
+| **C3: Random Item Insert / Delete (100x)**  | Latency (ms) | 🥇 **Graft (0.30 ms)** | — | 🥇 **Graft (0.07 ms)** | — |
+| **D1: Product Catalog & Shopping Cart**    | Latency (ms) | 🥇 **Graft (0.02 ms)** | — | 🥇 **Graft (0.03 ms)** | — |
+| **D2: Form (12 Interdependent Fields)**    | Latency (ms) | 🥇 **Graft (0.06 ms)** | — | 🥇 BLoC (0.06 ms) | 🥈 **0.07 ms (#2, +0.01ms)** |
+| **D3: Navigation & Dialog State Sharing**  | Latency (ms) | 🥇 **Graft (2.54 ms)** | — | 🥇 **Graft (8.17 ms)** | — |
+| **E1: Route Stack Push / Pop Lifecycle**   | Latency (ms) | 🥇 **Graft (6.05 ms)** | — | 🥇 **Graft (17.28 ms)** | — |
+| **E2: Hot Reload Reassemble Simulation**   | Latency (ms) | 🥇 **Graft (0.92 ms)** | — | 🥇 **Graft (3.35 ms)** | — |
+| **E3: Disposed Controller Access Safety**  | Safety (ms)  | 🥇 **Graft (0.00 ms)** | — | 🥇 **Graft (0.00 ms)** | — |
 
 ---
 
