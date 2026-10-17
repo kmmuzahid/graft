@@ -34,6 +34,9 @@ class GraftRouteTracker {
   static final Map<Route<dynamic>, Map<Type, Graft>> _routeInstances = {};
   static final Map<Graft, Route<dynamic>> _owners = {};
 
+  /// Shared [GraftRouteObserver] instance for convenient registration in `MaterialApp.navigatorObservers`.
+  static final GraftRouteObserver observer = GraftRouteObserver();
+
   /// Returns the top-most active route, or null if no routes are currently tracked.
   static Route<dynamic>? get currentRoute =>
       _routeStack.isNotEmpty ? _routeStack.last : null;

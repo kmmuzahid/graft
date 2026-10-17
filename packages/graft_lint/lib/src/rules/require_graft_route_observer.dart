@@ -42,6 +42,7 @@ class RequireGraftRouteObserverRule extends DartLintRule {
         final hasTracker = expression.elements.any((element) {
           final source = element.toSource();
           return source.contains('GraftRouteTracker.observer') ||
+              source.contains('GraftRouteObserver') ||
               source.contains('routeObserver');
         });
         if (!hasTracker) {

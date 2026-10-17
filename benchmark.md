@@ -1,6 +1,6 @@
 # 🚀 Late 2026 Flutter State Management Benchmark Report
 
-> See the full primary report at [`BENCHMARK_REPORT.md`](file:///Users/km/Documents/km%20muzahid/graft/BENCHMARK_REPORT.md).
+> See the full primary report at [`BENCHMARK_REPORT.md`](https://github.com/kmmuzahid/graft/blob/main/BENCHMARK_REPORT.md).
 
 **A Comprehensive, Empirical Comparison of Graft vs. Leading State Management Solutions across Native IO & Web Platforms**
 

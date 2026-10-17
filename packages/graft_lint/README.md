@@ -2,73 +2,76 @@
 
 [![pub package](https://img.shields.io/pub/v/graft_lint.svg?color=blue)](https://pub.dev/packages/graft_lint)
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/kmmuzahid/graft/blob/main/LICENSE)
+[![Flutter 3.10+](https://img.shields.io/badge/Flutter-3.10+-02569B.svg?logo=flutter)](https://flutter.dev)
+[![custom_lint](https://img.shields.io/badge/custom__lint-compatible-blueviolet.svg)](https://pub.dev/packages/custom_lint)
 
-Official analyzer plugin and custom lint rules for the [Graft](https://pub.dev/packages/graft) fine-grained reactive state management library.
+The official analyzer plugin and lint rules for **[Graft](https://pub.dev/packages/graft)**, the self-optimizing state management engine for Flutter.
+
+`graft_lint` continuously analyzes your AST in real time to catch architectural anti-patterns, guarantee leak-free route lifecycles, and enforce 0-GC CPU bitmask diffing contracts with IDE red squiggles.
 
 ---
 
 ## 📋 Rules Included
 
-| Rule | Severity | Description |
-|---|---|---|
-| [`avoid_nested_graft_slot`](#1-avoid_nested_graft_slot) | **Error** | Flags illegal nesting of `graft.slot()`, `slots()`, `async()`, or `builder()` inside another slot of the same Graft instance. |
-| [`prefer_props_in_graft_state`](#2-prefer_props_in_graft_state) | **Info** | Recommends overriding `GraftProps get props => propsOf(...)` in `GraftState` subclasses for 1-cycle hardware bitmask diffing and zero heap allocations. |
-| [`require_graft_route_observer`](#3-require_graft_route_observer) | **Info** | Recommends registering `GraftRouteTracker.observer` in `MaterialApp.navigatorObservers` for automatic route scoping. |
+| Rule | Default Severity | Recommended Level | Description |
+|---|:---:|:---:|---|
+| [`avoid_nested_graft_slot`](#1-avoid_nested_graft_slot) | **Error** | 🔴 `error` | Flags illegal nesting of slots (`slot`, `slots`, `async`, `builder`) within the same `Graft` instance. |
+| [`prefer_props_in_graft_state`](#2-prefer_props_in_graft_state) | **Info** | 🔴 `error` | Enforces overriding `GraftProps get props => propsOf(...)` in `GraftState` domain models for CPU register diffing. |
+| [`require_graft_route_observer`](#3-require_graft_route_observer) | **Info** | 🔴 `error` | Ensures `GraftRouteTracker.observer` is registered in `MaterialApp` to prevent controller memory leaks. |
 
 ---
 
 ## 🚀 Quick Setup
 
 ### 1. Add Dependencies
-Run in your terminal:
+
+Add `custom_lint` and `graft_lint` as dev dependencies:
+
 ```bash
 flutter pub add dev:custom_lint dev:graft_lint
 ```
 
-Or manually add them to your `pubspec.yaml`:
+Or manually in your `pubspec.yaml`:
+
 ```yaml
 dev_dependencies:
   custom_lint: ^0.8.1
-  graft_lint: ^1.0.0
+  graft_lint: ^0.1.2-alpha.5
 ```
 
-### 2. Enable in `analysis_options.yaml`
-Add `custom_lint` to your analyzer plugins list:
+### 2. Configure `analysis_options.yaml`
 
-```yaml
-analyzer:
-  plugins:
-    - custom_lint
-```
-
-> **Note:** Once enabled, all `graft_lint` rules are active by default. You do not need to list them under `linter: rules:` (doing so will trigger an unrecognized rule warning from Dart).
-
----
-
-## ⚙️ Configuring Rules
-
-You can adjust rule severities or toggle specific rules directly in `analysis_options.yaml`:
-
-### Adjusting Severity (Error / Warning / Info / Ignore)
-Use `analyzer.errors` to set your desired diagnostic level:
+Activate the plugin in your root `analysis_options.yaml`. To show 🔴 **red error squiggles** in your IDE whenever rules are violated, promote their severity under `analyzer.errors`:
 
 ```yaml
 analyzer:
   plugins:
     - custom_lint
   errors:
-    avoid_nested_graft_slot: error       # error | warning | info | ignore
-    require_graft_route_observer: info   # info | warning | error | ignore
+    avoid_nested_graft_slot: error       # 🔴 Flags illegal nested slots (default: error)
+    prefer_props_in_graft_state: error   # 🔴 Promoted to error: flags missing propsOf(...)
+    require_graft_route_observer: error  # 🔴 Promoted to error: flags missing route observer
 ```
 
+> [!TIP]
+> ### 🔄 Why don't squiggles appear immediately in my IDE?
+> The Dart Analysis Server caches plugin processes. After saving `analysis_options.yaml`:
+> - **VS Code**: Press `Cmd + Shift + P` (or `Ctrl + Shift + P`) and select **Dart: Restart Analysis Server**.
+> - **Android Studio**: Open the bottom **Dart Analysis** tab and click the 🔄 **Restart Dart Analysis Server** icon.
+
+---
+
+## ⚙️ Advanced Configuration
+
 ### Selectively Toggling Rules
-To explicitly disable or enable specific rules, use the root-level `custom_lint` section:
+All rules are enabled by default. To disable or re-enable individual rules, configure the root `custom_lint` section in `analysis_options.yaml`:
 
 ```yaml
 custom_lint:
   rules:
     - avoid_nested_graft_slot: true
-    - require_graft_route_observer: false # Disable if your app doesn't use route-scoped auto-disposal
+    - prefer_props_in_graft_state: true
+    - require_graft_route_observer: false # Disable if not using route-scoped auto-disposal
 ```
 
 ---
@@ -76,44 +79,52 @@ custom_lint:
 ## 🔍 Rule Details & Examples
 
 ### 1. `avoid_nested_graft_slot`
-* **Severity:** `Error`
-* **Why:** Graft slots are already isolated micro-diffing engines. Nesting a slot inside another slot of the same Graft instance creates redundant diffing passes and subverts fine-grained widget reconciliation.
+* **Default Severity:** `Error` (🔴 Red squiggly line)
+* **Rationale:** Graft slots (`graft.slot`, `graft(...)`, `graft.slots`, `graft.async`, `graft.builder`) are already isolated micro-diffing engines. Nesting a slot inside another slot of the same controller creates redundant reconciliation loops and subverts fine-grained rebuild insulation.
 
 #### ❌ Bad
 ```dart
-graft.slot((context, state) {
-  return Column(
+// ❌ Nesting a slot inside another slot of the same Graft instance
+graft.slot(
+  builder: (s) => Column(
     children: [
-      // ❌ Nested slot of the same graft instance
-      graft.slot((context, state) => Text(state.name)),
+      Text('Title: ${s.title}'),
+      graft((s) => Text('Name: ${s.name}')), // 🔴 avoid_nested_graft_slot error!
     ],
-  );
-});
+  ),
+);
 ```
 
 #### ✅ Good
 ```dart
+// Option A: Use graft.slots for multi-child layouts
 graft.slots(
-  layout: (context, slots) => Column(children: slots),
-  children: [
-    (state) => Text(state.title),
-    (state) => Text(state.name),
+  layout: Column(crossAxisAlignment: CrossAxisAlignment.start, children: slots),
+  slots: (s) => [
+    Text('Title: ${s.title}'),
+    Text('Name: ${s.name}'),
   ],
+);
+
+// Option B: Use graft.compute for derived state
+graft.compute<String>(
+  compute: (s) => '${s.title}: ${s.name}',
+  builder: (combined) => Text(combined),
 );
 ```
 
 ---
 
 ### 2. `prefer_props_in_graft_state`
-* **Severity:** `Info`
-* **Why:** Subclasses of `GraftState` that declare domain fields should override `GraftProps get props => propsOf(...)`. This enables Graft's hardware-aligned 64-bit integer dirty bitmask, evaluated in CPU registers with 0 GC heap allocations during diff passes.
+* **Default Severity:** `Info` (Promotable to `Error` via `analysis_options.yaml`)
+* **Rationale:** Subclasses of `GraftState` that declare domain fields must override `GraftProps get props => propsOf(...)`. This contract allows Graft to compute dirty bitmasks directly in 64-bit CPU registers with 0 GC heap allocations during state mutations.
 
 #### ❌ Bad
 ```dart
 class UserState extends GraftState {
   String name = '';
   int score = 0;
-  // Missing props getter
+  // 🔴 prefer_props_in_graft_state: missing props getter!
 }
 ```
 
@@ -124,42 +135,49 @@ class UserState extends GraftState {
   int score = 0;
 
   @override
-  GraftProps get props => propsOf(name, score); // ⚡ Zero heap allocations!
+  GraftProps get props => propsOf(name, score); // ⚡ 64-bit CPU register diffing!
 }
 ```
 
 ---
 
 ### 3. `require_graft_route_observer`
-* **Severity:** `Info`
-* **Why:** Graft uses route tracking to automatically clean up and dispose route-scoped Grafts when screens pop from the navigation stack.
+* **Default Severity:** `Info` (Promotable to `Error` via `analysis_options.yaml`)
+* **Rationale:** Graft's zero-setup route injection (`context.use<T>()`) relies on route navigation hooks to track screen lifecycles. Registering the route observer ensures route-scoped controllers cleanly self-dispose when their owning screen pops from the Navigator stack.
 
 #### ❌ Bad
 ```dart
 MaterialApp(
-  home: const HomeScreen(),
+  home: const HomeScreen(), // 🔴 require_graft_route_observer warning
 );
 ```
 
 #### ✅ Good
 ```dart
 MaterialApp(
-  navigatorObservers: [GraftRouteTracker.observer],
+  navigatorObservers: [GraftRouteTracker.observer], // or GraftRouteObserver()
   home: const HomeScreen(),
 );
 ```
 
 ---
 
-## 🧪 Running in CI / Terminal
+## 🧪 Terminal & CI/CD Verification
 
-To verify lint rules from your CLI or in CI/CD pipelines without launching the IDE:
+Run `custom_lint` to verify all rules from your terminal or continuous integration pipeline:
 
 ```bash
 dart run custom_lint
 ```
 
-To fail CI when any warning or error is found:
+To fail CI pipelines with a non-zero exit code if any warning or error is detected:
+
 ```bash
 dart run custom_lint --fatal-warnings
 ```
+
+---
+
+## 📄 License
+
+MIT License. Copyright (c) 2026 KM Muzahid. Free to use in commercial and open-source applications.

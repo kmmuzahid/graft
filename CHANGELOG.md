@@ -3,23 +3,40 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
-## 1.0.0 - Production Ready
+## 0.1.2-alpha.5
 
-### 🚀 Production Enterprise Readiness & Universal Multi-Platform Support
-- **Universal Web & WASM Compatibility**:
-  - Implemented conditional platform exports for SIMD / bitmask vector operations (`graft_simd_io.dart` for native VM vs `graft_simd_web.dart` for web / WebAssembly).
-  - Eliminated compile-time dependencies on `dart:io` and `dart:ffi` on web targets (`dart compile js` and `dart compile wasm` compile cleanly with 0 errors).
-- **Pub.dev Packaging & Dependency Hygiene**:
-  - Moved `flutter_test` exclusively to `dev_dependencies`, eliminating runtime dependency weight for a 140/140 pana pub score.
-- **Flutter DevTools Timeline Profiling (`GraftDevObserver`)**:
-  - Integrated `enableTimeline: true` flag in `GraftDevObserver`.
-  - Emits timeline slices into Flutter DevTools Performance trace for controller lifecycles (`onCreate`, `onDispose`), state diffing (`MyGraft.update()`), and surgical element slot rebuilds.
-- **Asynchronous Race Protection**:
-  - Monotonic token counter (`_currentAsyncTaskId`) in `runAsync` drops out-of-order stale network/IO responses automatically.
-- **Empirical Rank #1 Across Scenarios A, B, C, D**:
-  - Verified #1 benchmark ranking across state mutation, subtree rebuild isolation, collection scaling, and route-stack lifecycle safety.
-- **Documentation & DX Polish**:
-  - Upgraded documentation and example application to idiomatic `layout: Column(children: slots)` syntax.
+### 🚀 Public Alpha Release & Core Engine Hardening
+- **Core Architecture & Type-Safe `props` Contract**:
+  - Compiler-enforced `GraftProps get props => propsOf(...)` contract for domain properties.
+  - Direct synchronous cascade updates via `state..field = val..update()` and functional mutations via `mutate((s) => ...)`.
+  - In-place baseline diffing and `reset()` with zero GC heap allocations.
+- **Hardware-Aligned 64-Bit Bitmask Diff Engine**:
+  - `GraftMask` evaluates up to 64 state properties directly in CPU registers via 1-cycle bitwise operations.
+  - Effortlessly scales into unbounded chunked 32-bit words for 128, 500, or 1,000+ fields with 100% web JS compatibility.
+- **Universal Multi-Platform Support**:
+  - Native IO: iOS, Android, macOS, Windows, Linux, and Embedded targets.
+  - Modern Web: Verified with both JavaScript (`dart compile js`) and WebAssembly (`dart compile wasm`).
+  - Conditional platform exports for bitmask vector math (`graft_simd_io.dart` on Native vs `graft_simd_web.dart` on Web/WASM).
+- **Reactive UI Slots & Virtualization**:
+  - **`graft.slot` / callable `graft((s) => ...)`**: Single-child leaf slots with Depth-$N$ parent rebuild insulation.
+  - **`graft.slots`**: Universal multi-child layout diffing engine (`Column`, `Row`, `Wrap`, `Stack`, `Flex`) with self-optimizing `ignoredMask` pre-flight bypass.
+  - **`graft.builder`**: 100% lazy virtualized collections (`ListView.builder`, `GridView.builder`) with per-item slot isolation.
+  - **`graft.compute`**: Pre-flight derived computation cache with zero layout rebuild overhead.
+  - **`graft.async`**: Declarative, pattern-matched slots (`idle`, `loading`, `data`, `error`) for asynchronous domain states.
+  - **`GraftBoundary`**: Element-level rebuild firewall with ambient auto-discovery and backward adaptive learning.
+  - `NoSubscriptionContext` prevents ambient `Theme` or `MediaQuery` subscriptions from leaking into parent layouts.
+- **Route-Stack Dependency Injection & Lifecycle**:
+  - Zero-setup `context.use<T>()` inherits existing controllers across predecessor routes without `MultiProvider` nesting.
+  - Automatic owner-controlled disposal when the route that created the controller pops from the `Navigator`.
+  - Transient popup protection (`resolveOwnerRoute`): `showDialog` and `showModalBottomSheet` borrow safely without disposing host controllers.
+  - `GraftRouteTracker.observer` static accessor for registration in `MaterialApp` and `CupertinoApp`.
+- **Concurrency & Telemetry**:
+  - Monotonic token counter (`_currentAsyncTaskId`) in `runAsync` automatically drops out-of-order stale network/IO responses.
+  - `GraftDevObserver` with colorized terminal logging and `enableTimeline: true` for Flutter DevTools Performance tracing.
+  - Declarative unit testing harness (`graftTest`) in `package:graft/testing.dart`.
+  - 211 passing tests across 54 test files with 100% pass rate.
+- **Documentation & DX Overhaul**:
+  - Complete documentation with Quick Start, architectural pillars, empirical benchmark scorecard, and full API reference.
 
 ---
 

@@ -2,13 +2,14 @@
 
 All notable changes to `graft_lint` will be documented in this file.
 
-## 1.0.0
+## 0.1.2-alpha.5
 
-* **Graft 1.0.0 Architecture Alignment:**
-  * Updated `prefer_props_in_graft_state` rule to enforce `GraftProps get props => propsOf(...)`.
-  * Expanded `avoid_nested_graft_slot` to inspect `async()` alongside `slot()`, `slots()`, and `builder()`.
-  * Fully aligned diagnostic codes and messages with Graft 1.0.0 zero-allocation bitmask contracts.
-  * Marked rule constructors as `const` for optimal analyzer plugin performance.
+* **Architecture Alignment & Rule Hardening:**
+  * Updated `prefer_props_in_graft_state` rule to enforce `GraftProps get props => propsOf(...)` for 1-cycle CPU bitmask diffing.
+  * Expanded `avoid_nested_graft_slot` to inspect `async()`, `compute()`, and `builder()` alongside `slot()` and `slots()`.
+  * Enhanced `require_graft_route_observer` to detect both `GraftRouteTracker.observer` and `GraftRouteObserver()`, with added support for `CupertinoApp`.
+  * Marked rule constructors as `const` for optimal Dart Analysis Server performance.
+  * Updated documentation with accurate Graft slot syntax and IDE red error squiggle configuration guides.
 
 ## 0.1.2-alpha.1
 

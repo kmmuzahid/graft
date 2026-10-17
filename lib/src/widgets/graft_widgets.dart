@@ -41,29 +41,6 @@ extension GraftWidgetsX<S extends GraftState> on Graft<S> {
   ///   },
   /// ))
   /// ```
-  ///
-  /// ⚠️ **Avoid Misuse:**
-  /// - Do **NOT** use `graft.slot` inside `graft.slots(...)`. Those multi-child layouts
-  /// Creates an isolated single-child slot that diffs its content.
-  ///
-  /// ### Why use `graft.slot(...)`?
-  /// Rebuilds **ONLY** when the widget returned by [builder] changes properties or identity.
-  /// Unrelated state changes in other fields will result in **0 rebuilds** for this slot.
-  ///
-  /// Also handles full-screen state switching (e.g. Loading / Error / Content):
-  /// when the returned widget type changes (e.g. `Spinner` to `Dashboard`), it automatically
-  /// swaps the widget.
-  ///
-  /// ### Example:
-  /// ```dart
-  /// // 1. Single Field in AppBar / ListTile:
-  /// AppBar(
-  ///   title: graft.slot(
-  ///     builder: (s) => Text(s.title),
-  ///   ),
-  /// )
-  /// ```
-  ///
   /// ⚠️ **Avoid Misuse:**
   /// - Do **NOT** use `graft.slot` inside `graft.slots(...)`. Those multi-child layouts
   ///   **already** isolate and diff every child slot automatically!
@@ -92,7 +69,7 @@ extension GraftWidgetsX<S extends GraftState> on Graft<S> {
   /// ### Example:
   /// ```dart
   /// graft.async(
-  ///   (s) => s.userProfile,
+  ///   selector: (s) => s.userProfile,
   ///   data: (profile) => ProfileCard(profile),
   ///   loading: () => const ShimmerCard(),
   ///   error: (err, st) => ErrorBanner(error: err),

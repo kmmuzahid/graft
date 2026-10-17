@@ -1,70 +1,80 @@
 # Graft 🌱
 
-**Graft is the first self-optimizing state management engine for Flutter: combining the clean domain architecture of BLoC, the micro-rebuild precision of Signals, and the register-level diffing speed of a hardware bitmask.**
+**Graft is a self-optimizing state management engine for Flutter: combining BLoC-style domain models, Signals-level micro-rebuild precision, and register-level CPU bitmask diffing — with strictly zero code generation.**
 
 [![pub package](https://img.shields.io/pub/v/graft.svg?include_prereleases&color=blue)](https://pub.dev/packages/graft)
+[![graft_lint](https://img.shields.io/pub/v/graft_lint.svg?label=graft_lint&color=blue)](https://pub.dev/packages/graft_lint)
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/kmmuzahid/graft/blob/main/LICENSE)
-[![tests](https://img.shields.io/badge/tests-185%20passed-brightgreen.svg)](https://github.com/kmmuzahid/graft)
+[![tests](https://img.shields.io/badge/tests-211%20passed-brightgreen.svg)](https://github.com/kmmuzahid/graft)
 [![coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](https://github.com/kmmuzahid/graft)
 [![Flutter 3.10+](https://img.shields.io/badge/Flutter-3.10+-02569B.svg?logo=flutter)](https://flutter.dev)
 
 > [!NOTE]
-> ### 🚀 Graft v1.0.0 — Production Ready
-> Graft is enterprise-ready for mission-critical Flutter applications across iOS, Android, Web (JS & WASM), macOS, Windows, Linux, and Embedded targets.
-> It unifies zero-wrapper domain models, hardware bitmask slot diffing, DevTools Timeline profiling, and leak-free route-stack lifecycles.
+> ### 🚀 Graft v0.1.2-alpha.5 — Public Alpha Release
+> Graft is currently in active public alpha across iOS, Android, Web (JS & WASM), macOS, Windows, Linux, and Embedded targets.
+> We invite developers to take it for a spin, test its slot diffing and route-scoping capabilities across diverse architectures, and help us discover edge cases, ideas, and feedback on [GitHub Issues](https://github.com/kmmuzahid/graft/issues) as we march toward 1.0!
 
 ---
 
-## 🏆 Late-2026 Flutter State Management Benchmark Scorecard
-
-Empirically verified across 15+ measured runs per scenario against **Riverpod**, **flutter_bloc / Cubit**, **Signals**, **GetX**, and **Provider** on both Native IO and Web.
-
-> 📊 For the complete statistical breakdown (Mean, Median, p95, Min, Max, StdDev, Rebuilds), see [`BENCHMARK_REPORT.md`](file:///Users/km/Documents/km%20muzahid/graft/BENCHMARK_REPORT.md).
-
-| Benchmark Scenario | Metric | Native IO Winner | Native IO Graft (Rank & Gap) | Web Browser Winner | Web Browser Graft (Rank & Gap) |
-| :--- | :--- | :---: | :---: | :---: | :---: |
-| **A1: 10,000 Synchronous Increments** | Latency (ms) | 🥇 **Graft (0.10 ms)** | — | 🥇 Provider (0.62 ms) | 🥉 **1.21 ms (#3, +0.59ms)** |
-| **A2: 100,000 Micro-State Mutations** | Latency (ms) | 🥇 **Graft (0.66 ms)** | — | 🥇 Provider (4.77 ms) | 🥉 **13.10 ms (#3, +8.33ms)** |
-| **A3: 5-Field Atomic Batch Mutation** | Latency (ms) | 🥇 **Graft (0.12 ms)** | — | 🥇 Provider (0.72 ms) | 4th · **3.69 ms (#4, +2.97ms)** |
-| **A4: Depth-8 Nested Sub-State Mutation** | Latency (ms) | 🥇 **Graft (0.01 ms)** | — | 🥇 Provider (0.11 ms) | 🥈 **0.13 ms (#2, +0.02ms)** |
-| **B1: 10-Slot Column Layout (120 Frames)** | Render (ms) | 🥇 Provider (16.06 ms) | 🥈 **23.36 ms (#2, +7.30ms)** | 🥇 Riverpod (76.37 ms) | 4th · **78.29 ms (#4, +1.92ms)** |
-| **B2: 50-Slot Heavy Layout (120 Frames)** | Render (ms) | 🥇 Riverpod (24.74 ms) | 🥈 **24.83 ms (#2, +0.09ms)** | 🥇 **Graft (168.55 ms)** | — |
-| **C1: 5,000 Item List (300 Rapid Updates)** | Throughput (ms) | 🥇 **Graft (28.99 ms)** | — | 🥇 **Graft (136.11 ms)** | — |
-| **C2: 20,000 Item List (300 Rapid Updates)**| Throughput (ms) | 🥇 **Graft (31.02 ms)** | — | 🥇 **Graft (136.29 ms)** | — |
-| **C3: Random Item Insert / Delete (100x)**  | Latency (ms) | 🥇 **Graft (0.30 ms)** | — | 🥇 **Graft (0.07 ms)** | — |
-| **D1: Product Catalog & Shopping Cart**    | Latency (ms) | 🥇 **Graft (0.02 ms)** | — | 🥇 **Graft (0.03 ms)** | — |
-| **D2: Form (12 Interdependent Fields)**    | Latency (ms) | 🥇 **Graft (0.06 ms)** | — | 🥇 BLoC (0.06 ms) | 🥈 **0.07 ms (#2, +0.01ms)** |
-| **D3: Navigation & Dialog State Sharing**  | Latency (ms) | 🥇 **Graft (2.54 ms)** | — | 🥇 **Graft (8.17 ms)** | — |
-| **E1: Route Stack Push / Pop Lifecycle**   | Latency (ms) | 🥇 **Graft (6.05 ms)** | — | 🥇 **Graft (17.28 ms)** | — |
-| **E2: Hot Reload Reassemble Simulation**   | Latency (ms) | 🥇 **Graft (0.92 ms)** | — | 🥇 **Graft (3.35 ms)** | — |
-| **E3: Disposed Controller Access Safety**  | Safety (ms)  | 🥇 **Graft (0.00 ms)** | — | 🥇 **Graft (0.00 ms)** | — |
+## 📑 Table of Contents
+- [📦 Installation & Linter Setup](#-installation--linter-setup)
+- [🛠️ Quick Start](#️-quick-start)
+- [🏛️ The 6 Core Pillars](#️-the-6-core-pillars-philosophy)
+- [🏆 Benchmark Scorecard](#-late-2026-flutter-state-management-benchmark-scorecard)
+- [📚 Complete Public API Reference](#-complete-public-api-reference)
+  - [A. Reactive Slots & Rebuild Barriers](#a-reactive-slots--rebuild-boundaries-the-core-innovations)
+  - [B. Domain State & Controllers](#b-domain-state--business-logic-controllers)
+  - [C. Route-Stack Dependency Injection](#c-route-stack-dependency-injection-buildcontext-extensions)
+  - [D. Observability & DevTools](#d-observability--devtools)
+  - [E. Declarative Unit Testing](#e-declarative-unit-testing-grafttestingdart)
+- [🏗️ High-Performance Architecture](#️-high-performance-architecture)
+- [🧪 Test Verification & QA](#-test-verification--quality-assurance)
+- [📄 License](#-license)
 
 ---
 
-## 🏛️ The 6 Core Pillars (Philosophy)
+## 📦 Installation & Linter Setup
 
-State management in Flutter has historically forced developers to choose between two extremes:
-1. **Architectural Cleanliness with Rebuild Overhead:** Clean domain classes (BLoC/Provider) that rebuild entire widget subtrees unless wrapped in dozens of verbose `BlocSelector` or `Selector` widgets.
-2. **Rebuild Precision with Domain Fragmentation:** Fine-grained reactivity (Signals/GetX/MobX) that shatters cohesive domain models into fragmented primitive wrappers (`signal()`, `.obs`, `.value`, `rx`), cluttering business logic and polluting UI code.
+### 1. Add Dependencies
 
-Graft rejects this compromise through 6 foundational pillars:
+Add `graft` along with the official analyzer plugin, **[`graft_lint`](https://pub.dev/packages/graft_lint)**:
 
-1. **Zero-Wrapper Domain State:** State models are pure Dart classes extending `GraftState`. No `Signal<T>`, no `.obs`, no `.value`, and strictly zero code generation (`build_runner` is never required).
-2. **Mandatory `props` & Recursive Snapshot Contract:** Domain properties are declared via `List<Object?> get props;`, an abstract compiler-enforced contract. Graft uses recursive deep snapshotting for nested `GraftState` sub-states and collections, eliminating forgotten fields and ensuring 100% snapshot integrity during in-place cascade mutations.
-3. **Unbounded Hardware-Aligned `GraftMask`:** State field modifications are mapped into an unbounded, 32-bit chunked word-based bitset (`GraftMask`). It diffs $\le 64$ fields in CPU registers and effortlessly scales to 128, 500, or 1,000+ fields with 100% web JS compatibility and 0 GC heap allocations.
-4. **Synchronous In-Place Cascade Mutation & In-Place Reset:** Direct synchronous updates via `state..field = val..update()` and complete baseline resets via `state.reset()`. Primitives, nested models, and collection items are accurately diffed without requiring immutable `copyWith` methods.
-5. **Two-Wrapper Architecture & Context Decoupling:**
-   - **`GraftBoundary`**: Subtree-level rebuild barrier featuring **Ambient Auto-Discovery** (zero manual lists via `GraftScopeTracker`) and **Backward Adaptive Learning** with multi-field bitwise union accumulation.
-   - **`graft((s) => ...)`**: Fine-grained surgical leaf slot with Depth-$N$ parent rebuild insulation, powered by `NoSubscriptionContext` to prevent `Theme`/`MediaQuery` subscription bleeding during widget diffing.
-   - **`graft.slots(...)`**: Universal multi-child layout slot diffing with self-optimizing `ignoredMask` pre-flight bypass.
-6. **Automatic Route-Aware Lifecycle & PopupRoute Protection:** Controllers automatically inherit down predecessor routes and cleanly self-dispose when their owning screen route pops. Transient routes (`showDialog`, `showModalBottomSheet`) borrow safely without prematurely disposing host controllers via `resolveOwnerRoute`.
+```bash
+flutter pub add graft
+flutter pub add dev:custom_lint dev:graft_lint
+```
+
+### 2. Configure `analysis_options.yaml`
+
+Activate the plugin in your root `analysis_options.yaml`. To display 🔴 **red error squiggles** in your IDE whenever `propsOf(...)` is forgotten or slots are illegally nested, configure the rules under `errors`:
+
+```yaml
+analyzer:
+  plugins:
+    - custom_lint
+  errors:
+    avoid_nested_graft_slot: error       # 🔴 Flags illegal nested slot builders
+    prefer_props_in_graft_state: error   # 🔴 Flags GraftState missing propsOf(...)
+    require_graft_route_observer: error  # 🔴 Flags MaterialApp missing route observer
+```
+
+> [!TIP]
+> If squiggles do not appear immediately in your IDE after saving `analysis_options.yaml`:
+> - **VS Code**: Press `Cmd + Shift + P` (or `Ctrl + Shift + P`) and select **Dart: Restart Analysis Server**.
+> - **Android Studio**: In the bottom **Dart Analysis** window, click the **Restart Dart Analysis Server** icon.
+
+### 3. Verify in Terminal / CI
+
+```bash
+dart run custom_lint --fatal-warnings
+```
 
 ---
 
 ## 🛠️ Quick Start
 
 ### 1. Define State & Controller
-Extend `GraftState` and declare domain properties in `props`. No `copyWith` or code-gen needed:
+Extend `GraftState` and declare domain properties in `props` using `propsOf(...)`. No `copyWith` or code-gen needed:
 
 ```dart
 class UserState extends GraftState {
@@ -73,33 +83,40 @@ class UserState extends GraftState {
   int points = 0;
 
   @override
-  List<Object?> get props => [name, email, points];
+  GraftProps get props => propsOf(name, email, points);
+
+  @override
+  void onReset() {
+    name = 'Alice';
+    email = 'alice@example.com';
+    points = 0;
+  }
 }
 
 class UserGraft extends Graft<UserState> {
   UserGraft() : super(UserState());
 
+  // Option A: Fluent cascade mutation
   void updateName(String newName) {
     state
       ..name = newName
       ..update(); // Synchronous 1-cycle bitmask diff & surgical UI dispatch
   }
 
+  // Option B: Functional lambda mutation
   void addPoints(int amount) {
-    state
-      ..points += amount
-      ..update();
+    mutate((s) => s.points += amount);
   }
 
   void reset() {
-    state.reset(); // Restores initial baseline values synchronously
+    state.reset(); // Restores initial baseline values via onReset() synchronously
   }
 }
 ```
 
-### 2. The Core Innovations: `slot`, `slots`, & `GraftBoundary`
+### 2. The Core Innovations: `slot`, `slots`, `builder`, & `GraftBoundary`
 
-Graft eliminates wasteful Flutter subtree rebuilds using 3 dedicated UI primitives:
+Graft eliminates wasteful Flutter subtree rebuilds using 4 dedicated UI primitives:
 
 #### A. Single-Child Leaf Slot (`graft.slot` or callable `graft(...)`)
 Isolates individual dynamic widgets with **Depth-$N$ parent rebuild insulation**. Outer containers (`Card`, `Padding`, `AppBar`) experience **0 rebuilds**:
@@ -129,7 +146,24 @@ graft.slots(
 )
 ```
 
-#### C. Multi-Graft Rebuild Firewall (`GraftBoundary`)
+#### C. Virtualized Lazy Lists (`graft.builder(...)`)
+100% lazy collections (`ListView.builder`, `GridView.builder`) with per-item slot isolation. Modifying one item triggers **1 rebuild** only for that item, while all other items experience **0 rebuilds**:
+
+```dart
+// Zero-plumbing: automatically creates an optimized ListView.builder
+graft.builder<TaskItem>(
+  items: (s) => s.tasks,
+  itemBuilder: (task, index) => ListTile(
+    title: Text(task.title),
+    trailing: Checkbox(
+      value: task.isDone,
+      onChanged: (_) => graft.toggleTask(index),
+    ),
+  ),
+)
+```
+
+#### D. Multi-Graft Rebuild Firewall (`GraftBoundary`)
 An Element-level rebuild barrier with **Ambient Auto-Discovery** and **Backward Adaptive Learning**. 
 
 When placed inside heavy layout containers or inside `graft.slots(...)`, it auto-discovers and listens to multiple controllers simultaneously, completely preventing expensive parent containers and sibling slots from rebuilding:
@@ -142,8 +176,7 @@ dashboardGraft.slots(
     Text('Section: ${s.title}'), // Slot 1: Diffed by dashboardGraft
 
     // 🛡️ Heavy layout container wrapping a multi-controller GraftBoundary:
-    //backward tree will not rebuild of GraftBoundary even though it is in the same graft.slots
-    //this is the power of graft
+    // Parent container and sibling slots do NOT rebuild when inner boundary states update.
     HeavyContainer(
       child: GraftBoundary(
         builder: (context) {
@@ -177,7 +210,7 @@ Without `GraftBoundary`, updating `userGraft` or `themeGraft` inside a complex s
 ---
 
 ### 3. Route-Stack Lifecycle & Zero-Setup Injection (`context.use`)
-Attach `GraftRouteObserver` to your `MaterialApp` in `main.dart`, and borrow controllers on-demand anywhere in your widget tree:
+Attach `GraftRouteTracker.observer` to your `MaterialApp` in `main.dart`, and borrow controllers on-demand anywhere in your widget tree:
 
 ```dart
 void main() {
@@ -191,7 +224,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      navigatorObservers: [GraftRouteObserver()],
+      navigatorObservers: [GraftRouteTracker.observer], // or GraftRouteObserver()
       home: const UserScreen(),
     );
   }
@@ -225,6 +258,52 @@ class UserScreen extends StatelessWidget {
   }
 }
 ```
+
+---
+
+## 🏛️ The 6 Core Pillars (Philosophy)
+
+State management in Flutter has historically forced developers to choose between two extremes:
+1. **Architectural Cleanliness with Rebuild Overhead:** Clean domain classes (BLoC/Provider) that rebuild entire widget subtrees unless wrapped in dozens of verbose `BlocSelector` or `Selector` widgets.
+2. **Rebuild Precision with Domain Fragmentation:** Fine-grained reactivity (Signals/GetX/MobX) that shatters cohesive domain models into fragmented primitive wrappers (`signal()`, `.obs`, `.value`, `rx`), cluttering business logic and polluting UI code.
+
+Graft rejects this compromise through 6 foundational pillars:
+
+1. **Zero-Wrapper Domain State:** State models are pure Dart classes extending `GraftState`. No `Signal<T>`, no `.obs`, no `.value`, and strictly zero code generation (`build_runner` is never required).
+2. **Mandatory `props` & Recursive Snapshot Contract:** Domain properties are declared via `GraftProps get props => propsOf(...)`, an abstract compiler-enforced contract. Graft uses recursive deep snapshotting for nested `GraftState` sub-states and collections, eliminating forgotten fields and ensuring 100% snapshot integrity during in-place cascade mutations.
+3. **Unbounded Hardware-Aligned `GraftMask`:** State field modifications are mapped into an unbounded, 32-bit chunked word-based bitset (`GraftMask`). It diffs ≤ 64 fields in CPU registers and effortlessly scales to 128, 500, or 1,000+ fields with 100% web JS compatibility and 0 GC heap allocations.
+4. **Synchronous In-Place Cascade Mutation & In-Place Reset:** Direct synchronous updates via `state..field = val..update()` and complete baseline resets via `state.reset()`. Primitives, nested models, and collection items are accurately diffed without requiring immutable `copyWith` methods.
+5. **Two-Wrapper Architecture & Context Decoupling:**
+   - **`GraftBoundary`**: Subtree-level rebuild barrier featuring **Ambient Auto-Discovery** (zero manual lists via `GraftScopeTracker`) and **Backward Adaptive Learning** with multi-field bitwise union accumulation.
+   - **`graft((s) => ...)`**: Fine-grained surgical leaf slot with Depth-$N$ parent rebuild insulation, powered by `NoSubscriptionContext` to prevent `Theme`/`MediaQuery` subscription bleeding during widget diffing.
+   - **`graft.slots(...)`**: Universal multi-child layout slot diffing with self-optimizing `ignoredMask` pre-flight bypass.
+6. **Automatic Route-Aware Lifecycle & PopupRoute Protection:** Controllers automatically inherit down predecessor routes and cleanly self-dispose when their owning screen route pops. Transient routes (`showDialog`, `showModalBottomSheet`) borrow safely without prematurely disposing host controllers via `resolveOwnerRoute`.
+
+---
+
+## 🏆 Late-2026 Flutter State Management Benchmark Scorecard
+
+Empirically verified across 15+ measured runs per scenario against **Riverpod**, **flutter_bloc / Cubit**, **Signals**, **GetX**, and **Provider** on both Native IO and Web.
+
+> 📊 For the complete statistical breakdown (Mean, Median, p95, Min, Max, StdDev, Rebuilds), see [`BENCHMARK_REPORT.md`](https://github.com/kmmuzahid/graft/blob/main/BENCHMARK_REPORT.md).
+
+| Benchmark Scenario | Metric | Native IO Winner | Native IO Graft (Rank & Gap) | Web Browser Winner | Web Browser Graft (Rank & Gap) |
+| :--- | :--- | :---: | :---: | :---: | :---: |
+| **A1: 10,000 Synchronous Increments** | Latency (ms) | 🥇 **Graft (0.10 ms)** | — | 🥇 Provider (0.62 ms) | 🥉 **1.21 ms (#3, +0.59ms)** |
+| **A2: 100,000 Micro-State Mutations** | Latency (ms) | 🥇 **Graft (0.66 ms)** | — | 🥇 Provider (4.77 ms) | 🥉 **13.10 ms (#3, +8.33ms)** |
+| **A3: 5-Field Atomic Batch Mutation** | Latency (ms) | 🥇 **Graft (0.12 ms)** | — | 🥇 Provider (0.72 ms) | 4th · **3.69 ms (#4, +2.97ms)** |
+| **A4: Depth-8 Nested Sub-State Mutation** | Latency (ms) | 🥇 **Graft (0.01 ms)** | — | 🥇 Provider (0.11 ms) | 🥈 **0.13 ms (#2, +0.02ms)** |
+| **B1: 10-Slot Column Layout (120 Frames)** | Render (ms) | 🥇 Provider (16.06 ms) | 🥈 **23.36 ms (#2, +7.30ms)** | 🥇 Riverpod (76.37 ms) | 4th · **78.29 ms (#4, +1.92ms)** |
+| **B2: 50-Slot Heavy Layout (120 Frames)** | Render (ms) | 🥇 Riverpod (24.74 ms) | 🥈 **24.83 ms (#2, +0.09ms)** | 🥇 **Graft (168.55 ms)** | — |
+| **C1: 5,000 Item List (300 Rapid Updates)** | Throughput (ms) | 🥇 **Graft (28.99 ms)** | — | 🥇 **Graft (136.11 ms)** | — |
+| **C2: 20,000 Item List (300 Rapid Updates)**| Throughput (ms) | 🥇 **Graft (31.02 ms)** | — | 🥇 **Graft (136.29 ms)** | — |
+| **C3: Random Item Insert / Delete (100x)**  | Latency (ms) | 🥇 **Graft (0.30 ms)** | — | 🥇 **Graft (0.07 ms)** | — |
+| **D1: Product Catalog & Shopping Cart**    | Latency (ms) | 🥇 **Graft (0.02 ms)** | — | 🥇 **Graft (0.03 ms)** | — |
+| **D2: Form (12 Interdependent Fields)**    | Latency (ms) | 🥇 **Graft (0.06 ms)** | — | 🥇 BLoC (0.06 ms) | 🥈 **0.07 ms (#2, +0.01ms)** |
+| **D3: Navigation & Dialog State Sharing**  | Latency (ms) | 🥇 **Graft (2.54 ms)** | — | 🥇 **Graft (8.17 ms)** | — |
+| **E1: Route Stack Push / Pop Lifecycle**   | Latency (ms) | 🥇 **Graft (6.05 ms)** | — | 🥇 **Graft (17.28 ms)** | — |
+| **E2: Hot Reload Reassemble Simulation**   | Latency (ms) | 🥇 **Graft (0.92 ms)** | — | 🥇 **Graft (3.35 ms)** | — |
+| **E3: Disposed Controller Access Safety**  | Safety (ms)  | 🥇 **Graft (0.00 ms)** | — | 🥇 **Graft (0.00 ms)** | — |
 
 ---
 
@@ -275,48 +354,28 @@ graft.slots(
 )
 ```
 
-#### 3. `GraftBoundary`
-An Element-level rebuild firewall featuring **Ambient Auto-Discovery** and **Backward Adaptive Learning**.
+#### 3. `GraftBoundary({required builder, key})`
+An Element-level rebuild firewall that isolates multi-controller subscriptions.
 
-When used inside layout containers or complex multi-child `graft.slots(...)`, it isolates multi-controller subscriptions and traps leaf mutations, completely preventing expensive parent containers and sibling slots from rebuilding:
+* **Ambient Auto-Discovery**: Automatically discovers and subscribes to any `Graft` controller whose `.state` is read within `builder`—no manual listener registration required.
+* **Backward Adaptive Learning**: Traps state mutations within the boundary. When inner controllers update, outer containers, parent widgets, and sibling slots experience **0 rebuilds**.
+* **Zero Subscription Bleed**: Evaluates through `NoSubscriptionContext` to prevent ambient `Theme` or `MediaQuery` subscriptions from leaking into parent layouts.
 
 ```dart
-dashboardGraft.slots(
-  layout: Column(children: slots),
-  slots: (s) => [
-    HeaderBanner(), // 0 rebuilds (even though it is not const)
-    Text('Section: ${s.title}'), // Slot 1: Diffed by dashboardGraft
-
-    // 🛡️ Heavy layout container wrapping a multi-controller GraftBoundary:
-    HeavyContainer(
-      child: GraftBoundary(
-        builder: (context) {
-          // Ambiently discovers and listens to userGraft & themeGraft:
-          return Row(
-            children: [
-              Text(userGraft.state.name),
-              const SizedBox(width: 8),
-              Text(themeGraft.state.accentColor),
-            ],
-          );
-        },
-      ),
-    ),
-
-    const FooterBanner(), // 0 rebuilds (const pointer match)
-  ],
+// Isolates multiple controllers inside any subtree without parent rebuilds:
+GraftBoundary(
+  builder: (context) {
+    // Ambiently discovers and listens to userGraft & themeGraft:
+    return Row(
+      children: [
+        Text(userGraft.state.name),
+        const SizedBox(width: 8),
+        Icon(Icons.circle, color: themeGraft.state.accentColor),
+      ],
+    );
+  },
 )
 ```
-
-##### 🔍 Rebuild Breakdown: Why `GraftBoundary` Inside Slots is Essential
-Without `GraftBoundary`, updating `userGraft` or `themeGraft` inside a complex slot would force the surrounding container or parent layout to rebuild. With `GraftBoundary`:
-
-| State Mutation Event | `HeavyContainer` (Above Boundary) | Sibling Slots (`s.title`, Header, Footer) | Inside `GraftBoundary` (`Row`) |
-| :--- | :---: | :---: | :---: |
-| `userGraft.state..name = 'Bob'..update()` | **0 Rebuilds** (Insulated) | **0 Rebuilds** (Diff engine bypass) | 🔄 **1 Rebuild** |
-| `themeGraft.state..accentColor = 'red'..update()` | **0 Rebuilds** (Insulated) | **0 Rebuilds** (Diff engine bypass) | 🔄 **1 Rebuild** |
-| `dashboardGraft.state..title = 'Reports'..update()` | **0 Rebuilds** (`GraftEquivalent`) | 🔄 **1 Rebuild** (`s.title` slot only) | **0 Rebuilds** |
-| `userGraft.state..email = 'new'..update()` *(Unused)* | **0 Rebuilds** | **0 Rebuilds** | **0 Rebuilds** (Adaptive bypass) |
 
 #### 4. `graft.compute<R>({required compute, required builder, key})`
 Pre-flight derived selector computation. Checks the computed value before executing `builder`:
@@ -346,7 +405,7 @@ Declarative, pattern-matched reactive slot for asynchronous domain states:
 
 ```dart
 graft.async<UserProfile>(
-  (s) => s.profileState,
+  selector: (s) => s.profileState,
   data: (profile) => ProfileCard(profile),
   loading: () => const ShimmerCard(),
   error: (err, st) => ErrorBanner(error: err),
@@ -392,7 +451,7 @@ class CartState extends GraftState {
   double discount = 0.0;
 
   @override
-  List<Object?> get props => [items, discount];
+  GraftProps get props => propsOf(items, discount);
 
   @override
   void onReset() {
@@ -402,7 +461,7 @@ class CartState extends GraftState {
 }
 ```
 
-* **`List<Object?> get props`**: Mandatory abstract contract declaring properties for diffing.
+* **`GraftProps get props`**: Mandatory abstract contract declaring properties for diffing via `propsOf(...)` or `propsOfMany(...)`.
 * **`state.update()`**: Computes dirty bitmask against in-place baseline snapshot and triggers UI notification.
 * **`state.reset()`**: Calls `onReset()` and flushes baseline changes synchronously with 0 GC allocations.
 * **`GraftMask get dirtyMask`**: Read-only bitmask from the last diff evaluation.
@@ -686,11 +745,11 @@ Graft's dependency injection coordinates with Flutter's `Navigator` stack to eli
 
 ## 🧪 Test Verification & Quality Assurance
 
-Graft is verified against **185 passing tests** with zero static analysis warnings:
+Graft is verified against **211 passing tests** with zero static analysis warnings:
 
 ```bash
 flutter test
-# 00:08 +185: All tests passed!
+# 00:50 +211: All tests passed!
 ```
 
 ```bash

@@ -6,10 +6,10 @@
 ///
 /// ### Just 3 Core Concepts:
 ///
-/// 1. **Atomic Mutation ([mutate]):**
+/// 1. **Atomic Mutation ([Graft.mutate]):**
 ///    Mutate domain state cleanly using native Dart cascades with automatic snapshotting:
 ///    ```dart
-///    mutate((s) => s
+///    graft.mutate((s) => s
 ///      ..name = 'Alice'
 ///      ..email = 'alice@example.com'
 ///    ); // Batched 64-bit bitmask diffing: notifies listeners once!
