@@ -1912,6 +1912,7 @@ abstract class GraftState {
   }
 
   /// Optional lifecycle hook called during [reset] to restore domain field values.
+  @protected
   void onReset() {}
 }
 
