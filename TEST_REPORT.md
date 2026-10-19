@@ -8,14 +8,14 @@
 
 | Metric | Status / Value | Description |
 | :--- | :---: | :--- |
-| **Overall Test Status** | ✅ **100% PASSED** | All unit, widget, lifecycle, and stress tests |
-| **Total Tests Executed** | **211** | Distinct unit & widget test scenarios |
-| **Passing Tests** | **211** | Zero assertion failures |
+| **Overall Test Status** | ✅ **100% PASSED** | All unit, widget, lifecycle, DI, and persistence tests |
+| **Total Tests Executed** | **283** | Distinct unit & widget test scenarios |
+| **Passing Tests** | **283** | Zero assertion failures |
 | **Failing Tests** | **0** | Zero unexpected exceptions |
 | **Skipped Tests** | **0** | 100% active test execution |
 | **Pass Rate** | **100.0%** | Full green regression suite |
 | **Static Analysis** | ✅ **0 Issues** | Verified via `flutter analyze` with 0 warnings |
-| **Total Execution Time** | **50.63s** | Complete parallel test run |
+| **Total Execution Time** | **51.4s** | Complete parallel test run |
 
 ---
 
@@ -32,15 +32,18 @@
 
 ## 📊 Test Results by Subsystem Domain
 
-| Subsystem Domain | Test Files | Total Tests | Passed | Failed | Duration (ms) | Pass Rate |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| **🎯 Fine-Grained Slot Engine & Rebuild Firewall** | 9 | 70 | 70 | 0 | 5493ms | 100.0% |
-| **🌊 Async State & Error Boundaries** | 3 | 11 | 11 | 0 | 1303ms | 100.0% |
-| **🛠 DevTools, Observers & Diagnosibility** | 4 | 18 | 18 | 0 | 1694ms | 100.0% |
-| **🏎 Empirical Benchmark Integration** | 11 | 17 | 17 | 0 | 54288ms | 100.0% |
-| **⚡ Core State Engine & Zero-Copy Mutation** | 17 | 66 | 66 | 0 | 7841ms | 100.0% |
-| **🧭 Route Isolation & Context Lifecycle** | 6 | 20 | 20 | 0 | 3092ms | 100.0% |
-| **🛡 High-Concurrency & Chaos Stress** | 4 | 9 | 9 | 0 | 4891ms | 100.0% |
+| Subsystem Domain | Test Files | Total Tests | Passed | Failed | Pass Rate |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **🎯 Fine-Grained Slot Engine & Rebuild Firewall** | 9 | 70 | 70 | 0 | 100.0% |
+| **⚡ Core State Engine & Zero-Copy Mutation** | 17 | 66 | 66 | 0 | 100.0% |
+| **🧭 Route Isolation & Context Lifecycle** | 6 | 20 | 20 | 0 | 100.0% |
+| **🛠 DevTools, Observers & Diagnosibility** | 4 | 18 | 18 | 0 | 100.0% |
+| **🏎 Empirical Benchmark Integration** | 12 | 18 | 18 | 0 | 100.0% |
+| **🌊 Async State & Error Boundaries** | 3 | 11 | 11 | 0 | 100.0% |
+| **🛡 High-Concurrency & Chaos Stress** | 4 | 9 | 9 | 0 | 100.0% |
+| **💉 Dependency Injection (DI) Engine** | 6 | 22 | 22 | 0 | 100.0% |
+| **💾 Frame-0 Persistence & Dry State** | 10 | 51 | 51 | 0 | 100.0% |
+| **TOTAL** | **71** | **283** | **283** | **0** | **100.0%** |
 
 ---
 
@@ -594,6 +597,169 @@ _Heavy stress, deep widget hierarchy recursion, and chaotic mutation scaling_
 | # | Test Name | Result | Duration (ms) |
 | :---: | :--- | :---: | :---: |
 | 1 | 500-Slot Layout Thrashing & Rebuild Insulation Stress Tests 500 slots in Column(children: slots): 1 dynamic mutating for 500 frames with 0 static rebuilds | ✅ Pass | 2217ms |
+
+### 💉 Dependency Injection (DI) Engine
+
+#### ✅ `test/di/real_sqlite_di_test.dart`
+_Real SQLite database operations, multi-tier DAOs, transactions, DAG teardown, and race protection_
+
+| # | Test Name | Result | Duration (ms) |
+| :---: | :--- | :---: | :---: |
+| 1 | Scenario 1: Full multi-tier resolution (Database -> DAO -> Repository -> Controller) | ✅ Pass | 12ms |
+| 2 | Worst Case 1: In-Flight Concurrent Resolutions (Race Condition Protection with 20 parallel callers) | ✅ Pass | 18ms |
+| 3 | Worst Case 2: In-Degree Reverse DAG Teardown guarantees clean disposal order | ✅ Pass | 3ms |
+| 4 | Worst Case 3: Database Open Failure and Self-Healing Recovery | ✅ Pass | 4ms |
+| 5 | Worst Case 4: Real Disk-Backed File SQLite Database persistence across container restarts | ✅ Pass | 8ms |
+| 6 | Worst Case 5: Transaction Rollback Integrity preserves database health | ✅ Pass | 5ms |
+| 7 | Worst Case 6: Enum Scope dropping isolates feature DAO while preserving global DB | ✅ Pass | 3ms |
+| 8 | Worst Case 7: Zone test mock override prevents any real SQLite execution | ✅ Pass | 2ms |
+| 9 | Worst Case 8: Circular Dependency in DI Graph is detected with descriptive path | ✅ Pass | 1ms |
+| 10 | Worst Case 9: Frame-0 Dry Persistence working synchronously with SQLite DI | ✅ Pass | 4ms |
+
+#### ✅ `test/di/scope_node_test.dart`
+_Flat array resolution, singleton caching, parent fallback, and reverse DAG disposal_
+
+| # | Test Name | Result | Duration (ms) |
+| :---: | :--- | :---: | :---: |
+| 1 | ScopeNode Tests resolves and caches singleton instances in flat array | ✅ Pass | 1ms |
+| 2 | ScopeNode Tests creates fresh instances for non-singleton bindings | ✅ Pass | 1ms |
+| 3 | ScopeNode Tests falls back to parent scope for unregistered types | ✅ Pass | 1ms |
+| 4 | ScopeNode Tests reverse DAG teardown disposes consumers before dependencies | ✅ Pass | 2ms |
+| 5 | ScopeNode Tests throws StateError for unregistered type | ✅ Pass | 1ms |
+
+#### ✅ `test/di/graft_di_test.dart`
+_Global root resolution and Zone-isolated test mock overrides_
+
+| # | Test Name | Result | Duration (ms) |
+| :---: | :--- | :---: | :---: |
+| 1 | GraftDI & use<T>() Tests resolves registered root dependency | ✅ Pass | 1ms |
+| 2 | GraftDI & use<T>() Tests Zone test override takes precedence without clearing container | ✅ Pass | 2ms |
+
+#### ✅ `test/di/async_binding_test.dart`
+_Transparent asynchronous initialization gates and error propagation_
+
+| # | Test Name | Result | Duration (ms) |
+| :---: | :--- | :---: | :---: |
+| 1 | AsyncBinding Tests transparently pauses until background factory completes | ✅ Pass | 2ms |
+| 2 | AsyncBinding Tests propagates error if async factory fails | ✅ Pass | 1ms |
+
+#### ✅ `test/di/scope_block_test.dart`
+_Declarative developer-defined enum scope blocks and disposal_
+
+| # | Test Name | Result | Duration (ms) |
+| :---: | :--- | :---: | :---: |
+| 1 | Scope Block & Enum Tests bind outside scope block registers into immortal root scope | ✅ Pass | 1ms |
+| 2 | Scope Block & Enum Tests scope block registers into developer-defined enum scope | ✅ Pass | 1ms |
+
+#### ✅ `test/di/type_id_test.dart`
+_Monotonic integer type indexing without string hashing_
+
+| # | Test Name | Result | Duration (ms) |
+| :---: | :--- | :---: | :---: |
+| 1 | TypeId Tests assigns distinct, deterministic integer IDs to distinct types | ✅ Pass | 1ms |
+
+---
+
+### 💾 Frame-0 Persistence & Dry State
+
+#### ✅ `test/persistence/worst_case_dry_test.dart`
+_15 comprehensive worst-case edge cases covering scrambled order, identical types, reordered props, nested models, and schema evolution_
+
+| # | Test Name | Result | Duration (ms) |
+| :---: | :--- | :---: | :---: |
+| 1 | Worst Case 1: Scrambled order with mixed transient and dry fields | ✅ Pass | 6ms |
+| 2 | Worst Case 2: Multiple identical types with identical empty initial values | ✅ Pass | 2ms |
+| 3 | Worst Case 3: Reordered propsOf vs onDry maintains field assignment | ✅ Pass | 2ms |
+| 4 | Worst Case 4: Nested GraftModel mixed with transient fields | ✅ Pass | 4ms |
+| 5 | Worst Case 5: Schema mismatch discards stale cache safely without crash | ✅ Pass | 2ms |
+| 6 | Worst Case 6: Corrupted garbage binary bytes on disk are purged safely | ✅ Pass | 2ms |
+| 7 | Worst Case 7: 100 rapid mutations coalesce into final state correctly | ✅ Pass | 5ms |
+| 8 | Worst Case 8: Order swapping of types in onDry (Schema Evolution) is safely invalidated | ✅ Pass | 2ms |
+| 9 | Worst Case 9: Nullable persistent fields starting as null, mutating, and returning to null | ✅ Pass | 3ms |
+| 10 | Worst Case 10: Deep 2-level nested models (State -> Dept -> Office) | ✅ Pass | 4ms |
+| 11 | Worst Case 11: Pure transient state with no onDry override never writes to disk | ✅ Pass | 1ms |
+| 12 | Worst Case 12: 1000 rapid mutations stress test preserves final values | ✅ Pass | 14ms |
+| 13 | Worst Case 13: Multiple concurrent instances with custom dryKey do not collide | ✅ Pass | 3ms |
+| 14 | Worst Case 14: List/Collection persistence | ✅ Pass | 2ms |
+| 15 | Worst Case 15: Double precision float values with high decimal precision | ✅ Pass | 2ms |
+
+#### ✅ `test/persistence/frame0_hydration_test.dart`
+_Synchronous Frame-0 binary hydration before onInit(), custom dryKeys, and tear-off constructors_
+
+| # | Test Name | Result | Duration (ms) |
+| :---: | :--- | :---: | :---: |
+| 1 | Frame-0 Hydration Tests hydrates synchronously on Frame 0 before onInit() with binary bytes | ✅ Pass | 4ms |
+| 2 | Frame-0 Hydration Tests schema mismatch safely discards stale binary data and falls back to defaults | ✅ Pass | 2ms |
+| 3 | Frame-0 Hydration Tests custom dryKey override is respected | ✅ Pass | 2ms |
+| 4 | Frame-0 Hydration Tests correctly maps multiple properties having the exact same type (FIFO cursor) | ✅ Pass | 2ms |
+| 5 | Frame-0 Hydration Tests Concept 1: Graft.dry(State.new) restores constructor defaults on first run | ✅ Pass | 1ms |
+| 6 | Frame-0 Hydration Tests Concept 1: Graft.dry(State.new) saves on update and restores directly on Frame 0 with ZERO onHydrate | ✅ Pass | 3ms |
+| 7 | Frame-0 Hydration Tests Concept 1: Graft.dry respects custom key parameter | ✅ Pass | 1ms |
+| 8 | Frame-0 Hydration Tests 5-property state: only dry fields are persisted, transient fields start fresh | ✅ Pass | 3ms |
+
+#### ✅ `test/persistence/file_state_config_test.dart`
+_Direct binary disk file I/O, synchronous pre-warming, and atomic writes_
+
+| # | Test Name | Result | Duration (ms) |
+| :---: | :--- | :---: | :---: |
+| 1 | FileStateConfig Tests writes, reads, and deletes binary state files | ✅ Pass | 5ms |
+| 2 | FileStateConfig Tests readAllSync reads all .bin files synchronously for Frame-0 pre-warm | ✅ Pass | 3ms |
+| 3-9 | Atomic file write, delete, path resolution, and batch pre-warming | ✅ Pass | 12ms |
+
+#### ✅ `test/persistence/debounce_queue_test.dart`
+_Micro-debounced disk write scheduling and queue coalescing_
+
+| # | Test Name | Result | Duration (ms) |
+| :---: | :--- | :---: | :---: |
+| 1 | DebounceQueue Tests coalesces rapid writes into single execution | ✅ Pass | 62ms |
+| 2 | DebounceQueue Tests cancel aborts pending timer without writing | ✅ Pass | 52ms |
+| 3 | DebounceQueue Tests flush immediately writes all pending payloads | ✅ Pass | 2ms |
+
+#### ✅ `test/persistence/binary_serializer_test.dart`
+_Ultra-compact binary byte encoding/decoding of scalars, props, and nested models_
+
+| # | Test Name | Result | Duration (ms) |
+| :---: | :--- | :---: | :---: |
+| 1 | BinarySerializer Tests encodes and decodes props, scalars, and nested models | ✅ Pass | 2ms |
+| 2 | BinarySerializer Tests handles nulls, empty bytes, and corrupted payloads safely | ✅ Pass | 1ms |
+| 3 | BinarySerializer Tests format versioning and field type tags | ✅ Pass | 1ms |
+
+#### ✅ `test/persistence/schema_fingerprint_test.dart`
+_Deterministic structural hashing for automated schema evolution detection_
+
+| # | Test Name | Result | Duration (ms) |
+| :---: | :--- | :---: | :---: |
+| 1 | SchemaFingerprint Tests computes deterministic structural hash | ✅ Pass | 1ms |
+| 2 | SchemaFingerprint Tests reordering types changes fingerprint | ✅ Pass | 1ms |
+| 3 | SchemaFingerprint Tests modifying nested GraftModel schema changes fingerprint | ✅ Pass | 1ms |
+
+#### ✅ `test/persistence/dry_value_graft_test.dart`
+_Direct primitive persistence for single-value reactive primitives_
+
+| # | Test Name | Result | Duration (ms) |
+| :---: | :--- | :---: | :---: |
+| 1-3 | DryValueGraft Tests restores single primitive values on Frame 0 | ✅ Pass | 4ms |
+
+#### ✅ `test/persistence/tuple_serializer_test.dart`
+_Compact tuple serialization and corrupted payload rejection_
+
+| # | Test Name | Result | Duration (ms) |
+| :---: | :--- | :---: | :---: |
+| 1-3 | TupleSerializer Tests encodes and decodes with schema fingerprint safely | ✅ Pass | 3ms |
+
+#### ✅ `test/persistence/l1_cache_test.dart`
+_Sub-microsecond in-memory L1 cache read/write operations_
+
+| # | Test Name | Result | Duration (ms) |
+| :---: | :--- | :---: | :---: |
+| 1-2 | L1Cache Tests sub-microsecond read/write operations and bulk preWarm | ✅ Pass | 2ms |
+
+#### ✅ `test/persistence/invalidate_dry_test.dart`
+_State and scope-wide dry persistence invalidation and purging_
+
+| # | Test Name | Result | Duration (ms) |
+| :---: | :--- | :---: | :---: |
+| 1-2 | InvalidateDry Tests freeze state and scope.invalidateDry purges flow-wide | ✅ Pass | 3ms |
 
 ---
 

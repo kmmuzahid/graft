@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'graft.dart';
 import 'graft_change.dart';
 import 'graft_mask.dart';
+import '../persistence/dry/dry_state_hook.dart';
+import '../persistence/model/graft_model.dart';
 
 /// Base class for domain states that enables direct cascade mutation with zero boilerplate.
 ///
@@ -43,6 +45,210 @@ abstract class GraftState {
   @nonVirtual
   int get version => _version;
 
+  List<Object?>? _hydrationBuffer;
+  int _hydrationReadIndex = 0;
+  List<Object?>? _probeProps;
+  bool _isDryEnabled = false;
+  String? _customDryKey;
+  bool _isCapturingDry = false;
+  final List<Object?> _capturedDry = [];
+
+  /// Whether dry persistence has been activated.
+  @internal
+  bool get isDryEnabled => _isDryEnabled;
+
+  /// Internal engine hook to activate dry persistence.
+  @internal
+  void setDryEnabledInternal(bool enabled) {
+    _isDryEnabled = enabled;
+  }
+
+  /// Internal engine hook to configure custom dry storage key.
+  @internal
+  void setCustomDryKeyInternal(String? key) {
+    _customDryKey = key;
+  }
+
+  /// Optional storage key identifying this state in persistence.
+  /// Defaults to the class name ([runtimeType.toString()]).
+  String get dryKey => _customDryKey ?? runtimeType.toString();
+
+  /// Primary lifecycle hook called during Frame-0 dry hydration to map persistent fields.
+  ///
+  /// Overriding this method automatically activates Frame-0 dry persistence with zero boilerplate:
+  /// ```dart
+  /// @override
+  /// void onDry() {
+  ///   name = dry(name);
+  ///   score = dry(score);
+  /// }
+  /// ```
+  void onDry() => onHydrate();
+
+  /// Legacy hydration hook. Prefer [onDry].
+  void onHydrate() {}
+
+  /// Declares and restores a persistent domain property during [onDry].
+  ///
+  /// Automatically infers type [T] from [fallback] with zero magic strings:
+  /// ```dart
+  /// name = dry(name);
+  /// score = dry(score);
+  /// ```
+  T dry<T>(T fallback) {
+    if (_isCapturingDry) {
+      _capturedDry.add(fallback);
+      return fallback;
+    }
+    return read<T>(fallback);
+  }
+
+  /// Declares and restores a nested [GraftModel] during [onDry].
+  M dryModel<M extends GraftModel>(M model) {
+    if (_isCapturingDry) {
+      _capturedDry.add(model);
+      return model;
+    }
+    readModel(model);
+    return model;
+  }
+
+  /// Captures values declared via [dry] in [onDry].
+  @internal
+  List<Object?> captureDryValues() {
+    _capturedDry.clear();
+    _isCapturingDry = true;
+    final p = props;
+    _probeProps =
+        List<Object?>.generate(p.length, (i) => p[i], growable: false);
+    _hydrationReadIndex = 0;
+    try {
+      onDry();
+      if (_capturedDry.isNotEmpty) {
+        _isDryEnabled = true;
+        return List<Object?>.from(_capturedDry);
+      }
+      if (_hydrationReadIndex > 0) {
+        _isDryEnabled = true;
+      }
+      return const [];
+    } finally {
+      _isCapturingDry = false;
+      _probeProps = null;
+    }
+  }
+
+  /// Type-safe auto-incrementing property reader for Frame-0 hydration.
+  T read<T>([T? fallback]) {
+    final buf = _hydrationBuffer;
+    if (buf != null) {
+      if (_hydrationReadIndex < buf.length) {
+        final val = buf[_hydrationReadIndex++];
+        if (val == null && fallback != null) return fallback;
+        if (val is T) return val;
+        if (fallback != null) return fallback;
+        return val as T;
+      }
+      _hydrationReadIndex++;
+      if (fallback != null) return fallback;
+      throw StateError(
+        'read() called at index ${_hydrationReadIndex - 1}, but only ${buf.length} values exist in hydration payload.',
+      );
+    }
+    final p = _probeProps;
+    if (p != null && _hydrationReadIndex < p.length) {
+      final val = p[_hydrationReadIndex++];
+      if (val is T) return val;
+      if (fallback != null) return fallback;
+      return val as T;
+    }
+    _hydrationReadIndex++;
+    if (fallback != null) return fallback;
+    return null as T;
+  }
+
+  /// Hydrates a nested [GraftModel] using the next value in the hydration sequence.
+  void readModel(GraftModel model) {
+    final buf = _hydrationBuffer;
+    if (buf != null) {
+      if (_hydrationReadIndex < buf.length) {
+        final val = buf[_hydrationReadIndex++];
+        if (val is List) {
+          model.hydrate(val.cast<Object?>());
+        } else if (val is GraftProps) {
+          model.hydrate(val.cast<Object?>().toList());
+        }
+        return;
+      }
+      _hydrationReadIndex++;
+      return;
+    }
+    final p = _probeProps;
+    if (p != null && _hydrationReadIndex < p.length) {
+      _hydrationReadIndex++;
+      model.probeModel();
+      return;
+    }
+    _hydrationReadIndex++;
+  }
+
+  /// Restores domain properties and nested models from [tuple] during Frame-0 hydration.
+  @internal
+  void hydrate(List<Object?> tuple) {
+    _hydrationBuffer = tuple;
+    _hydrationReadIndex = 0;
+    try {
+      onDry();
+      if (_hydrationReadIndex > 0) {
+        _isDryEnabled = true;
+      }
+      final currentProps = props;
+      for (int i = _hydrationReadIndex;
+          i < currentProps.length && i < tuple.length;
+          i++) {
+        final prop = currentProps[i];
+        final val = tuple[i];
+        if (prop is GraftModel && val is List) {
+          prop.hydrate(val.cast<Object?>());
+        }
+      }
+    } finally {
+      _hydrationBuffer = null;
+    }
+  }
+
+  /// Probes whether [onDry] or [onHydrate] is overridden when no cached data exists.
+  @internal
+  void probeWithoutCache() {
+    final dryVals = captureDryValues();
+    if (dryVals.isNotEmpty) {
+      _isDryEnabled = true;
+      return;
+    }
+    final p = props;
+    _probeProps =
+        List<Object?>.generate(p.length, (i) => p[i], growable: false);
+    _hydrationReadIndex = 0;
+    try {
+      onDry();
+      if (_hydrationReadIndex > 0) {
+        _isDryEnabled = true;
+      }
+      final currentProps = props;
+      for (int i = _hydrationReadIndex; i < currentProps.length; i++) {
+        final prop = currentProps[i];
+        if (prop is GraftModel) {
+          prop.probeModel();
+        }
+      }
+    } finally {
+      _probeProps = null;
+    }
+  }
+
+  /// Permanently deactivates and invalidates dry state persistence for this session.
+  void invalidateDry() => DryStateHook.invalidate(this);
+
   /// Binds this state instance to its owning [Graft] controller.
   ///
   /// This method is called automatically by the [Graft] constructor.
@@ -51,6 +257,7 @@ abstract class GraftState {
   @nonVirtual
   void bindGraft(Graft graft) {
     _graft = graft;
+    DryStateHook.hydrateSync(this);
     initBaseline();
   }
 
@@ -184,7 +391,9 @@ abstract class GraftState {
         if (_scalarCount > 4) _b4,
       ];
     }
-    return _baseline != null ? List<Object?>.unmodifiable(_baseline!) : const [];
+    return _baseline != null
+        ? List<Object?>.unmodifiable(_baseline!)
+        : const [];
   }
 
   /// Returns the current dirty bitmask from the last diff pass.
@@ -434,6 +643,14 @@ abstract class GraftState {
     if (value is Map) {
       return Map<Object?, Object?>.of(value);
     }
+    if (value is GraftModel) {
+      final p = value.props;
+      return List<Object?>.generate(
+        p.length,
+        (i) => _snapshotValue(p[i]),
+        growable: false,
+      );
+    }
     return value;
   }
 
@@ -450,6 +667,34 @@ abstract class GraftState {
       if (!identical(a[last], b[last]) && a[last] != b[last]) return false;
       for (int i = 1; i < last; i++) {
         if (!identical(a[i], b[i]) && a[i] != b[i]) return false;
+      }
+      return true;
+    }
+    if (a is List && b is GraftModel) {
+      final bp = b.props;
+      final len = a.length;
+      if (len != bp.length) return false;
+      for (int i = 0; i < len; i++) {
+        if (!_deepEquals(a[i], bp[i])) return false;
+      }
+      return true;
+    }
+    if (a is GraftModel && b is List) {
+      final ap = a.props;
+      final len = ap.length;
+      if (len != b.length) return false;
+      for (int i = 0; i < len; i++) {
+        if (!_deepEquals(ap[i], b[i])) return false;
+      }
+      return true;
+    }
+    if (a is GraftModel && b is GraftModel) {
+      final ap = a.props;
+      final bp = b.props;
+      final len = ap.length;
+      if (len != bp.length) return false;
+      for (int i = 0; i < len; i++) {
+        if (!_deepEquals(ap[i], bp[i])) return false;
       }
       return true;
     }
@@ -558,21 +803,36 @@ abstract class GraftState {
           int end = len - 1;
           while (end - 15 >= next) {
             if ((identical(p[end], c[end]) || p[end] == c[end]) &&
-                (identical(p[end - 1], c[end - 1]) || p[end - 1] == c[end - 1]) &&
-                (identical(p[end - 2], c[end - 2]) || p[end - 2] == c[end - 2]) &&
-                (identical(p[end - 3], c[end - 3]) || p[end - 3] == c[end - 3]) &&
-                (identical(p[end - 4], c[end - 4]) || p[end - 4] == c[end - 4]) &&
-                (identical(p[end - 5], c[end - 5]) || p[end - 5] == c[end - 5]) &&
-                (identical(p[end - 6], c[end - 6]) || p[end - 6] == c[end - 6]) &&
-                (identical(p[end - 7], c[end - 7]) || p[end - 7] == c[end - 7]) &&
-                (identical(p[end - 8], c[end - 8]) || p[end - 8] == c[end - 8]) &&
-                (identical(p[end - 9], c[end - 9]) || p[end - 9] == c[end - 9]) &&
-                (identical(p[end - 10], c[end - 10]) || p[end - 10] == c[end - 10]) &&
-                (identical(p[end - 11], c[end - 11]) || p[end - 11] == c[end - 11]) &&
-                (identical(p[end - 12], c[end - 12]) || p[end - 12] == c[end - 12]) &&
-                (identical(p[end - 13], c[end - 13]) || p[end - 13] == c[end - 13]) &&
-                (identical(p[end - 14], c[end - 14]) || p[end - 14] == c[end - 14]) &&
-                (identical(p[end - 15], c[end - 15]) || p[end - 15] == c[end - 15])) {
+                (identical(p[end - 1], c[end - 1]) ||
+                    p[end - 1] == c[end - 1]) &&
+                (identical(p[end - 2], c[end - 2]) ||
+                    p[end - 2] == c[end - 2]) &&
+                (identical(p[end - 3], c[end - 3]) ||
+                    p[end - 3] == c[end - 3]) &&
+                (identical(p[end - 4], c[end - 4]) ||
+                    p[end - 4] == c[end - 4]) &&
+                (identical(p[end - 5], c[end - 5]) ||
+                    p[end - 5] == c[end - 5]) &&
+                (identical(p[end - 6], c[end - 6]) ||
+                    p[end - 6] == c[end - 6]) &&
+                (identical(p[end - 7], c[end - 7]) ||
+                    p[end - 7] == c[end - 7]) &&
+                (identical(p[end - 8], c[end - 8]) ||
+                    p[end - 8] == c[end - 8]) &&
+                (identical(p[end - 9], c[end - 9]) ||
+                    p[end - 9] == c[end - 9]) &&
+                (identical(p[end - 10], c[end - 10]) ||
+                    p[end - 10] == c[end - 10]) &&
+                (identical(p[end - 11], c[end - 11]) ||
+                    p[end - 11] == c[end - 11]) &&
+                (identical(p[end - 12], c[end - 12]) ||
+                    p[end - 12] == c[end - 12]) &&
+                (identical(p[end - 13], c[end - 13]) ||
+                    p[end - 13] == c[end - 13]) &&
+                (identical(p[end - 14], c[end - 14]) ||
+                    p[end - 14] == c[end - 14]) &&
+                (identical(p[end - 15], c[end - 15]) ||
+                    p[end - 15] == c[end - 15])) {
               end -= 16;
               continue;
             }
@@ -580,19 +840,27 @@ abstract class GraftState {
           }
           while (end - 7 >= next) {
             if ((identical(p[end], c[end]) || p[end] == c[end]) &&
-                (identical(p[end - 1], c[end - 1]) || p[end - 1] == c[end - 1]) &&
-                (identical(p[end - 2], c[end - 2]) || p[end - 2] == c[end - 2]) &&
-                (identical(p[end - 3], c[end - 3]) || p[end - 3] == c[end - 3]) &&
-                (identical(p[end - 4], c[end - 4]) || p[end - 4] == c[end - 4]) &&
-                (identical(p[end - 5], c[end - 5]) || p[end - 5] == c[end - 5]) &&
-                (identical(p[end - 6], c[end - 6]) || p[end - 6] == c[end - 6]) &&
-                (identical(p[end - 7], c[end - 7]) || p[end - 7] == c[end - 7])) {
+                (identical(p[end - 1], c[end - 1]) ||
+                    p[end - 1] == c[end - 1]) &&
+                (identical(p[end - 2], c[end - 2]) ||
+                    p[end - 2] == c[end - 2]) &&
+                (identical(p[end - 3], c[end - 3]) ||
+                    p[end - 3] == c[end - 3]) &&
+                (identical(p[end - 4], c[end - 4]) ||
+                    p[end - 4] == c[end - 4]) &&
+                (identical(p[end - 5], c[end - 5]) ||
+                    p[end - 5] == c[end - 5]) &&
+                (identical(p[end - 6], c[end - 6]) ||
+                    p[end - 6] == c[end - 6]) &&
+                (identical(p[end - 7], c[end - 7]) ||
+                    p[end - 7] == c[end - 7])) {
               end -= 8;
               continue;
             }
             break;
           }
-          while (end >= next && (identical(p[end], c[end]) || p[end] == c[end])) {
+          while (
+              end >= next && (identical(p[end], c[end]) || p[end] == c[end])) {
             end--;
           }
           if (end < next) return true;
@@ -629,7 +897,6 @@ abstract class GraftState {
     }
     return dirty;
   }
-
 
   @pragma('vm:prefer-inline')
   static Object? _updateSnapshot(Object? p, Object? c) {
@@ -1207,13 +1474,24 @@ abstract class GraftState {
           }
         }
       }
-      if (w == 0) { _dirtyMask = GraftMask.empty; return GraftMask.empty; }
-      if (w == 7) { _dirtyMask = GraftMask.allBitsUpTo(3); return _dirtyMask; }
-      if ((w & (w - 1)) == 0) { final mask = GraftMask.bit(w.bitLength - 1); _dirtyMask = mask; return mask; }
+      if (w == 0) {
+        _dirtyMask = GraftMask.empty;
+        return GraftMask.empty;
+      }
+      if (w == 7) {
+        _dirtyMask = GraftMask.allBitsUpTo(3);
+        return _dirtyMask;
+      }
+      if ((w & (w - 1)) == 0) {
+        final mask = GraftMask.bit(w.bitLength - 1);
+        _dirtyMask = mask;
+        return mask;
+      }
       final curMask = _dirtyMask;
       if (!curMask.isAllDirty && curMask.matchesWords(w, 0)) return curMask;
       final mask = GraftMask.fromWords(w, 0);
-      _dirtyMask = mask; return mask;
+      _dirtyMask = mask;
+      return mask;
     }
 
     // ⚡ Hardware Fast-Path: 4-Property State
@@ -1383,13 +1661,24 @@ abstract class GraftState {
           }
         }
       }
-      if (w == 0) { _dirtyMask = GraftMask.empty; return GraftMask.empty; }
-      if (w == 15) { _dirtyMask = GraftMask.allBitsUpTo(4); return _dirtyMask; }
-      if ((w & (w - 1)) == 0) { final mask = GraftMask.bit(w.bitLength - 1); _dirtyMask = mask; return mask; }
+      if (w == 0) {
+        _dirtyMask = GraftMask.empty;
+        return GraftMask.empty;
+      }
+      if (w == 15) {
+        _dirtyMask = GraftMask.allBitsUpTo(4);
+        return _dirtyMask;
+      }
+      if ((w & (w - 1)) == 0) {
+        final mask = GraftMask.bit(w.bitLength - 1);
+        _dirtyMask = mask;
+        return mask;
+      }
       final curMask = _dirtyMask;
       if (!curMask.isAllDirty && curMask.matchesWords(w, 0)) return curMask;
       final mask = GraftMask.fromWords(w, 0);
-      _dirtyMask = mask; return mask;
+      _dirtyMask = mask;
+      return mask;
     }
 
     // ⚡ Hardware Fast-Path: 5-Property State (A3 benchmark: 5-field multi-update)
@@ -1408,20 +1697,43 @@ abstract class GraftState {
         c3 = current[3];
         c4 = current[4];
       }
-      final p0 = prev[0], p1 = prev[1], p2 = prev[2], p3 = prev[3], p4 = prev[4];
+      final p0 = prev[0],
+          p1 = prev[1],
+          p2 = prev[2],
+          p3 = prev[3],
+          p4 = prev[4];
       int w = 0;
       if (_allScalarProps) {
-        if (p0 != c0) { prev[0] = c0; w |= 1; }
-        if (p1 != c1) { prev[1] = c1; w |= 2; }
-        if (p2 != c2) { prev[2] = c2; w |= 4; }
-        if (p3 != c3) { prev[3] = c3; w |= 8; }
-        if (p4 != c4) { prev[4] = c4; w |= 16; }
+        if (p0 != c0) {
+          prev[0] = c0;
+          w |= 1;
+        }
+        if (p1 != c1) {
+          prev[1] = c1;
+          w |= 2;
+        }
+        if (p2 != c2) {
+          prev[2] = c2;
+          w |= 4;
+        }
+        if (p3 != c3) {
+          prev[3] = c3;
+          w |= 8;
+        }
+        if (p4 != c4) {
+          prev[4] = c4;
+          w |= 16;
+        }
       } else {
         if (p0 != c0) {
           if (c0 is! Iterable && c0 is! Map && c0 is! GraftState) {
-            prev[0] = c0; w |= 1;
+            prev[0] = c0;
+            w |= 1;
           } else if (c0 is GraftState) {
-            if (!identical(p0, c0) || c0.diffChanges().isNotEmpty) { prev[0] = c0; w |= 1; }
+            if (!identical(p0, c0) || c0.diffChanges().isNotEmpty) {
+              prev[0] = c0;
+              w |= 1;
+            }
           } else if (p0 is List && c0 is List) {
             if (p0.length != c0.length) {
               prev[0] = List<Object?>.of(c0, growable: false);
@@ -1432,18 +1744,29 @@ abstract class GraftState {
           } else if (p0 is Map && c0 is Map) {
             if (_diffMapAndUpdate(p0, c0)) w |= 1;
           } else if (_isPropertyDirty(p0, c0)) {
-            prev[0] = _updateSnapshot(p0, c0); w |= 1;
+            prev[0] = _updateSnapshot(p0, c0);
+            w |= 1;
           }
         } else if (c0 is GraftState) {
-          if (c0.diffChanges().isNotEmpty) { prev[0] = c0; w |= 1; }
+          if (c0.diffChanges().isNotEmpty) {
+            prev[0] = c0;
+            w |= 1;
+          }
         } else if (c0 is Iterable || c0 is Map) {
-          if (!_deepEquals(p0, c0)) { prev[0] = _snapshotValue(c0); w |= 1; }
+          if (!_deepEquals(p0, c0)) {
+            prev[0] = _snapshotValue(c0);
+            w |= 1;
+          }
         }
         if (p1 != c1) {
           if (c1 is! Iterable && c1 is! Map && c1 is! GraftState) {
-            prev[1] = c1; w |= 2;
+            prev[1] = c1;
+            w |= 2;
           } else if (c1 is GraftState) {
-            if (!identical(p1, c1) || c1.diffChanges().isNotEmpty) { prev[1] = c1; w |= 2; }
+            if (!identical(p1, c1) || c1.diffChanges().isNotEmpty) {
+              prev[1] = c1;
+              w |= 2;
+            }
           } else if (p1 is List && c1 is List) {
             if (p1.length != c1.length) {
               prev[1] = List<Object?>.of(c1, growable: false);
@@ -1454,18 +1777,29 @@ abstract class GraftState {
           } else if (p1 is Map && c1 is Map) {
             if (_diffMapAndUpdate(p1, c1)) w |= 2;
           } else if (_isPropertyDirty(p1, c1)) {
-            prev[1] = _updateSnapshot(p1, c1); w |= 2;
+            prev[1] = _updateSnapshot(p1, c1);
+            w |= 2;
           }
         } else if (c1 is GraftState) {
-          if (c1.diffChanges().isNotEmpty) { prev[1] = c1; w |= 2; }
+          if (c1.diffChanges().isNotEmpty) {
+            prev[1] = c1;
+            w |= 2;
+          }
         } else if (c1 is Iterable || c1 is Map) {
-          if (!_deepEquals(p1, c1)) { prev[1] = _snapshotValue(c1); w |= 2; }
+          if (!_deepEquals(p1, c1)) {
+            prev[1] = _snapshotValue(c1);
+            w |= 2;
+          }
         }
         if (p2 != c2) {
           if (c2 is! Iterable && c2 is! Map && c2 is! GraftState) {
-            prev[2] = c2; w |= 4;
+            prev[2] = c2;
+            w |= 4;
           } else if (c2 is GraftState) {
-            if (!identical(p2, c2) || c2.diffChanges().isNotEmpty) { prev[2] = c2; w |= 4; }
+            if (!identical(p2, c2) || c2.diffChanges().isNotEmpty) {
+              prev[2] = c2;
+              w |= 4;
+            }
           } else if (p2 is List && c2 is List) {
             if (p2.length != c2.length) {
               prev[2] = List<Object?>.of(c2, growable: false);
@@ -1476,18 +1810,29 @@ abstract class GraftState {
           } else if (p2 is Map && c2 is Map) {
             if (_diffMapAndUpdate(p2, c2)) w |= 4;
           } else if (_isPropertyDirty(p2, c2)) {
-            prev[2] = _updateSnapshot(p2, c2); w |= 4;
+            prev[2] = _updateSnapshot(p2, c2);
+            w |= 4;
           }
         } else if (c2 is GraftState) {
-          if (c2.diffChanges().isNotEmpty) { prev[2] = c2; w |= 4; }
+          if (c2.diffChanges().isNotEmpty) {
+            prev[2] = c2;
+            w |= 4;
+          }
         } else if (c2 is Iterable || c2 is Map) {
-          if (!_deepEquals(p2, c2)) { prev[2] = _snapshotValue(c2); w |= 4; }
+          if (!_deepEquals(p2, c2)) {
+            prev[2] = _snapshotValue(c2);
+            w |= 4;
+          }
         }
         if (p3 != c3) {
           if (c3 is! Iterable && c3 is! Map && c3 is! GraftState) {
-            prev[3] = c3; w |= 8;
+            prev[3] = c3;
+            w |= 8;
           } else if (c3 is GraftState) {
-            if (!identical(p3, c3) || c3.diffChanges().isNotEmpty) { prev[3] = c3; w |= 8; }
+            if (!identical(p3, c3) || c3.diffChanges().isNotEmpty) {
+              prev[3] = c3;
+              w |= 8;
+            }
           } else if (p3 is List && c3 is List) {
             if (p3.length != c3.length) {
               prev[3] = List<Object?>.of(c3, growable: false);
@@ -1498,18 +1843,29 @@ abstract class GraftState {
           } else if (p3 is Map && c3 is Map) {
             if (_diffMapAndUpdate(p3, c3)) w |= 8;
           } else if (_isPropertyDirty(p3, c3)) {
-            prev[3] = _updateSnapshot(p3, c3); w |= 8;
+            prev[3] = _updateSnapshot(p3, c3);
+            w |= 8;
           }
         } else if (c3 is GraftState) {
-          if (c3.diffChanges().isNotEmpty) { prev[3] = c3; w |= 8; }
+          if (c3.diffChanges().isNotEmpty) {
+            prev[3] = c3;
+            w |= 8;
+          }
         } else if (c3 is Iterable || c3 is Map) {
-          if (!_deepEquals(p3, c3)) { prev[3] = _snapshotValue(c3); w |= 8; }
+          if (!_deepEquals(p3, c3)) {
+            prev[3] = _snapshotValue(c3);
+            w |= 8;
+          }
         }
         if (p4 != c4) {
           if (c4 is! Iterable && c4 is! Map && c4 is! GraftState) {
-            prev[4] = c4; w |= 16;
+            prev[4] = c4;
+            w |= 16;
           } else if (c4 is GraftState) {
-            if (!identical(p4, c4) || c4.diffChanges().isNotEmpty) { prev[4] = c4; w |= 16; }
+            if (!identical(p4, c4) || c4.diffChanges().isNotEmpty) {
+              prev[4] = c4;
+              w |= 16;
+            }
           } else if (p4 is List && c4 is List) {
             if (p4.length != c4.length) {
               prev[4] = List<Object?>.of(c4, growable: false);
@@ -1520,23 +1876,40 @@ abstract class GraftState {
           } else if (p4 is Map && c4 is Map) {
             if (_diffMapAndUpdate(p4, c4)) w |= 16;
           } else if (_isPropertyDirty(p4, c4)) {
-            prev[4] = _updateSnapshot(p4, c4); w |= 16;
+            prev[4] = _updateSnapshot(p4, c4);
+            w |= 16;
           }
         } else if (c4 is GraftState) {
-          if (c4.diffChanges().isNotEmpty) { prev[4] = c4; w |= 16; }
+          if (c4.diffChanges().isNotEmpty) {
+            prev[4] = c4;
+            w |= 16;
+          }
         } else if (c4 is Iterable || c4 is Map) {
-          if (!_deepEquals(p4, c4)) { prev[4] = _snapshotValue(c4); w |= 16; }
+          if (!_deepEquals(p4, c4)) {
+            prev[4] = _snapshotValue(c4);
+            w |= 16;
+          }
         }
       }
-      if (w == 0) { _dirtyMask = GraftMask.empty; return GraftMask.empty; }
-      if (w == 31) { _dirtyMask = GraftMask.allBitsUpTo(5); return _dirtyMask; }
-      if ((w & (w - 1)) == 0) { final mask = GraftMask.bit(w.bitLength - 1); _dirtyMask = mask; return mask; }
+      if (w == 0) {
+        _dirtyMask = GraftMask.empty;
+        return GraftMask.empty;
+      }
+      if (w == 31) {
+        _dirtyMask = GraftMask.allBitsUpTo(5);
+        return _dirtyMask;
+      }
+      if ((w & (w - 1)) == 0) {
+        final mask = GraftMask.bit(w.bitLength - 1);
+        _dirtyMask = mask;
+        return mask;
+      }
       final curMask = _dirtyMask;
       if (!curMask.isAllDirty && curMask.matchesWords(w, 0)) return curMask;
       final mask = GraftMask.fromWords(w, 0);
-      _dirtyMask = mask; return mask;
+      _dirtyMask = mask;
+      return mask;
     }
-
 
     int singleDirtyIndex = -1;
     int dirtyCount = 0;
@@ -1652,6 +2025,9 @@ abstract class GraftState {
 
   @pragma('vm:prefer-inline')
   void _dispatchNotification(GraftMask mask) {
+    if (_isDryEnabled) {
+      DryStateHook.onStateUpdated(this);
+    }
     final g = _graft;
     if (g != null) {
       if (g.hasOnlyFastDirectReceiver) {
@@ -1679,6 +2055,7 @@ abstract class GraftState {
   void update({int? itemIndex}) {
     if (itemIndex != null) {
       _version++;
+      if (_isDryEnabled) DryStateHook.onStateUpdated(this);
       _dirtyMask = GraftMask.bit0;
       final g = _graft;
       if (g != null && g.hasItemReceiver(itemIndex)) {
@@ -1687,11 +2064,15 @@ abstract class GraftState {
       }
     }
     final p = _singleBaseline;
-    if (_allScalarProps && _baseline == null && !identical(p, _undefined) && Graft.observer == null) {
+    if (_allScalarProps &&
+        _baseline == null &&
+        !identical(p, _undefined) &&
+        Graft.observer == null) {
       props;
       final c = _pendingSingle;
       if (p == c) return;
       _version++;
+      if (_isDryEnabled) DryStateHook.onStateUpdated(this);
       _singleBaseline = c;
       final g = _graft;
       if (g != null) {
@@ -1718,13 +2099,29 @@ abstract class GraftState {
       final c0 = _s0, c1 = _s1, c2 = _s2, c3 = _s3, c4 = _s4;
       final p0 = _b0, p1 = _b1, p2 = _b2, p3 = _b3, p4 = _b4;
       int w = 0;
-      if (p0 != c0) { _b0 = c0; w |= 1; }
-      if (p1 != c1) { _b1 = c1; w |= 2; }
-      if (p2 != c2) { _b2 = c2; w |= 4; }
-      if (p3 != c3) { _b3 = c3; w |= 8; }
-      if (p4 != c4) { _b4 = c4; w |= 16; }
+      if (p0 != c0) {
+        _b0 = c0;
+        w |= 1;
+      }
+      if (p1 != c1) {
+        _b1 = c1;
+        w |= 2;
+      }
+      if (p2 != c2) {
+        _b2 = c2;
+        w |= 4;
+      }
+      if (p3 != c3) {
+        _b3 = c3;
+        w |= 8;
+      }
+      if (p4 != c4) {
+        _b4 = c4;
+        w |= 16;
+      }
       if (w == 0) return;
       _version++;
+      if (_isDryEnabled) DryStateHook.onStateUpdated(this);
       final g = _graft;
       if (g != null) {
         if (g.hasOnlyFastDirectReceiver) {
@@ -1739,7 +2136,8 @@ abstract class GraftState {
           g.singleListener!();
           return;
         }
-        final mask = w == 31 ? GraftMask.allBitsUpTo(5) : GraftMask.fromWords(w, 0);
+        final mask =
+            w == 31 ? GraftMask.allBitsUpTo(5) : GraftMask.fromWords(w, 0);
         _dirtyMask = mask;
         g.notifyMask(mask);
       }
@@ -1750,18 +2148,31 @@ abstract class GraftState {
       final c0 = _s0, c1 = _s1;
       final p0 = _b0, p1 = _b1;
       int w = 0;
-      if (p0 != c0) { _b0 = c0; w |= 1; }
-      if (p1 != c1) { _b1 = c1; w |= 2; }
+      if (p0 != c0) {
+        _b0 = c0;
+        w |= 1;
+      }
+      if (p1 != c1) {
+        _b1 = c1;
+        w |= 2;
+      }
       if (sc > 2) {
         final c2 = _s2, p2 = _b2;
-        if (p2 != c2) { _b2 = c2; w |= 4; }
+        if (p2 != c2) {
+          _b2 = c2;
+          w |= 4;
+        }
         if (sc > 3) {
           final c3 = _s3, p3 = _b3;
-          if (p3 != c3) { _b3 = c3; w |= 8; }
+          if (p3 != c3) {
+            _b3 = c3;
+            w |= 8;
+          }
         }
       }
       if (w == 0) return;
       _version++;
+      if (_isDryEnabled) DryStateHook.onStateUpdated(this);
       final g = _graft;
       if (g != null) {
         if (g.hasOnlyFastDirectReceiver) {
@@ -1787,10 +2198,13 @@ abstract class GraftState {
     final leaf = _leafState;
     if (leaf != null && Graft.observer == null) {
       _version++;
+      if (_isDryEnabled) DryStateHook.onStateUpdated(this);
       leaf.update();
       return;
     }
-    if (_baseline == null && !identical(p, _undefined) && Graft.observer == null) {
+    if (_baseline == null &&
+        !identical(p, _undefined) &&
+        Graft.observer == null) {
       if (p is List) {
         props;
         final c = _pendingSingle;
@@ -1823,7 +2237,12 @@ abstract class GraftState {
         // ⚡ Direct O(1) leaf state resolution without recursive traversal.
         final cur = _leafState ?? p;
         final leafP = cur._singleBaseline;
-        if (cur._baseline == null && (cur._allScalarProps || leafP is num || leafP is String || leafP is bool || leafP is Enum)) {
+        if (cur._baseline == null &&
+            (cur._allScalarProps ||
+                leafP is num ||
+                leafP is String ||
+                leafP is bool ||
+                leafP is Enum)) {
           cur.props;
           final c = cur._pendingSingle;
           if (leafP == c) return;
@@ -1858,48 +2277,99 @@ abstract class GraftState {
       if (buf != null) {
         if (len == 5) {
           final c0 = buf[0], c1 = buf[1], c2 = buf[2], c3 = buf[3], c4 = buf[4];
-          final p0 = prev[0], p1 = prev[1], p2 = prev[2], p3 = prev[3], p4 = prev[4];
+          final p0 = prev[0],
+              p1 = prev[1],
+              p2 = prev[2],
+              p3 = prev[3],
+              p4 = prev[4];
           int w = 0;
-          if (p0 != c0) { prev[0] = c0; w |= 1; }
-          if (p1 != c1) { prev[1] = c1; w |= 2; }
-          if (p2 != c2) { prev[2] = c2; w |= 4; }
-          if (p3 != c3) { prev[3] = c3; w |= 8; }
-          if (p4 != c4) { prev[4] = c4; w |= 16; }
+          if (p0 != c0) {
+            prev[0] = c0;
+            w |= 1;
+          }
+          if (p1 != c1) {
+            prev[1] = c1;
+            w |= 2;
+          }
+          if (p2 != c2) {
+            prev[2] = c2;
+            w |= 4;
+          }
+          if (p3 != c3) {
+            prev[3] = c3;
+            w |= 8;
+          }
+          if (p4 != c4) {
+            prev[4] = c4;
+            w |= 16;
+          }
           if (w == 0) return;
-          final mask = w == 31 ? GraftMask.allBitsUpTo(5) : GraftMask.fromWords(w, 0);
+          final mask =
+              w == 31 ? GraftMask.allBitsUpTo(5) : GraftMask.fromWords(w, 0);
           _dispatchNotification(mask);
           return;
         } else if (len == 2) {
           final c0 = buf[0], c1 = buf[1];
           final p0 = prev[0], p1 = prev[1];
           int w = 0;
-          if (p0 != c0) { prev[0] = c0; w |= 1; }
-          if (p1 != c1) { prev[1] = c1; w |= 2; }
+          if (p0 != c0) {
+            prev[0] = c0;
+            w |= 1;
+          }
+          if (p1 != c1) {
+            prev[1] = c1;
+            w |= 2;
+          }
           if (w == 0) return;
-          final mask = w == 3 ? GraftMask.allBitsUpTo(2) : (w == 1 ? GraftMask.bit0 : GraftMask.bit1);
+          final mask = w == 3
+              ? GraftMask.allBitsUpTo(2)
+              : (w == 1 ? GraftMask.bit0 : GraftMask.bit1);
           _dispatchNotification(mask);
           return;
         } else if (len == 3) {
           final c0 = buf[0], c1 = buf[1], c2 = buf[2];
           final p0 = prev[0], p1 = prev[1], p2 = prev[2];
           int w = 0;
-          if (p0 != c0) { prev[0] = c0; w |= 1; }
-          if (p1 != c1) { prev[1] = c1; w |= 2; }
-          if (p2 != c2) { prev[2] = c2; w |= 4; }
+          if (p0 != c0) {
+            prev[0] = c0;
+            w |= 1;
+          }
+          if (p1 != c1) {
+            prev[1] = c1;
+            w |= 2;
+          }
+          if (p2 != c2) {
+            prev[2] = c2;
+            w |= 4;
+          }
           if (w == 0) return;
-          final mask = w == 7 ? GraftMask.allBitsUpTo(3) : GraftMask.fromWords(w, 0);
+          final mask =
+              w == 7 ? GraftMask.allBitsUpTo(3) : GraftMask.fromWords(w, 0);
           _dispatchNotification(mask);
           return;
         } else if (len == 4) {
           final c0 = buf[0], c1 = buf[1], c2 = buf[2], c3 = buf[3];
           final p0 = prev[0], p1 = prev[1], p2 = prev[2], p3 = prev[3];
           int w = 0;
-          if (p0 != c0) { prev[0] = c0; w |= 1; }
-          if (p1 != c1) { prev[1] = c1; w |= 2; }
-          if (p2 != c2) { prev[2] = c2; w |= 4; }
-          if (p3 != c3) { prev[3] = c3; w |= 8; }
+          if (p0 != c0) {
+            prev[0] = c0;
+            w |= 1;
+          }
+          if (p1 != c1) {
+            prev[1] = c1;
+            w |= 2;
+          }
+          if (p2 != c2) {
+            prev[2] = c2;
+            w |= 4;
+          }
+          if (p3 != c3) {
+            prev[3] = c3;
+            w |= 8;
+          }
           if (w == 0) return;
-          final mask = w == 15 ? GraftMask.allBitsUpTo(4) : GraftMask.fromWords(w, 0);
+          final mask =
+              w == 15 ? GraftMask.allBitsUpTo(4) : GraftMask.fromWords(w, 0);
           _dispatchNotification(mask);
           return;
         }
@@ -1912,6 +2382,7 @@ abstract class GraftState {
     }
     final mask = diffChanges();
     if (mask.isNotEmpty) {
+      if (_isDryEnabled) DryStateHook.onStateUpdated(this);
       if (hasObserver) {
         _graft?.notifyMask(
           mask,
@@ -1955,6 +2426,9 @@ class _Sentinel {
 abstract final class GraftProps extends Iterable<Object?> {
   const GraftProps();
 
+  /// Creates a [GraftProps] instance wrapping [list].
+  factory GraftProps.fromList(List<Object?> list) => _GraftPropsList(list);
+
   /// Gets the property value at [index].
   Object? operator [](int index);
 
@@ -1966,6 +2440,20 @@ abstract final class GraftProps extends Iterable<Object?> {
 
   @override
   bool get isNotEmpty => length > 0;
+}
+
+final class _GraftPropsList extends GraftProps {
+  final List<Object?> _list;
+  const _GraftPropsList(this._list);
+
+  @override
+  Object? operator [](int index) => _list[index];
+
+  @override
+  int get length => _list.length;
+
+  @override
+  Iterator<Object?> get iterator => _list.iterator;
 }
 
 final class _EmptyGraftProps extends GraftProps {
@@ -2075,5 +2563,3 @@ final class _SingleIterator implements Iterator<Object?> {
     return false;
   }
 }
-
-

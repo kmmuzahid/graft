@@ -1,30 +1,8 @@
 import 'package:flutter/foundation.dart';
 import '../core/graft.dart';
+import 'graft_di.dart';
 
 /// Type-safe factory registry for resolving, instantiating, and scoping [Graft] instances.
-///
-/// ### Why use GraftRegistry?
-/// - **Zero MultiProvider Nesting:** No need to wrap your widget tree in 15 layers of Providers/BlocProviders.
-/// - **Route-Scoped by Default:** Register once at startup; screens resolve and inherit dependencies
-///   naturally across the navigation stack via `context.use<T>()`.
-/// - **Global Singletons on Demand:** Easily declare persistent singletons via [registerSingleton]
-///   that survive route pops and remain alive for the lifetime of the application.
-/// - **External DI Interop:** Seamlessly integrates with GetIt, Injectable, or any custom locator
-///   via [fallbackLocator].
-///
-/// ### Startup Setup:
-/// ```dart
-/// void main() {
-///   // 1. Route-scoped: created when first screen asks, disposed when owner route pops
-///   GraftRegistry.register(UserGraft.new);
-///   GraftRegistry.register(OrderGraft.new);
-///
-///   // 2. Global Singleton: shared app-wide, never disposed by route pops
-///   GraftRegistry.registerSingleton(AuthGraft.new);
-///
-///   runApp(const MyApp());
-/// }
-/// ```
 class GraftRegistry {
   GraftRegistry._();
 
@@ -37,41 +15,11 @@ class GraftRegistry {
   static final Set<Type> _isNewCreateDisabled = {};
 
   /// Optional fallback resolver (e.g. `GetIt.I<T>`).
-  ///
-  /// ### Why set a fallback locator?
-  /// If your project already uses a service locator like GetIt or Kiwi, you don't need
-  /// to re-register every Graft in [GraftRegistry]. Setting [fallbackLocator] allows
-  /// Graft to automatically query your existing container when a type is not registered here.
-  ///
-  /// ### Example:
-  /// ```dart
-  /// void main() {
-  ///   GraftRegistry.fallbackLocator = <T extends Object>() => GetIt.I<T>();
-  ///   runApp(const MyApp());
-  /// }
-  /// ```
   static T Function<T extends Object>()? fallbackLocator;
 
   /// Registers a factory for a given [Graft] type [T].
-  ///
-  /// ### Scoping & Lifecycle:
-  /// - When [allowNew] is `true` (default):
-  ///   The Graft is **Route-Scoped**. It is created on the first screen that calls
-  ///   `context.use<T>()`, inherited by pushed routes in the stack, and automatically
-  ///   disposed when the owner route pops. Fresh instances can also be created via `context.create<T>()`.
-  ///
-  /// - When [allowNew] is `false`:
-  ///   The Graft is locked as a **Global Singleton**:
-  ///   1. Only one instance is ever created for the entire application.
-  ///   2. Neither `context.use<T>()` nor `context.create<T>()` will ever create a new instance;
-  ///      they will always return this exact shared instance.
-  ///   3. It is **never disposed** by any route pop!
-  ///
-  /// ### Example:
-  /// ```dart
-  /// // Route-scoped (default):
-  /// GraftRegistry.register(UserGraft.new);
-  /// ```
+  /// When [allowNew] is `true` (default), the Graft is Route-Scoped.
+  /// When [allowNew] is `false`, it is locked as an app-wide Global Singleton.
   static void register<T extends Graft>(
     T Function() factory, {
     bool allowNew = true,
@@ -160,7 +108,7 @@ class GraftRegistry {
   /// }
   /// ```
   static bool isRegistered<T extends Graft>() {
-    return _factories.containsKey(T);
+    return _factories.containsKey(T) || GraftDI.root.isRegistered<T>();
   }
 
   /// Creates a new instance of [T] using its registered factory or [fallbackLocator].
@@ -175,6 +123,10 @@ class GraftRegistry {
     final factory = _factories[T];
     if (factory != null) {
       return factory() as T;
+    }
+
+    if (GraftDI.root.isRegistered<T>()) {
+      return GraftDI.root.resolve<T>();
     }
 
     if (fallbackLocator != null) {

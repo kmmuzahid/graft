@@ -2,7 +2,7 @@ name: graft
 description: >-
   Self-optimizing state management engine for Flutter: BLoC-style domain models,
   Signals-level micro-rebuild precision, and register-level CPU bitmask diffing.
-version: 0.1.2-alpha.5
+version: 1.0.0-alpha.1
 homepage: https://github.com/kmmuzahid/graft
 repository: https://github.com/kmmuzahid/graft
 issue_tracker: https://github.com/kmmuzahid/graft/issues
@@ -31,4 +31,5 @@ dev_dependencies:
   signals_flutter: ^5.5.0
   get: ^4.6.6
   provider: ^6.1.5+1
+  sqlite3: ^3.7.1
 

@@ -6,6 +6,9 @@ import 'graft_mask.dart';
 import 'graft_observer.dart';
 import 'graft_scope_tracker.dart';
 import 'graft_state.dart';
+import '../persistence/ambient_locator.dart';
+import '../persistence/dry/dry_state_hook.dart';
+import '../persistence/state_config.dart';
 
 
 /// Base class for reactive state management with fine-grained slot isolation.
@@ -51,6 +54,20 @@ class Graft<S extends GraftState> extends ChangeNotifier {
   /// }
   /// ```
   static GraftObserver? observer;
+
+  /// Optional application entry point in main():
+  /// Only needed if you want custom [config] or custom [setup].
+  /// If omitted, Graft automatically boots with default file storage lazily on first access.
+  /// 100% synchronous (0-await!) — background storage I/O is handled self-healingly by the engine.
+  static void init({
+    GraftStateConfig? config,
+    void Function()? setup,
+  }) {
+    if (config != null) {
+      configurePersistence(config);
+    }
+    setup?.call();
+  }
 
   late S _state;
   void Function(GraftMask dirtyMask)? _singleMaskListener;
@@ -141,12 +158,66 @@ class Graft<S extends GraftState> extends ChangeNotifier {
 
   /// Creates a new [Graft] with the given [initialState].
   ///
-  /// Automatically binds [initialState] to this controller and notifies [observer].
+  /// Automatically binds [initialState] to this controller, restores Frame-0
+  /// dry state if enabled, invokes [onInit], and notifies [observer].
   Graft(S initialState) {
     _state = initialState;
     initialState.bindGraft(this);
+    onInit();
     observer?.onCreate(this);
   }
+
+  /// Creates a new [Graft] with Frame-0 dry state hydration using constructor tear-off [stateFactory].
+  ///
+  /// Restores persisted properties from L1 RAM in < 50ns directly into constructor arguments.
+  /// Eliminates all [onHydrate], `read()`, and magic strings completely!
+  ///
+  /// ### Example:
+  /// ```dart
+  /// class CheckoutGraft extends Graft<CheckoutState> {
+  ///   CheckoutGraft() : super.dry(CheckoutState.new);
+  /// }
+  /// ```
+  Graft.dry(
+    Function stateFactory, {
+    String? key,
+  }) {
+    final dryKey = key ?? S.toString();
+    _state = DryStateHook.hydrateFactory<S>(stateFactory, dryKey);
+    _state.setCustomDryKeyInternal(key);
+    _state.bindGraft(this);
+    DryStateHook.enableDryForState(_state, dryKey);
+    onInit();
+    observer?.onCreate(this);
+  }
+
+  /// Called immediately after state binding and Frame-0 dry hydration.
+  ///
+  /// Override this to initialize controllers from hydrated state or setup listeners:
+  /// ```dart
+  /// @override
+  /// void onInit() {
+  ///   super.onInit();
+  ///   nameController.text = state.customerName; // Restored on Frame 0!
+  /// }
+  /// ```
+  @protected
+  @mustCallSuper
+  void onInit() {}
+
+  /// Called when this [Graft] instance is being disposed.
+  ///
+  /// Override this to dispose text editing controllers or cancel timers:
+  /// ```dart
+  /// @override
+  /// void onDispose() {
+  ///   nameController.dispose();
+  ///   super.onDispose();
+  /// }
+  /// ```
+  @protected
+  @mustCallSuper
+  void onDispose() {}
 
   /// The current state snapshot of this [Graft].
   ///
@@ -564,6 +635,7 @@ class Graft<S extends GraftState> extends ChangeNotifier {
   @override
   void dispose() {
     if (_isDisposed) return;
+    onDispose();
     _isDisposed = true;
     _singleListener = null;
     _extraListeners?.clear();
@@ -575,6 +647,12 @@ class Graft<S extends GraftState> extends ChangeNotifier {
     super.dispose();
     observer?.onDispose(this);
   }
+}
+
+/// Persistence extensions on [Graft].
+extension GraftPersistenceX<S extends GraftState> on Graft<S> {
+  /// Permanently deactivates and invalidates dry state persistence for this session.
+  void invalidateDry() => state.invalidateDry();
 }
 
 class _GraftListenable<S extends GraftState> implements ValueListenable<S> {

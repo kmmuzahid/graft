@@ -17,28 +17,6 @@ This benchmark suite evaluates **Graft** against the six primary Flutter state m
 
 ---
 
-## ⚖️ Cross-Platform Executive Scorecard: Native IO vs. Web
-
-| Benchmark Scenario | Metric / Unit | Native IO Winner | Native IO Graft (Rank & Gap) | Web Browser Winner | Web Browser Graft (Rank & Gap) |
-| :--- | :--- | :---: | :---: | :---: | :---: |
-| **A1: 10,000 Synchronous Increments** | Latency (ms) | 🥇 **Graft (0.10 ms)** | — | 🥇 Provider (0.62 ms) | 🥉 **1.21 ms (#3, +0.59ms)** |
-| **A2: 100,000 Micro-State Mutations** | Latency (ms) | 🥇 **Graft (0.66 ms)** | — | 🥇 Provider (4.77 ms) | 🥉 **13.10 ms (#3, +8.33ms)** |
-| **A3: 5-Field Atomic Batch Mutation** | Latency (ms) | 🥇 **Graft (0.12 ms)** | — | 🥇 Provider (0.72 ms) | 4th · **3.69 ms (#4, +2.97ms)** |
-| **A4: Depth-8 Nested Sub-State Mutation** | Latency (ms) | 🥇 **Graft (0.01 ms)** | — | 🥇 Provider (0.11 ms) | 🥈 **0.13 ms (#2, +0.02ms)** |
-| **B1: 10-Slot Column Layout (120 Frames)** | Render Time (ms) | 🥇 Provider (16.06 ms) | 🥈 **23.36 ms (#2, +7.30ms)** | 🥇 Riverpod (76.37 ms) | 4th · **78.29 ms (#4, +1.92ms)** |
-| **B2: 50-Slot Heavy Layout (120 Frames)** | Render Time (ms) | 🥇 Riverpod (24.74 ms) | 🥈 **24.83 ms (#2, +0.09ms)** | 🥇 **Graft (168.55 ms)** | — |
-| **C1: 5,000 Item List (300 Rapid Updates)** | Throughput (ms) | 🥇 **Graft (28.99 ms)** | — | 🥇 **Graft (136.11 ms)** | — |
-| **C2: 20,000 Item List (300 Rapid Updates)**| Throughput (ms) | 🥇 **Graft (31.02 ms)** | — | 🥇 **Graft (136.29 ms)** | — |
-| **C3: Random Item Insert / Delete (100x)**  | Latency (ms) | 🥇 **Graft (0.30 ms)** | — | 🥇 **Graft (0.07 ms)** | — |
-| **D1: Product Catalog & Shopping Cart**    | Latency (ms) | 🥇 **Graft (0.02 ms)** | — | 🥇 **Graft (0.03 ms)** | — |
-| **D2: Form (12 Interdependent Fields)**    | Latency (ms) | 🥇 **Graft (0.06 ms)** | — | 🥇 BLoC (0.06 ms) | 🥈 **0.07 ms (#2, +0.01ms)** |
-| **D3: Navigation & Dialog State Sharing**  | Latency (ms) | 🥇 **Graft (2.54 ms)** | — | 🥇 **Graft (8.17 ms)** | — |
-| **E1: Route Stack Push / Pop Lifecycle**   | Latency (ms) | 🥇 **Graft (6.05 ms)** | — | 🥇 **Graft (17.28 ms)** | — |
-| **E2: Hot Reload Reassemble Simulation**   | Latency (ms) | 🥇 **Graft (0.92 ms)** | — | 🥇 **Graft (3.35 ms)** | — |
-| **E3: Disposed Controller Access Safety**  | Safety (ms)  | 🥇 **Graft (0.00 ms)** | — | 🥇 **Graft (0.00 ms)** | — |
-
----
-
 ## ⚙️ Environment & Methodology
 
 | Specification | Value |
@@ -59,143 +37,143 @@ This benchmark suite evaluates **Graft** against the six primary Flutter state m
 
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | State Churn |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **Graft** | 0.09 | 0.09 | 0.10 | 0.09 | 0.10 | 0.00 | 0 | 0 | 0 (Zero-GC) |
-| 🥈 | **BLoC (Cubit)** | 0.14 | 0.13 | 0.16 | 0.12 | 0.16 | 0.01 | 0 | 0 | 0 (Zero-GC) |
-| 🥉 | **Provider** | 0.14 | 0.14 | 0.16 | 0.12 | 0.21 | 0.02 | 0 | 0 | 0 (Zero-GC) |
-| 4 | **GetX** | 0.18 | 0.17 | 0.20 | 0.16 | 0.22 | 0.02 | 0 | 0 | 0 (Zero-GC) |
-| 5 | **Riverpod (StateNotifier)** | 0.93 | 0.93 | 0.98 | 0.87 | 1.06 | 0.05 | 0 | 0 | 0 (Zero-GC) |
-| 6 | **Signals** | 2.54 | 2.53 | 2.63 | 2.47 | 2.64 | 0.05 | 0 | 0 | 0 (Zero-GC) |
-| 7 | **Riverpod (Notifier)** | 4.42 | 3.56 | 5.98 | 3.50 | 10.55 | 1.85 | 0 | 0 | 0 (Zero-GC) |
+| 🥇 | **Graft** | 0.09 | 0.09 | 0.10 | 0.08 | 0.11 | 0.01 | 0 | 0 | 0 (Zero-GC) |
+| 🥈 | **Provider** | 0.15 | 0.14 | 0.16 | 0.14 | 0.32 | 0.05 | 0 | 0 | 0 (Zero-GC) |
+| 🥉 | **GetX** | 0.18 | 0.15 | 0.19 | 0.14 | 0.45 | 0.08 | 0 | 0 | 0 (Zero-GC) |
+| 4 | **BLoC (Cubit)** | 0.21 | 0.14 | 0.16 | 0.14 | 1.15 | 0.26 | 0 | 0 | 0 (Zero-GC) |
+| 5 | **Riverpod (StateNotifier)** | 0.95 | 0.87 | 1.20 | 0.81 | 1.35 | 0.15 | 0 | 0 | 0 (Zero-GC) |
+| 6 | **Signals** | 2.77 | 2.75 | 2.97 | 2.57 | 3.08 | 0.15 | 0 | 0 | 0 (Zero-GC) |
+| 7 | **Riverpod (Notifier)** | 4.03 | 3.57 | 5.18 | 3.51 | 5.42 | 0.72 | 0 | 0 | 0 (Zero-GC) |
 
 ### 🔹 Scenario: A2_100k_increments
 
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | State Churn |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **Graft** | 0.65 | 0.65 | 0.67 | 0.61 | 0.67 | 0.02 | 0 | 0 | 0 (Zero-GC) |
-| 🥈 | **Provider** | 1.32 | 1.33 | 1.35 | 1.23 | 1.35 | 0.03 | 0 | 0 | 0 (Zero-GC) |
-| 🥉 | **GetX** | 1.85 | 1.87 | 1.89 | 1.79 | 1.90 | 0.03 | 0 | 0 | 0 (Zero-GC) |
-| 4 | **BLoC (Cubit)** | 4.09 | 3.78 | 8.76 | 1.25 | 8.83 | 2.62 | 0 | 0 | 0 (Zero-GC) |
-| 5 | **Riverpod (Notifier)** | 5.75 | 5.74 | 5.83 | 5.64 | 5.90 | 0.07 | 0 | 0 | 0 (Zero-GC) |
-| 6 | **Riverpod (StateNotifier)** | 8.98 | 8.95 | 9.17 | 8.78 | 9.19 | 0.11 | 0 | 0 | 0 (Zero-GC) |
-| 7 | **Signals** | 23.90 | 23.85 | 24.12 | 23.68 | 24.23 | 0.15 | 0 | 0 | 0 (Zero-GC) |
+| 🥇 | **Graft** | 0.70 | 0.69 | 0.71 | 0.68 | 0.87 | 0.05 | 0 | 0 | 0 (Zero-GC) |
+| 🥈 | **Provider** | 1.32 | 1.31 | 1.35 | 1.26 | 1.39 | 0.03 | 0 | 0 | 0 (Zero-GC) |
+| 🥉 | **GetX** | 1.48 | 1.48 | 1.51 | 1.44 | 1.52 | 0.02 | 0 | 0 | 0 (Zero-GC) |
+| 4 | **BLoC (Cubit)** | 3.97 | 3.43 | 7.85 | 1.24 | 8.23 | 2.39 | 0 | 0 | 0 (Zero-GC) |
+| 5 | **Riverpod (Notifier)** | 5.26 | 5.24 | 5.41 | 5.20 | 5.45 | 0.08 | 0 | 0 | 0 (Zero-GC) |
+| 6 | **Riverpod (StateNotifier)** | 8.17 | 8.18 | 8.26 | 7.97 | 8.30 | 0.08 | 0 | 0 | 0 (Zero-GC) |
+| 7 | **Signals** | 24.53 | 24.15 | 24.54 | 23.54 | 30.58 | 1.70 | 0 | 0 | 0 (Zero-GC) |
 
 ### 🔹 Scenario: A3_multi_field_5
 
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | State Churn |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **Graft** | 0.12 | 0.12 | 0.14 | 0.11 | 0.14 | 0.01 | 0 | 0 | 0 (Zero-GC) |
-| 🥈 | **Provider** | 0.16 | 0.15 | 0.17 | 0.14 | 0.23 | 0.02 | 0 | 0 | 0 (Zero-GC) |
-| 🥉 | **GetX** | 0.49 | 0.49 | 0.51 | 0.46 | 0.51 | 0.02 | 0 | 0 | 0 (Zero-GC) |
-| 4 | **BLoC (Cubit)** | 0.69 | 0.20 | 2.61 | 0.19 | 5.06 | 1.36 | 0 | 0 | 10000 |
-| 5 | **Riverpod (Notifier)** | 0.71 | 0.69 | 0.80 | 0.63 | 0.88 | 0.06 | 0 | 0 | 10000 |
-| 6 | **Riverpod (StateNotifier)** | 1.00 | 1.00 | 1.03 | 0.94 | 1.04 | 0.03 | 0 | 0 | 10000 |
-| 7 | **Signals** | 9.13 | 9.11 | 9.31 | 8.94 | 9.48 | 0.14 | 0 | 0 | 0 (Zero-GC) |
+| 🥇 | **Graft** | 0.12 | 0.12 | 0.14 | 0.11 | 0.15 | 0.01 | 0 | 0 | 0 (Zero-GC) |
+| 🥈 | **Provider** | 0.16 | 0.15 | 0.17 | 0.14 | 0.24 | 0.02 | 0 | 0 | 0 (Zero-GC) |
+| 🥉 | **GetX** | 0.40 | 0.40 | 0.43 | 0.38 | 0.45 | 0.02 | 0 | 0 | 0 (Zero-GC) |
+| 4 | **BLoC (Cubit)** | 0.49 | 0.20 | 1.69 | 0.19 | 2.97 | 0.79 | 0 | 0 | 10000 |
+| 5 | **Riverpod (Notifier)** | 0.63 | 0.62 | 0.73 | 0.59 | 0.74 | 0.05 | 0 | 0 | 10000 |
+| 6 | **Riverpod (StateNotifier)** | 0.84 | 0.83 | 0.91 | 0.77 | 0.91 | 0.04 | 0 | 0 | 10000 |
+| 7 | **Signals** | 9.04 | 9.03 | 9.09 | 8.94 | 9.11 | 0.05 | 0 | 0 | 0 (Zero-GC) |
 
 ### 🔹 Scenario: A4_depth8_nested
 
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | State Churn |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **Graft** | 0.01 | 0.01 | 0.01 | 0.01 | 0.05 | 0.01 | 0 | 0 | 0 (Zero-GC) |
-| 🥈 | **GetX** | 0.12 | 0.12 | 0.17 | 0.10 | 0.18 | 0.03 | 0 | 0 | 0 (Zero-GC) |
-| 🥉 | **Provider** | 0.19 | 0.17 | 0.29 | 0.15 | 0.33 | 0.05 | 0 | 0 | 0 (Zero-GC) |
-| 4 | **BLoC (Cubit)** | 0.50 | 0.42 | 0.44 | 0.40 | 1.66 | 0.32 | 0 | 0 | 8000 |
-| 5 | **Riverpod (Notifier)** | 0.58 | 0.58 | 0.64 | 0.54 | 0.64 | 0.03 | 0 | 0 | 8000 |
-| 6 | **Riverpod (StateNotifier)** | 0.66 | 0.67 | 0.68 | 0.61 | 0.68 | 0.02 | 0 | 0 | 8000 |
-| 7 | **Signals** | 0.90 | 0.69 | 1.79 | 0.67 | 2.04 | 0.43 | 0 | 0 | 0 (Zero-GC) |
+| 🥇 | **Graft** | 0.01 | 0.01 | 0.03 | 0.01 | 0.04 | 0.01 | 0 | 0 | 0 (Zero-GC) |
+| 🥈 | **GetX** | 0.08 | 0.08 | 0.09 | 0.07 | 0.10 | 0.01 | 0 | 0 | 0 (Zero-GC) |
+| 🥉 | **Provider** | 0.17 | 0.17 | 0.20 | 0.15 | 0.23 | 0.02 | 0 | 0 | 0 (Zero-GC) |
+| 4 | **BLoC (Cubit)** | 0.42 | 0.42 | 0.44 | 0.41 | 0.44 | 0.01 | 0 | 0 | 8000 |
+| 5 | **Riverpod (Notifier)** | 0.65 | 0.56 | 0.64 | 0.53 | 1.76 | 0.31 | 0 | 0 | 8000 |
+| 6 | **Riverpod (StateNotifier)** | 0.78 | 0.71 | 0.78 | 0.66 | 1.72 | 0.26 | 0 | 0 | 8000 |
+| 7 | **Signals** | 0.85 | 0.66 | 0.67 | 0.63 | 3.63 | 0.77 | 0 | 0 | 0 (Zero-GC) |
 
 ### 🔹 Scenario: B1_10_slot_column_120_frames
 
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | State Churn |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **GetX** | 20.97 | 20.45 | 25.13 | 17.94 | 26.86 | 2.59 | 120 | 0 | 0 (Zero-GC) |
-| 🥈 | **Riverpod (Notifier)** | 22.08 | 21.95 | 24.26 | 18.56 | 26.92 | 2.23 | 120 | 0 | 0 (Zero-GC) |
-| 🥉 | **Signals** | 22.12 | 22.80 | 27.27 | 15.02 | 27.65 | 4.25 | 120 | 0 | 0 (Zero-GC) |
-| 4 | **Graft (slots)** | 24.26 | 23.93 | 27.65 | 19.73 | 33.30 | 3.57 | 120 | 0 | 0 (Zero-GC) |
-| 5 | **Graft (leaf slot)** | 24.38 | 24.42 | 28.98 | 19.15 | 31.63 | 3.77 | 120 | 0 | 0 (Zero-GC) |
-| 6 | **Provider** | 27.59 | 27.38 | 35.52 | 18.94 | 42.11 | 6.40 | 120 | 0 | 0 (Zero-GC) |
-| 7 | **BLoC (Cubit)** | 28.45 | 29.01 | 45.49 | 14.86 | 49.70 | 11.92 | 120 | 0 | 0 (Zero-GC) |
-| 8 | **Riverpod (StateNotifier)** | 29.02 | 26.82 | 36.06 | 19.55 | 45.59 | 7.04 | 120 | 0 | 0 (Zero-GC) |
+| 🥇 | **Signals** | 17.70 | 14.77 | 25.71 | 13.51 | 26.71 | 4.63 | 120 | 0 | 0 (Zero-GC) |
+| 🥈 | **BLoC (Cubit)** | 19.25 | 18.39 | 22.78 | 15.98 | 29.53 | 3.52 | 120 | 0 | 0 (Zero-GC) |
+| 🥉 | **Riverpod (StateNotifier)** | 21.07 | 19.86 | 28.86 | 14.00 | 29.35 | 5.18 | 120 | 0 | 0 (Zero-GC) |
+| 4 | **Provider** | 24.83 | 23.43 | 31.57 | 18.33 | 35.61 | 4.45 | 120 | 0 | 0 (Zero-GC) |
+| 5 | **Riverpod (Notifier)** | 25.25 | 23.51 | 33.12 | 16.66 | 44.60 | 6.71 | 120 | 0 | 0 (Zero-GC) |
+| 6 | **Graft (leaf slot)** | 27.26 | 25.31 | 35.74 | 19.29 | 37.97 | 6.10 | 120 | 0 | 0 (Zero-GC) |
+| 7 | **GetX** | 29.17 | 29.65 | 39.98 | 17.12 | 45.23 | 9.71 | 120 | 0 | 0 (Zero-GC) |
+| 8 | **Graft (slots)** | 40.50 | 27.27 | 80.56 | 21.20 | 147.57 | 33.30 | 120 | 0 | 0 (Zero-GC) |
 
 ### 🔹 Scenario: B2_50_slot_column_120_frames
 
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | State Churn |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **Graft (leaf slot)** | 25.33 | 25.07 | 26.23 | 24.56 | 27.80 | 0.84 | 120 | 0 | 0 (Zero-GC) |
-| 🥈 | **Graft (slots)** | 27.39 | 27.34 | 28.41 | 26.26 | 29.02 | 0.95 | 120 | 0 | 0 (Zero-GC) |
-| 🥉 | **Riverpod (Notifier)** | 27.64 | 27.41 | 31.80 | 25.70 | 31.93 | 2.05 | 120 | 0 | 0 (Zero-GC) |
-| 4 | **GetX** | 28.30 | 28.11 | 29.45 | 26.92 | 30.45 | 1.04 | 120 | 0 | 0 (Zero-GC) |
-| 5 | **BLoC (Cubit)** | 28.44 | 28.34 | 30.11 | 27.09 | 30.32 | 1.14 | 120 | 0 | 0 (Zero-GC) |
-| 6 | **Provider** | 29.59 | 29.11 | 31.27 | 27.90 | 31.97 | 1.27 | 120 | 0 | 0 (Zero-GC) |
-| 7 | **Signals** | 29.76 | 29.08 | 31.50 | 27.65 | 34.66 | 1.80 | 120 | 0 | 0 (Zero-GC) |
-| 8 | **Riverpod (StateNotifier)** | 32.61 | 30.62 | 34.90 | 28.42 | 57.91 | 7.21 | 120 | 0 | 0 (Zero-GC) |
+| 🥇 | **Graft (leaf slot)** | 25.18 | 24.74 | 26.51 | 23.57 | 27.85 | 1.15 | 120 | 0 | 0 (Zero-GC) |
+| 🥈 | **GetX** | 26.17 | 26.05 | 28.14 | 24.55 | 28.72 | 1.29 | 120 | 0 | 0 (Zero-GC) |
+| 🥉 | **Riverpod (StateNotifier)** | 27.59 | 26.37 | 30.49 | 24.91 | 34.51 | 2.48 | 120 | 0 | 0 (Zero-GC) |
+| 4 | **Signals** | 28.38 | 27.91 | 31.45 | 26.44 | 32.39 | 1.92 | 120 | 0 | 0 (Zero-GC) |
+| 5 | **BLoC (Cubit)** | 28.55 | 26.78 | 30.37 | 24.92 | 47.87 | 5.51 | 120 | 0 | 0 (Zero-GC) |
+| 6 | **Provider** | 28.69 | 28.25 | 30.52 | 26.29 | 30.98 | 1.37 | 120 | 0 | 0 (Zero-GC) |
+| 7 | **Graft (slots)** | 31.94 | 27.36 | 52.61 | 24.17 | 53.08 | 10.05 | 120 | 0 | 0 (Zero-GC) |
+| 8 | **Riverpod (Notifier)** | 48.81 | 45.22 | 60.67 | 35.35 | 90.02 | 13.25 | 120 | 0 | 0 (Zero-GC) |
 
 ### 🔹 Scenario: C1_5k_items_300_rapid_updates
 
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | State Churn |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **Graft** | 30.18 | 29.46 | 31.30 | 28.67 | 37.66 | 2.21 | 300 | 0 | 0 (Zero-GC) |
-| 🥈 | **Riverpod (Notifier)** | 35.47 | 34.68 | 37.94 | 32.03 | 48.89 | 4.06 | 300 | 0 | 300 |
-| 🥉 | **Signals** | 35.70 | 34.49 | 38.16 | 32.05 | 52.20 | 4.91 | 300 | 0 | 0 (Zero-GC) |
-| 4 | **BLoC (Cubit)** | 49.68 | 48.76 | 50.41 | 46.66 | 65.47 | 4.45 | 300 | 0 | 300 |
-| 5 | **Provider** | 60.28 | 60.33 | 61.79 | 57.83 | 61.88 | 1.35 | 300 | 0 | 300 |
-| 6 | **GetX** | 72.29 | 70.04 | 78.67 | 66.32 | 88.03 | 5.81 | 300 | 0 | 0 (Zero-GC) |
+| 🥇 | **Graft** | 28.95 | 28.75 | 30.83 | 27.31 | 31.19 | 1.20 | 300 | 0 | 0 (Zero-GC) |
+| 🥈 | **Riverpod (Notifier)** | 31.38 | 30.64 | 32.40 | 29.29 | 42.57 | 3.20 | 300 | 0 | 300 |
+| 🥉 | **Signals** | 34.91 | 33.13 | 48.87 | 28.84 | 55.35 | 7.49 | 300 | 0 | 0 (Zero-GC) |
+| 4 | **BLoC (Cubit)** | 47.65 | 45.36 | 51.38 | 43.98 | 70.67 | 6.72 | 300 | 0 | 300 |
+| 5 | **Provider** | 58.10 | 57.73 | 60.22 | 55.73 | 61.85 | 1.73 | 300 | 0 | 300 |
+| 6 | **GetX** | 77.39 | 70.41 | 106.41 | 65.36 | 116.98 | 15.42 | 300 | 0 | 0 (Zero-GC) |
 
 ### 🔹 Scenario: C2_20k_items_300_rapid_updates
 
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | State Churn |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **Graft** | 33.37 | 32.71 | 35.38 | 32.06 | 36.26 | 1.40 | 300 | 0 | 0 (Zero-GC) |
-| 🥈 | **Signals** | 42.33 | 40.31 | 62.80 | 35.84 | 64.64 | 8.88 | 300 | 0 | 0 (Zero-GC) |
-| 🥉 | **Riverpod (Notifier)** | 49.53 | 48.06 | 51.63 | 45.76 | 70.03 | 5.91 | 300 | 0 | 300 |
-| 4 | **BLoC (Cubit)** | 66.93 | 65.43 | 66.54 | 62.21 | 95.06 | 7.90 | 300 | 0 | 300 |
-| 5 | **GetX** | 78.06 | 76.10 | 78.35 | 73.02 | 107.28 | 8.23 | 300 | 0 | 0 (Zero-GC) |
-| 6 | **Provider** | 81.76 | 79.82 | 88.34 | 73.07 | 109.30 | 8.46 | 300 | 0 | 300 |
+| 🥇 | **Graft** | 30.60 | 29.99 | 32.07 | 29.52 | 33.80 | 1.18 | 300 | 0 | 0 (Zero-GC) |
+| 🥈 | **Signals** | 38.95 | 36.55 | 59.55 | 32.89 | 60.45 | 8.84 | 300 | 0 | 0 (Zero-GC) |
+| 🥉 | **Riverpod (Notifier)** | 47.72 | 45.91 | 49.22 | 44.38 | 68.33 | 5.85 | 300 | 0 | 300 |
+| 4 | **BLoC (Cubit)** | 61.85 | 59.97 | 64.38 | 57.19 | 87.17 | 7.19 | 300 | 0 | 300 |
+| 5 | **GetX** | 78.68 | 74.24 | 94.07 | 70.64 | 114.10 | 11.63 | 300 | 0 | 0 (Zero-GC) |
+| 6 | **Provider** | 79.00 | 77.04 | 81.76 | 71.70 | 104.80 | 7.56 | 300 | 0 | 300 |
 
 ### 🔹 Scenario: C3_random_insert_remove_100x
 
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | State Churn |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **Graft** | 0.30 | 0.29 | 0.32 | 0.27 | 0.42 | 0.04 | 0 | 0 | 0 (Zero-GC) |
-| 🥈 | **BLoC (Cubit)** | 0.80 | 0.48 | 0.63 | 0.45 | 5.15 | 1.20 | 0 | 0 | 0 (Zero-GC) |
-| 🥉 | **Provider** | 0.91 | 0.45 | 3.88 | 0.43 | 3.93 | 1.22 | 0 | 0 | 0 (Zero-GC) |
-| 4 | **GetX (RxList)** | 0.94 | 0.94 | 0.97 | 0.91 | 0.98 | 0.02 | 0 | 0 | 0 (Zero-GC) |
-| 5 | **Riverpod (Notifier)** | 1.19 | 0.46 | 4.24 | 0.41 | 4.28 | 1.53 | 0 | 0 | 0 (Zero-GC) |
+| 🥇 | **Graft** | 0.29 | 0.29 | 0.31 | 0.28 | 0.31 | 0.01 | 0 | 0 | 0 (Zero-GC) |
+| 🥈 | **GetX (RxList)** | 0.86 | 0.85 | 0.89 | 0.83 | 1.00 | 0.04 | 0 | 0 | 0 (Zero-GC) |
+| 🥉 | **Provider** | 0.92 | 0.46 | 3.86 | 0.41 | 4.12 | 1.25 | 0 | 0 | 0 (Zero-GC) |
+| 4 | **BLoC (Cubit)** | 1.08 | 0.48 | 4.82 | 0.45 | 5.21 | 1.60 | 0 | 0 | 0 (Zero-GC) |
+| 5 | **Riverpod (Notifier)** | 1.16 | 0.46 | 3.89 | 0.41 | 4.23 | 1.46 | 0 | 0 | 0 (Zero-GC) |
 
 ### 🔹 Scenario: D1_product_catalog_and_cart
 
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | State Churn |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **Graft** | 0.02 | 0.02 | 0.02 | 0.01 | 0.02 | 0.00 | 0 | 0 | 0 (Zero-GC) |
-| 🥈 | **Signals** | 0.02 | 0.02 | 0.02 | 0.02 | 0.04 | 0.01 | 0 | 0 | 0 (Zero-GC) |
-| 🥉 | **BLoC (Cubit)** | 0.02 | 0.02 | 0.03 | 0.02 | 0.03 | 0.00 | 0 | 0 | 40 |
+| 🥇 | **Graft** | 0.02 | 0.02 | 0.02 | 0.02 | 0.03 | 0.00 | 0 | 0 | 0 (Zero-GC) |
+| 🥈 | **Signals** | 0.02 | 0.02 | 0.02 | 0.02 | 0.07 | 0.01 | 0 | 0 | 0 (Zero-GC) |
+| 🥉 | **BLoC (Cubit)** | 0.05 | 0.03 | 0.03 | 0.03 | 0.29 | 0.07 | 0 | 0 | 40 |
 
 ### 🔹 Scenario: D2_form_12_interdependent_fields
 
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | State Churn |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **Graft** | **0.06** | **0.06** | **0.06** | **0.06** | **0.08** | 0.01 | 0 | 0 | 0 (Zero-GC) |
-| 🥈 | **BLoC (Cubit)** | 0.06 | 0.06 | 0.06 | 0.05 | 0.07 | 0.00 | 0 | 0 | 100 |
-| 🥉 | **Signals** | 0.06 | 0.06 | 0.06 | 0.05 | 0.12 | 0.02 | 0 | 0 | 0 (Zero-GC) |
+| 🥇 | **BLoC (Cubit)** | 0.06 | 0.06 | 0.06 | 0.05 | 0.06 | 0.00 | 0 | 0 | 100 |
+| 🥈 | **Graft** | 0.06 | 0.06 | 0.06 | 0.06 | 0.07 | 0.00 | 0 | 0 | 0 (Zero-GC) |
+| 🥉 | **Signals** | 0.07 | 0.06 | 0.08 | 0.05 | 0.21 | 0.04 | 0 | 0 | 0 (Zero-GC) |
 
 ### 🔹 Scenario: D3_navigation_and_dialog_sharing
 
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | State Churn |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **Graft** | 2.67 | 2.63 | 3.05 | 2.38 | 3.12 | 0.24 | 0 | 0 | 0 (Zero-GC) |
-| 🥈 | **BLoC** | 3.91 | 2.99 | 7.22 | 2.88 | 7.71 | 1.62 | 0 | 0 | 0 (Zero-GC) |
+| 🥇 | **Graft** | 2.58 | 2.47 | 3.10 | 2.27 | 3.35 | 0.31 | 0 | 0 | 0 (Zero-GC) |
+| 🥈 | **BLoC** | 4.04 | 3.31 | 6.03 | 2.72 | 12.48 | 2.46 | 0 | 0 | 0 (Zero-GC) |
 
 ### 🔹 Scenario: E1_route_push_pop_and_dialog_lifecycle
 
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | State Churn |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **Graft** | 5.39 | 5.36 | 5.76 | 4.91 | 6.29 | 0.36 | 0 | 0 | 0 (Zero-GC) |
+| 🥇 | **Graft** | 5.30 | 5.40 | 5.82 | 4.67 | 5.84 | 0.37 | 0 | 0 | 0 (Zero-GC) |
 
 ### 🔹 Scenario: E2_hot_reload_reassemble_simulation
 
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | State Churn |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **Graft** | 0.88 | 0.85 | 1.03 | 0.76 | 1.13 | 0.10 | 0 | 0 | 0 (Zero-GC) |
-| 🥈 | **BLoC** | 1.01 | 0.98 | 1.22 | 0.80 | 1.33 | 0.14 | 0 | 0 | 0 (Zero-GC) |
+| 🥇 | **Graft** | 0.87 | 0.82 | 0.95 | 0.80 | 1.17 | 0.10 | 0 | 0 | 0 (Zero-GC) |
+| 🥈 | **BLoC** | 1.02 | 0.94 | 1.52 | 0.78 | 1.56 | 0.24 | 0 | 0 | 0 (Zero-GC) |
 
 ### 🔹 Scenario: E3_disposed_controller_access_safety
 

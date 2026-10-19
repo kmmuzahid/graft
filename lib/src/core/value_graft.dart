@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'graft.dart';
 import 'graft_state.dart';
 
+import '../persistence/dry/dry_value_graft.dart';
+
 /// Single-value state container that adapts primitive types (`int`, `bool`, `String`)
 /// or enums into [GraftState].
 class GraftValue<T> extends GraftState {
@@ -55,6 +57,12 @@ class GraftValue<T> extends GraftState {
 class ValueGraft<T> extends Graft<GraftValue<T>> {
   /// Creates a [ValueGraft] initialized with [initialValue].
   ValueGraft(T initialValue) : super(GraftValue<T>(initialValue));
+
+  /// Constructor for custom or persistent [GraftValue] states.
+  ValueGraft.fromState(super.state);
+
+  /// Creates a persistent [ValueGraft] initialized with [initialValue] and persisted under [key].
+  factory ValueGraft.dry(T initialValue, {required String key}) = DryValueGraft<T>;
 
   /// The current primitive value.
   @nonVirtual

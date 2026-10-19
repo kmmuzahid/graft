@@ -235,6 +235,197 @@ class LiveCounterGraft extends Graft<LiveCounterState> {
   }
 }
 
+// -----------------------------------------------------------------------------
+// Pattern C Models: Cascaded Domain Sub-Models (GraftModel) & Dry Persistence
+// -----------------------------------------------------------------------------
+
+class AddressModel extends GraftModel {
+  String street = '221B Baker Street';
+  String city = 'London';
+  int zipCode = 10001;
+
+  @override
+  GraftProps get props => propsOf(street, city, zipCode);
+
+  @override
+  void onDry() {
+    street = dry(street);
+    city = dry(city);
+    zipCode = dry(zipCode);
+  }
+
+  @override
+  void onReset() {
+    street = '221B Baker Street';
+    city = 'London';
+    zipCode = 10001;
+  }
+}
+
+class PersistentProfileState extends GraftState {
+  String fullName = 'Sherlock Holmes';
+  String notes = 'Consulting Detective';
+  bool isSyncing = false; // Transient UI state (starts fresh on app launch)
+  AddressModel address = AddressModel(); // Nested GraftModel created once!
+
+  @override
+  GraftProps get props => propsOf(fullName, notes, isSyncing, address);
+
+  @override
+  void onDry() {
+    fullName = dry(fullName);
+    notes = dry(notes);
+    address = dryModel(address); // Deep nested model persistence!
+  }
+
+  @override
+  void onReset() {
+    fullName = 'Sherlock Holmes';
+    notes = 'Consulting Detective';
+    isSyncing = false;
+  }
+}
+
+class PersistentProfileGraft extends Graft<PersistentProfileState> {
+  PersistentProfileGraft() : super(PersistentProfileState());
+
+  void updateName(String name) {
+    state
+      ..fullName = name
+      ..update();
+  }
+
+  void updateNotes(String notes) {
+    state
+      ..notes = notes
+      ..update();
+  }
+
+  void updateAddress({
+    required String street,
+    required String city,
+    required int zip,
+  }) {
+    state
+      ..address.street = street
+      ..address.city = city
+      ..address.zipCode = zip
+      ..update();
+  }
+
+  void toggleSyncing() {
+    state
+      ..isSyncing = !state.isSyncing
+      ..update();
+  }
+
+  void resetAll() {
+    state.reset();
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Pattern D Models: Enterprise Dependency Injection (DI) & Scoping
+// -----------------------------------------------------------------------------
+
+enum AppScope { checkout }
+
+class DatabaseService implements Disposable {
+  bool isClosed = false;
+  DatabaseService._();
+
+  static Future<DatabaseService> open() async {
+    // Non-blocking asynchronous opening (never blocks Frame 0):
+    await Future.delayed(const Duration(milliseconds: 30));
+    return DatabaseService._();
+  }
+
+  void execute(String sql) {
+    if (isClosed) {
+      throw StateError('Cannot query: Database connection is closed!');
+    }
+  }
+
+  @override
+  void dispose() {
+    isClosed = true;
+    debugPrint('📦 [DI Teardown 3] DatabaseService closed safely.');
+  }
+}
+
+class CartDao implements Disposable {
+  final DatabaseService db;
+  CartDao(this.db);
+
+  List<String> fetchItems() {
+    db.execute('SELECT * FROM cart');
+    return ['Single Origin Geisha', 'Pour-Over Kettle', 'Conical Burr Grinder'];
+  }
+
+  @override
+  void dispose() {
+    debugPrint('🛒 [DI Teardown 2] CartDao disposed.');
+  }
+}
+
+class CheckoutCoordinator implements Disposable {
+  final CartDao cartDao;
+  CheckoutCoordinator(this.cartDao);
+
+  Future<void> submitOrder() async {
+    final items = cartDao.fetchItems();
+    debugPrint('🚀 [Checkout] Order processed for: $items');
+  }
+
+  @override
+  void dispose() {
+    debugPrint('💳 [DI Teardown 1] CheckoutCoordinator disposed.');
+  }
+}
+
+class CheckoutState extends GraftState {
+  List<String> items = const [];
+  bool isSubmitting = false;
+
+  @override
+  GraftProps get props => propsOf(items, isSubmitting);
+}
+
+class CheckoutGraft extends Graft<CheckoutState> {
+  final CheckoutCoordinator _coordinator;
+  final CartDao _cartDao;
+
+  // 💉 Pure Constructor Injection:
+  CheckoutGraft({
+    required CheckoutCoordinator coordinator,
+    required CartDao cartDao,
+  })  : _coordinator = coordinator,
+        _cartDao = cartDao,
+        super(CheckoutState());
+
+  @override
+  void onInit() {
+    super.onInit();
+    state
+      ..items = _cartDao.fetchItems()
+      ..update();
+  }
+
+  Future<void> placeOrder(BuildContext context) async {
+    state
+      ..isSubmitting = true
+      ..update();
+    await _coordinator.submitOrder();
+
+    // ⚡ Drop the entire checkout scope flow-wide:
+    AppScope.checkout.drop();
+
+    if (context.mounted) {
+      Navigator.of(context).pop();
+    }
+  }
+}
+
 // =============================================================================
 // 3. MAIN ENTRY POINT & APP SETUP
 // =============================================================================
@@ -243,11 +434,25 @@ void main() {
   // 1. Enable colorized console dev logging:
   Graft.observer = GraftDevObserver();
 
-  // 2. Register Graft factories in DI:
+  // 2. Configure enterprise DI root async database:
+  bindAsync<DatabaseService>(() => DatabaseService.open());
+
+  // 3. Configure scoped feature bindings:
+  scope(AppScope.checkout, () {
+    bind<CartDao>(() => CartDao(use<DatabaseService>()));
+    bind<CheckoutCoordinator>(() => CheckoutCoordinator(use<CartDao>()));
+    bind<CheckoutGraft>(() => CheckoutGraft(
+          coordinator: use<CheckoutCoordinator>(),
+          cartDao: use<CartDao>(),
+        ));
+  });
+
+  // 4. Register Graft factories in DI:
   GraftRegistry.register(UserGraft.new);
   GraftRegistry.register(TaskListGraft.new);
   GraftRegistry.register(ProductCatalogGraft.new);
   GraftRegistry.register(LiveCounterGraft.new);
+  GraftRegistry.register(PersistentProfileGraft.new);
 
   runApp(const GraftExampleApp());
 }
@@ -604,6 +809,66 @@ class HomeScreen extends StatelessWidget {
                 Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => const MultiGraftCompositionScreen(),
+                  ),
+                );
+              },
+            ),
+
+            const SizedBox(height: 24),
+            const Divider(),
+
+            // =================================================================
+            // 6. Frame-0 Dry Persistence & Nested GraftModel
+            // =================================================================
+            const _SectionHeader(
+              title: '6. Frame-0 Persistence & Nested GraftModel',
+              subtitle:
+                  'Cascade-mutable sub-models, selective persistence, zero-controller forms.',
+            ),
+            const SizedBox(height: 12),
+
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue.shade800,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              icon: const Icon(Icons.save),
+              label: const Text('Frame-0 Dry Persistence & GraftModel Screen'),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const PersistentModelScreen(),
+                  ),
+                );
+              },
+            ),
+
+            const SizedBox(height: 24),
+            const Divider(),
+
+            // =================================================================
+            // 7. Enterprise Dependency Injection (DI) & Scoping
+            // =================================================================
+            const _SectionHeader(
+              title: '7. Enterprise Dependency Injection (DI)',
+              subtitle:
+                  'Monotonic TypeId, reverse DAG teardown, and non-blocking async gates.',
+            ),
+            const SizedBox(height: 12),
+
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green.shade800,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              icon: const Icon(Icons.account_tree),
+              label: const Text('Enterprise DI & Scoped Checkout Screen'),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const EnterpriseDIScreen(),
                   ),
                 );
               },
@@ -1194,6 +1459,293 @@ class _HeavyShellContainerState extends State<_HeavyShellContainer> {
           const Divider(height: 20),
           widget.child,
         ],
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// 8. SCREEN 7: PERSISTENT MODEL SCREEN (GraftModel & Frame-0 Dry Persistence)
+// =============================================================================
+
+class PersistentModelScreen extends StatelessWidget {
+  const PersistentModelScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = context.use(PersistentProfileGraft.new);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Frame-0 Dry Persistence 💾'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Reset to Defaults',
+            onPressed: profile.resetAll,
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Card(
+              color: Colors.blueGrey,
+              child: Padding(
+                padding: EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '⚡ Frame-0 L1 RAM Hydration',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Values below are hydrated in < 1.5 µs before Frame 0 renders. '
+                      'Edit any field, press "R" for hot reload or restart the app — '
+                      'persistent fields restore instantly while transient UI state starts fresh!',
+                      style: TextStyle(color: Colors.white70, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Live State Summary Card
+            Card(
+              elevation: 2,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Live Domain State (Surgical Leaf Slots)',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const Divider(),
+                    // Slot 1: Name
+                    profile((s) => ListTile(
+                          leading: const Icon(Icons.badge, color: Colors.blue),
+                          title: Text('Name: ${s.fullName}'),
+                          subtitle: const Text('Persisted via dry(fullName)'),
+                        )),
+                    // Slot 2: Notes
+                    profile((s) => ListTile(
+                          leading: const Icon(Icons.notes, color: Colors.blue),
+                          title: Text('Notes: ${s.notes}'),
+                          subtitle: const Text('Persisted via dry(notes)'),
+                        )),
+                    // Slot 3: Nested AddressModel
+                    profile((s) => ListTile(
+                          leading: const Icon(Icons.home, color: Colors.blue),
+                          title: Text(
+                            'Address: ${s.address.street}, ${s.address.city} (${s.address.zipCode})',
+                          ),
+                          subtitle:
+                              const Text('Persisted via dryModel(address)'),
+                        )),
+                    // Slot 4: Transient Syncing Status
+                    profile((s) => ListTile(
+                          leading: Icon(
+                            s.isSyncing ? Icons.sync : Icons.cloud_done,
+                            color: s.isSyncing ? Colors.orange : Colors.green,
+                          ),
+                          title: Text(
+                            s.isSyncing ? 'Syncing...' : 'Idle / In Sync',
+                          ),
+                          subtitle: const Text(
+                            'Transient UI state (starts fresh on launch)',
+                          ),
+                          trailing: ElevatedButton(
+                            onPressed: profile.toggleSyncing,
+                            child: Text(s.isSyncing ? 'Stop' : 'Toggle'),
+                          ),
+                        )),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Zero-Controller Form Fields
+            const Text(
+              'Zero-Controller Form Inputs (Frame 0 Bound)',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+
+            TextFormField(
+              initialValue: profile.state.fullName,
+              decoration: const InputDecoration(
+                labelText: 'Full Name',
+                border: OutlineInputBorder(),
+              ),
+              onChanged: profile.updateName,
+            ),
+            const SizedBox(height: 12),
+
+            TextFormField(
+              initialValue: profile.state.notes,
+              decoration: const InputDecoration(
+                labelText: 'Notes',
+                border: OutlineInputBorder(),
+              ),
+              onChanged: profile.updateNotes,
+            ),
+            const SizedBox(height: 12),
+
+            TextFormField(
+              initialValue: profile.state.address.street,
+              decoration: const InputDecoration(
+                labelText: 'Street (Nested AddressModel)',
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (val) => profile.updateAddress(
+                street: val,
+                city: profile.state.address.city,
+                zip: profile.state.address.zipCode,
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            TextFormField(
+              initialValue: profile.state.address.city,
+              decoration: const InputDecoration(
+                labelText: 'City (Nested AddressModel)',
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (val) => profile.updateAddress(
+                street: profile.state.address.street,
+                city: val,
+                zip: profile.state.address.zipCode,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// 9. SCREEN 8: ENTERPRISE DI & SCOPED CHECKOUT (Reverse DAG Teardown)
+// =============================================================================
+
+class EnterpriseDIScreen extends StatelessWidget {
+  const EnterpriseDIScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    // 🛡️ GraftScope anchors AppScope.checkout to this route:
+    return GraftScope(
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Enterprise DI & Scopes 💉')),
+        body: Builder(
+          builder: (innerContext) {
+            // Automatically resolves bound CheckoutGraft with injected dependencies:
+            final checkout = innerContext.use<CheckoutGraft>();
+
+            return Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Card(
+                    color: Colors.teal,
+                    child: Padding(
+                      padding: EdgeInsets.all(14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '🛡️ In-Degree Reverse DAG Teardown',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'CheckoutGraft was registered via bind<CheckoutGraft>() '
+                            'with injected CartDao and CheckoutCoordinator. '
+                            'When the order completes or screen pops, Graft automatically '
+                            'disposes instances in topological reverse order: consumers first, '
+                            'database last!',
+                            style:
+                                TextStyle(color: Colors.white70, fontSize: 13),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Cart Items (Injected via CartDao):',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Expanded(
+                    child: checkout(
+                      (s) => ListView.builder(
+                        itemCount: s.items.length,
+                        itemBuilder: (ctx, i) => Card(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          child: ListTile(
+                            leading: const Icon(
+                              Icons.coffee,
+                              color: Colors.brown,
+                            ),
+                            title: Text(s.items[i]),
+                            subtitle:
+                                const Text('Injected from DatabaseService'),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  checkout(
+                    (s) => ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green.shade800,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                      icon: s.isSubmitting
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.check_circle),
+                      label: Text(
+                        s.isSubmitting
+                            ? 'Processing & Dropping Scope...'
+                            : 'Place Order & Drop AppScope.checkout',
+                        style: const TextStyle(fontSize: 16),
+                      ),
+                      onPressed: s.isSubmitting
+                          ? null
+                          : () => checkout.placeOrder(innerContext),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
