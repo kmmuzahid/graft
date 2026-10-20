@@ -120,25 +120,38 @@ void onOrderCompleted() {
 
 ## Route Leasing & Automatic Route Disposal
 
-Wrap your screen widget with `GraftScope(scopeEnum)` to bind its lifecycle to the navigation route:
+Graft integrates seamlessly with Flutter's navigation system to eliminate manual controller memory management:
+
+### 1. Route-Stack Lifecycle (`context.use<T>()`)
+Calling `context.use<T>()` automatically binds the controller's lifecycle to the active route:
+- **Automatic Ownership**: The first screen that calls `context.use<T>()` becomes the **Owner**.
+- **Stack Borrowing**: Child screens pushed on top automatically inherit and borrow the existing instance.
+- **Auto-Disposal**: When the owner route pops from the `Navigator`, Graft automatically calls `dispose()` on the controller.
+- **Popup Protection**: Dialogs (`showDialog`) and modal bottom sheets (`showModalBottomSheet`) borrow safely without prematurely disposing the host screen's controller.
+
+### 2. Subtree Scoping (`GraftScope`)
+For localized subtrees like `GoRouter` shell routes, persistent bottom navigation tabs, or modal sheets:
 
 ```dart
-class CheckoutScreen extends StatelessWidget {
-  const CheckoutScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return GraftScope(
-      scope: AppScope.checkout,
-      child: Scaffold(
-        appBar: AppBar(title: const Text('Checkout')),
-        body: const CheckoutForm(),
-      ),
-    );
-  }
-}
+GraftScope(
+  factories: [
+    () => CheckoutGraft(
+      coordinator: use<CheckoutCoordinator>(),
+      cartDao: use<CartDao>(),
+    ),
+  ],
+  child: const CheckoutForm(),
+);
 ```
-When `CheckoutScreen` pops from the navigation stack, Graft automatically releases its route lease token and disposes all transient scoped services.
+
+Or for a pre-existing single instance:
+```dart
+GraftScope.single(
+  graft: checkoutGraft,
+  child: const CheckoutForm(),
+);
+```
+When `GraftScope` unmounts from the element tree, all managed controllers are disposed automatically.
 
 ---
 
@@ -379,9 +392,9 @@ class CheckoutGraft extends Graft<CheckoutState> {
 }
 ```
 
-### 4. Build the Flutter UI Screen with `GraftScope`
+### 4. Build the Flutter UI Screen with Route-Stack Borrowing
 
-Because `CheckoutGraft` is registered in `AppScope.checkout`, the widget does not need to pass any constructor arguments! It simply calls `innerContext.use<CheckoutGraft>()`:
+Because `CheckoutGraft` is registered in `bind<CheckoutGraft>()`, the screen does not need any constructor parameters or service locator plumbing. It simply calls `context.use<CheckoutGraft>()`:
 
 ```dart
 class CheckoutScreen extends StatelessWidget {
@@ -389,44 +402,36 @@ class CheckoutScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 🛡️ GraftScope anchors AppScope.checkout to this route:
-    return GraftScope(
-      scope: AppScope.checkout,
-      child: Scaffold(
-        appBar: AppBar(title: const Text('Checkout')),
-        body: Builder(
-          builder: (innerContext) {
-            // 🎯 Zero boilerplate! Automatically resolves the bound CheckoutGraft from DI:
-            final checkout = innerContext.use<CheckoutGraft>();
+    // 🎯 Zero boilerplate! Automatically resolves or borrows CheckoutGraft across the route stack:
+    final checkout = context.use<CheckoutGraft>();
 
-            return Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  // Surgical leaf slot 1: Items list
-                  Expanded(
-                    child: checkout((s) => ListView.builder(
-                      itemCount: s.items.length,
-                      itemBuilder: (ctx, i) => ListTile(
-                        leading: const Icon(Icons.shopping_bag),
-                        title: Text(s.items[i]),
-                      ),
-                    )),
-                  ),
+    return Scaffold(
+      appBar: AppBar(title: const Text('Checkout')),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            // Surgical leaf slot 1: Items list
+            Expanded(
+              child: checkout((s) => ListView.builder(
+                itemCount: s.items.length,
+                itemBuilder: (ctx, i) => ListTile(
+                  leading: const Icon(Icons.shopping_bag),
+                  title: Text(s.items[i]),
+                ),
+              )),
+            ),
 
-                  // Surgical leaf slot 2: Submit button with loading state
-                  checkout((s) => ElevatedButton(
-                    onPressed: s.isSubmitting
-                        ? null
-                        : () => checkout.completeCheckout(innerContext),
-                    child: s.isSubmitting
-                        ? const CircularProgressIndicator.adaptive()
-                        : const Text('Place Order'),
-                  )),
-                ],
-              ),
-            );
-          },
+            // Surgical leaf slot 2: Submit button with loading state
+            checkout((s) => ElevatedButton(
+              onPressed: s.isSubmitting
+                  ? null
+                  : () => checkout.completeCheckout(context),
+              child: s.isSubmitting
+                  ? const CircularProgressIndicator.adaptive()
+                  : const Text('Place Order'),
+            )),
+          ],
         ),
       ),
     );
@@ -495,8 +500,8 @@ final user = context.use(UserGraft.new);
 
 ## 📚 Related Technical Guides & Reports
 
-- 🏛️ **[ARCHITECTURE.md](file:///Users/km/Documents/km%20muzahid/graft/ARCHITECTURE.md):** Deep dive into the 6 Core Engineering Pillars, monotonic TypeId, in-degree reverse DAG teardowns, and non-blocking async execution gates.
-- 💾 **[GRAFT_GUIDE.md](file:///Users/km/Documents/km%20muzahid/graft/GRAFT_GUIDE.md):** Major dedicated guide for State Management & Frame-0 Persistence (propsOf, surgical slots, zero-controller forms, and Frame-0 dry state).
-- 📊 **[BENCHMARK_REPORT.md](file:///Users/km/Documents/km%20muzahid/graft/BENCHMARK_REPORT.md):** Empirical benchmark methodology and full logs (including **Scenario F2**: DI Engine lookups $\le 12$ ns cold, $< 0.8$ ns hot V-table access).
-- 🧪 **[TEST_REPORT.md](file:///Users/km/Documents/km%20muzahid/graft/TEST_REPORT.md):** Comprehensive test verification report across 283 passing tests (including 22 Dependency Injection engine tests).
+- 🏛️ **[ARCHITECTURE.md](ARCHITECTURE.md):** Deep dive into the 6 Core Engineering Pillars, monotonic TypeId, in-degree reverse DAG teardowns, and non-blocking async execution gates.
+- 💾 **[GRAFT_GUIDE.md](GRAFT_GUIDE.md):** Major dedicated guide for State Management & Frame-0 Persistence (propsOf, surgical slots, zero-controller forms, and Frame-0 dry state).
+- 📊 **[BENCHMARK_REPORT.md](BENCHMARK_REPORT.md):** Empirical benchmark methodology and full logs (including **Scenario F2**: DI Engine lookups $\le 12$ ns cold, $< 0.8$ ns hot V-table access).
+- 🧪 **[TEST_REPORT.md](TEST_REPORT.md):** Comprehensive test verification report across 283 passing tests (including 22 Dependency Injection engine tests).
 

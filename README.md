@@ -19,11 +19,11 @@
 ## 📚 Dedicated Technical Guides & Documentation Hub
 
 For deep dives into specific subsystems, architecture philosophy, empirical benchmarks, and test matrices:
-- 🏛️ **[ARCHITECTURE.md](file:///Users/km/Documents/km%20muzahid/graft/ARCHITECTURE.md):** Deep dive into the 6 Core Engineering Pillars, bitmask diffing, monotonic TypeId, DAG teardowns, automated async gates, and dry persistence.
-- 💉 **[DI_GUIDE.md](file:///Users/km/Documents/km%20muzahid/graft/DI_GUIDE.md):** Major dedicated guide for the DI engine (developer enum scopes, zero-scope boot, singleton lock, non-blocking async DB/network, route leasing).
-- 💾 **[GRAFT_GUIDE.md](file:///Users/km/Documents/km%20muzahid/graft/GRAFT_GUIDE.md):** Major dedicated guide for State Management & Frame-0 Persistence (propsOf, surgical slots, zero-controller forms, Option B GraftModel, Frame-0 dry state).
-- 📊 **[BENCHMARK_REPORT.md](file:///Users/km/Documents/km%20muzahid/graft/BENCHMARK_REPORT.md):** Empirical benchmark methodology, hardware specs, and full logs across all 21 benchmark scenarios.
-- 🧪 **[TEST_REPORT.md](file:///Users/km/Documents/km%20muzahid/graft/TEST_REPORT.md):** Comprehensive test verification report across 283 passing tests.
+- 🏛️ **[ARCHITECTURE.md](ARCHITECTURE.md):** Deep dive into the 6 Core Engineering Pillars, bitmask diffing, monotonic TypeId, DAG teardowns, automated async gates, and dry persistence.
+- 💉 **[DI_GUIDE.md](DI_GUIDE.md):** Major dedicated guide for the DI engine (developer enum scopes, zero-scope boot, singleton lock, non-blocking async DB/network, route leasing).
+- 💾 **[GRAFT_GUIDE.md](GRAFT_GUIDE.md):** Major dedicated guide for State Management & Frame-0 Persistence (propsOf, surgical slots, zero-controller forms, Option B GraftModel, Frame-0 dry state).
+- 📊 **[BENCHMARK_REPORT.md](BENCHMARK_REPORT.md):** Empirical benchmark methodology, hardware specs, and full logs across all 21 benchmark scenarios.
+- 🧪 **[TEST_REPORT.md](TEST_REPORT.md):** Comprehensive test verification report across 283 passing tests.
 
 ---
 
@@ -289,7 +289,7 @@ Graft rejects this compromise through 6 foundational pillars:
 
 Empirically verified across 15+ measured runs per scenario against **Riverpod**, **flutter_bloc / Cubit**, **Signals**, **GetX**, and **Provider** on both Native IO and Web.
 
-> 📊 For the complete statistical breakdown (Mean, Median, p95, Min, Max, StdDev, Rebuilds), see [`BENCHMARK_REPORT.md`](https://github.com/kmmuzahid/graft/blob/main/BENCHMARK_REPORT.md).
+> 📊 For the complete statistical breakdown (Mean, Median, p95, Min, Max, StdDev, Rebuilds), see [`BENCHMARK_REPORT.md`](BENCHMARK_REPORT.md).
 
 | Benchmark Scenario | Metric | Native IO Winner | Native IO Graft (Rank & Gap) | Web Browser Winner | Web Browser Graft (Rank & Gap) |
 | :--- | :--- | :---: | :---: | :---: | :---: |
@@ -418,11 +418,12 @@ graft.async<UserProfile>(
 ```
 
 #### 7. `GraftScope`
-Provides localized subtree scoping for nested navigation hierarchies (GoRouter `StatefulShellRoute`, bottom tabs, or modal sheets):
+Provides localized subtree scoping for nested navigation hierarchies (`GoRouter`'s `StatefulShellRoute`, persistent bottom tabs, or modal sheets):
 
 ```dart
 GraftScope(
-  builder: (context) => const NestedTabNavigator(),
+  factories: [() => TabGraft()],
+  child: const NestedTabNavigator(),
 )
 ```
 
@@ -544,7 +545,7 @@ asyncValue.when(
 
 ### C. Dependency Injection & Scope Management
 
-> 📘 For the comprehensive DI deep dive, see **[`DI_GUIDE.md`](file:///Users/km/Documents/km%20muzahid/graft/DI_GUIDE.md)**.
+> 📘 For the comprehensive DI deep dive, see **[`DI_GUIDE.md`](DI_GUIDE.md)**.
 
 #### 1. `bind<T>()` & `bindAsync<T>()`
 Registers synchronous and non-blocking asynchronous dependencies into the active scope:
@@ -656,7 +657,11 @@ void main() {
 
 ### F. Frame-0 Dry State Persistence & Cascaded Models
 
-> 💾 For the comprehensive state and persistence deep dive, see **[`GRAFT_GUIDE.md`](file:///Users/km/Documents/km%20muzahid/graft/GRAFT_GUIDE.md)**.
+> 💾 For the comprehensive state and persistence deep dive, see **[`GRAFT_GUIDE.md`](GRAFT_GUIDE.md)**.
+
+> [!NOTE]
+> ### 💡 When is `onDry()` needed?
+> Overriding `onDry()` is **strictly optional**. You only implement `onDry()` when you want that state or model's data saved permanently across app restarts (e.g. auth tokens, cart items, user preferences). For **transient UI states** (dialogs, search bars, loading flags), **do NOT implement `onDry()`**—simply declare `props => propsOf(...)`.
 
 #### 1. Zero-Magic-String Persistence (`onDry` & `dry`)
 Declare plain Dart variables. List all domain properties in `propsOf` for surgical UI rebuilds, and map persistent fields in `onDry()`:
@@ -702,8 +707,8 @@ class FormGraft extends Graft<FormState> {
 }
 ```
 
-#### 2. `onInit()` & `onDispose()`
-Controller lifecycle hooks. `onInit()` runs immediately after Frame-0 hydration:
+#### 3. Controller Lifecycle Hooks (`onInit()` & `onDispose()`)
+`onInit()` runs immediately after Frame-0 hydration:
 ```dart
 class FormGraft extends Graft<FormState> {
   FormGraft() : super.dry(FormState.new);
@@ -723,31 +728,51 @@ class FormGraft extends Graft<FormState> {
 }
 ```
 
-#### 3. `ValueGraft.dry(initialValue, key: ...)`
+#### 4. Micro-State Persistence (`ValueGraft.dry`)
 Standalone persistent micro-state with zero boilerplate:
 ```dart
 final theme = ValueGraft<String>.dry('dark', key: 'app_theme');
 theme.value = 'light'; // Synchronous L1 save + debounced disk write!
 ```
 
-#### 4. `GraftModel` (Option B Cascaded Sub-Models)
-Cascaded domain sub-models with plain mutable fields and `propsOf`:
+#### 5. Cascaded Sub-Models (`GraftModel`)
+Cascaded domain sub-models with plain mutable fields and `propsOf`. Sub-models only need `onDry()` if persisted via `dryModel()`:
 ```dart
 class AddressModel extends GraftModel {
   String street = '';
   @override
   GraftProps get props => propsOf(street);
+  @override
+  void onDry() => street = dry(street);
 }
 ```
 
-#### 5. `invalidateDry()` (State & Flow-Wide Scope)
-Purges dry state and freezes future saves:
+#### 6. Purging Dry State (`invalidateDry`)
+Purges dry state from L1 RAM, cancels pending writes, and deletes from storage:
 ```dart
 // State-level purge:
 graft.invalidateDry();
 
 // Scope-level (flow-wide) purge:
 AppScope.checkout.invalidateDry();
+```
+
+#### 7. Permanent Storage Configuration & Abstraction (`configurePersistence`)
+By default, Graft operates in RAM via an internal `MemoryStateConfig()`. To persist state permanently across app restarts, configure a storage driver in `main()`:
+```dart
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Option A: Built-in binary file driver (.bin)
+  final dir = await getApplicationDocumentsDirectory();
+  configurePersistence(FileStateConfig(dir));
+
+  // Option B: Or implement a custom GraftStateConfig (e.g. SharedPreferences):
+  // final prefs = await SharedPreferences.getInstance();
+  // configurePersistence(SharedPrefsStateConfig(prefs));
+
+  runApp(const MyApp());
+}
 ```
 
 ---
@@ -827,14 +852,14 @@ graft.slots(layout: Column(children: slots), slots: (s) => [Text(s.name), Text(s
 // 16. graft.builder(): Virtualized lazy list with per-item slot isolation
 graft.builder(items: (s) => s.items, itemBuilder: (item, idx) => ItemTile(item))
 
-// 17. graft.asyncSlot(): Declarative async pattern-matching widget
-graft.asyncSlot(data: (d) => Text(d), loading: () => Spinner(), error: (e, s) => Text('Err'))
+// 17. graft.async(): Declarative async pattern-matching slot
+graft.async(selector: (s) => s.user, data: (u) => Text(u.name), loading: () => Spinner(), error: (e, s) => Text('Err'))
 
 // 18. GraftBoundary: Multi-controller rebuild barrier with auto-discovery
 GraftBoundary(builder: (context) => Row(children: [Text(u.state.name), Text(t.state.theme)]))
 
-// 19. GraftScope: Route-scoped dependency boundary for navigators
-GraftScope(scope: AppScope.checkout, child: CheckoutScreen())
+// 19. GraftScope: Subtree-scoped lifecycle boundary for navigators/tabs
+GraftScope(factories: [() => TabGraft()], child: const NestedTabs())
 ```
 
 ### 💉 4. Dependency Injection Engine
@@ -868,6 +893,7 @@ GraftDI.reset();
 ```
 
 ### 💾 5. Frame-0 Persistence & Dry State
+```dart
 // 29. onDry(): Overriding automatically enables Frame-0 dry persistence with zero boilerplate
 @override
 void onDry() {
@@ -893,6 +919,10 @@ configurePersistence(FileStateConfig(Directory('path/to/storage')));
 
 // 35. MemoryStateConfig: In-memory binary driver for unit tests
 configurePersistence(MemoryStateConfig());
+
+// 36. GraftStateConfig: Custom storage interface contract (SharedPreferences, Encrypted, MMKV)
+class MyStorageConfig implements GraftStateConfig { /* readAllSync, read, write, delete, close */ }
+configurePersistence(MyStorageConfig());
 ```
 
 ---
@@ -998,7 +1028,7 @@ Graft's dependency injection coordinates with Flutter's `Navigator` stack to eli
 
 ## 🧪 Test Verification & Quality Assurance
 
-> 🧪 For the complete test matrix and verification logs across all 71 test files, see **[`TEST_REPORT.md`](file:///Users/km/Documents/km%20muzahid/graft/TEST_REPORT.md)**.
+> 🧪 For the complete test matrix and verification logs across all 71 test files, see **[`TEST_REPORT.md`](TEST_REPORT.md)**.
 
 Graft is verified against **283 passing tests** with zero static analysis warnings and zero rebuild leakage:
 

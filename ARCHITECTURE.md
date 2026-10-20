@@ -99,8 +99,8 @@ Hydrating persisted form states via asynchronous storage engines (SQLite, Shared
 
 ## 📚 Architectural Guides & Documentation Hub
 
-- 📘 **[DI Engine Guide](file:///Users/km/Documents/km%20muzahid/graft/DI_GUIDE.md):** Complete guide to developer enum scopes, singleton locks, non-blocking async bindings, and route leasing.
-- 📙 **[State & Persistence Guide](file:///Users/km/Documents/km%20muzahid/graft/GRAFT_GUIDE.md):** Complete guide to cascade mutations, surgical slot isolation, `GraftModel`, and Frame-0 Dry State.
-- 📊 **[Empirical Benchmark Report](file:///Users/km/Documents/km%20muzahid/graft/BENCHMARK_REPORT.md):** Detailed performance methodology, hardware specs, and 21 empirical benchmark scenarios.
-- 🧪 **[Test Verification Report](file:///Users/km/Documents/km%20muzahid/graft/TEST_REPORT.md):** Comprehensive test matrix and verification logs across 283 passing tests across 71 test files.
-- 📋 **[Public API Reference Cheat Sheet](file:///Users/km/Documents/km%20muzahid/graft/README.md#complete-public-api-cheat-sheet):** Every public API listed with short, practical 2–3 line usages.
+- 📘 **[DI Engine Guide](DI_GUIDE.md):** Complete guide to developer enum scopes, singleton locks, non-blocking async bindings, and route leasing.
+- 📙 **[State & Persistence Guide](GRAFT_GUIDE.md):** Complete guide to cascade mutations, surgical slot isolation, `GraftModel`, and Frame-0 Dry State.
+- 📊 **[Empirical Benchmark Report](BENCHMARK_REPORT.md):** Detailed performance methodology, hardware specs, and 21 empirical benchmark scenarios.
+- 🧪 **[Test Verification Report](TEST_REPORT.md):** Comprehensive test matrix and verification logs across 283 passing tests across 71 test files.
+- 📋 **[Public API Reference Cheat Sheet](README.md#-complete-public-api-cheat-sheet):** Every public API listed with short, practical 2–3 line usages.

@@ -23,6 +23,9 @@
 7. [Zero-Controller Forms on Frame 0](#zero-controller-forms-on-frame-0)
 8. [Micro-State Persistence (`ValueGraft.dry`)](#micro-state-persistence-valuegraftdry)
 9. [Flow-Wide Scope Invalidation (`invalidateDry`)](#flow-wide-scope-invalidation-invalidatedry)
+10. [Storage Drivers & Testing Setup (`configurePersistence`)](#storage-drivers--testing-setup-configurepersistence)
+11. [Linter & Architectural Best Practices](#linter--architectural-best-practices)
+12. [Related Technical Guides & Reports](#related-technical-guides--reports)
 
 ---
 
@@ -71,6 +74,18 @@ class UserState extends GraftState {
 }
 ```
 
+> [!NOTE]
+> ### 💡 When is `onDry()` needed in a `GraftState`?
+> Overriding `onDry()` is **strictly optional**. You only need to implement `onDry()` if you want this specific state's data saved permanently across app restarts and restored on Frame 0 (e.g. authentication sessions, checkout drafts, user preferences).
+>
+> For **transient UI states** (e.g. search queries, bottom sheet filters, confirmation dialogs, animation flags), **do NOT implement `onDry()`**! Simply declare `props => propsOf(...)` and mutate in-place with `update()`.
+
+> [!TIP]
+> ### 🧠 State vs. Controller Lifecycle: `GraftState` Has No `init()`
+> - **`GraftState` (Domain Data):** Holds data fields and `props`. It has **no `init()` or `onInit()` method**. Initial values are assigned directly at declaration (`String name = 'Alice';`) or via standard Dart constructor formals (`UserState({this.name = 'Alice'});`).
+> - **`Graft` (Controller):** Owns UI coordination and lifecycle hooks (`onInit()` & `onDispose()`). When `context.use(...)` or `context.create(...)` resolves or creates a controller, Frame-0 hydration completes synchronously *before* `onInit()` runs.
+> - **`GraftStateConfig` (Storage Contract):** Defines 5 pure storage I/O methods. It has **no `init()` method**; dependencies (database handles, directories) are passed into its constructor.
+
 ### Mutating State In-Place
 Use standard Dart cascade syntax:
 ```dart
@@ -104,10 +119,10 @@ class UserGraft extends Graft<UserState> {
 
 ## Surgical UI Slots & Leaf Rebuilds
 
-Graft provides three ergonomic slot patterns for isolating widget rebuilds without selector closures:
+Graft provides a comprehensive suite of ergonomic reactive slot primitives designed to isolate widget rebuilds to the exact leaf element without requiring selector boilerplate:
 
-### 1. Callable Shortcut (`graft((s) => ...)`)
-The fastest syntax for single-child slots:
+### 1. Signature Callable Leaf Slot (`graft((s) => ...)`)
+The fastest syntax for single-child slots. Provides **Depth-$N$ parent rebuild insulation**—outer containers (`Card`, `Padding`, `AppBar`) experience **0 rebuilds**:
 ```dart
 @override
 Widget build(BuildContext context) {
@@ -116,35 +131,88 @@ Widget build(BuildContext context) {
   return Scaffold(
     appBar: AppBar(title: const Text('Profile')),
     body: Center(
+      // Rebuilds ONLY when name changes; outer Center & Scaffold never rebuild!
       child: user((s) => Text(s.name, style: const TextStyle(fontSize: 24))),
     ),
   );
 }
 ```
 
-### 2. Isolated Slot (`graft.slot(...)`)
-Surgical leaf slot with optional custom slot keys:
+### 2. Explicit Leaf Slot (`graft.slot(builder: ...)`)
+Named alternative to the callable syntax with optional custom keys:
 ```dart
-user.slot((s) => Text('Age: ${s.age}'));
+user.slot(
+  builder: (s) => Text('Age: ${s.age}'),
+);
 ```
 
-### 3. Multi-Child Layouts (`graft.slots(...)`)
-Zero rebuild leakage in list or column layouts:
+### 3. Multi-Child Layout Diff Engine (`graft.slots(...)`)
+Universal layout diffing (`Column`, `Row`, `Wrap`, `Stack`, `Flex`). Each item in the returned list becomes an independently evaluated diff slot. Unchanged slots, static headers, and condition branches evaluate with **0 rebuilds**:
 ```dart
-graft.slots([
-  (s) => Text(s.name),
-  (s) => Text('Age: ${s.age}'),
-  (s) => Icon(s.isOnline ? Icons.check_circle : Icons.offline_bolt),
-]);
+user.slots(
+  layout: Column(crossAxisAlignment: CrossAxisAlignment.start, children: slots),
+  slots: (s) => [
+    const ProfileHeader(), // 0 rebuilds (const pointer match)
+    Text('Name: ${s.name}'), // Rebuilds only when name changes
+    Text('Email: ${s.email}'), // Rebuilds only when email changes
+    if (s.isOnline) const OnlineBadge(), // Dynamic branch
+  ],
+);
 ```
 
-### 4. Asynchronous States (`GraftAsync<T>`)
-First-class pattern matching for async operations:
+### 4. Memoized Computed Selector (`graft.compute<R>(...)`)
+Pre-flight derived value caching. Checks the raw computed value *before* executing the builder closure. If the computed value hasn't changed, the widget builder closure is **never executed**:
 ```dart
-graft.asyncSlot(
-  data: (orders) => OrderList(orders),
-  loading: () => const CircularProgressIndicator(),
-  error: (err, st) => Text('Failed to load: $err'),
+user.compute<int>(
+  compute: (s) => s.notifications.length,
+  builder: (count) => Badge(
+    label: Text('$count'),
+    child: const Icon(Icons.notifications),
+  ),
+);
+```
+
+### 5. Virtualized Lazy Collections (`graft.builder<T>(...)`)
+100% lazy collections (`ListView.builder`, `GridView.builder`) with per-item slot isolation. Modifying one item in a 10,000-item list triggers **1 rebuild** for that item only, while all other items experience **0 rebuilds**:
+```dart
+taskGraft.builder<TaskItem>(
+  items: (s) => s.tasks,
+  itemBuilder: (task, index) => ListTile(
+    title: Text(task.title),
+    trailing: Checkbox(
+      value: task.isDone,
+      onChanged: (_) => taskGraft.toggleTask(index),
+    ),
+  ),
+);
+```
+
+### 6. Declarative Async Pattern Matching (`graft.async<T>(...)`)
+Type-safe algebraic pattern matching for `GraftAsync` states (`idle`, `loading`, `data`, `error`):
+```dart
+orderGraft.async<List<Order>>(
+  selector: (s) => s.ordersState,
+  data: (orders) => OrderListView(orders: orders),
+  loading: () => const Center(child: CircularProgressIndicator.adaptive()),
+  error: (err, st) => Text('Failed to load orders: $err'),
+  idle: () => const Text('Tap to load orders'),
+);
+```
+
+### 7. Multi-Controller Rebuild Firewall (`GraftBoundary`)
+An Element-level rebuild barrier with **Ambient Auto-Discovery** and **Backward Adaptive Learning**. It automatically discovers and listens to multiple controllers simultaneously, completely shielding parent layouts from inner rebuilds:
+```dart
+GraftBoundary(
+  builder: (context) {
+    // Ambiently discovers and listens to userGraft & themeGraft:
+    return Row(
+      children: [
+        Text(userGraft.state.name),
+        const SizedBox(width: 8),
+        Icon(Icons.palette, color: themeGraft.state.accentColor),
+      ],
+    );
+  },
 );
 ```
 
@@ -201,6 +269,12 @@ class AddressModel extends GraftModel {
   }
 }
 ```
+
+> [!NOTE]
+> ### 💡 When does a `GraftModel` need `onDry()`?
+> A `GraftModel` only needs to implement `onDry()` if its fields are being persisted to storage via `address = dryModel(address)` in the parent state's `onDry()`.
+>
+> If your domain sub-model is used purely in-memory (or belongs to a transient state), **do NOT implement `onDry()`**! Simply declare `props => propsOf(...)` and optional `onReset()`.
 
 ---
 
@@ -452,10 +526,185 @@ graft.invalidateDry();
 
 ---
 
+## Storage Drivers & Custom Storage Abstraction (`configurePersistence`)
+
+> [!IMPORTANT]
+> ### ⚠️ Permanent Disk Persistence Requires Storage Configuration
+> By default, if unconfigured, Graft operates purely in RAM using an internal `MemoryStateConfig()`. While state changes remain reactive during the current session, **state will NOT survive app restarts unless a permanent storage abstraction is configured**.
+>
+> To persist state permanently to disk or a database across app restarts, you must configure a storage driver in your `main()` function via `configurePersistence()`.
+
+Graft provides zero-dependency binary persistence drivers out-of-the-box, as well as an extensible storage contract (`GraftStateConfig`) allowing teams to connect any storage engine (SharedPreferences, Encrypted Storage, SQLite, or Cloud Sync).
+
+---
+
+### 1. Production Binary File Driver (`FileStateConfig`)
+The easiest zero-dependency solution for Flutter Mobile, Desktop, and Embedded targets. Saves binary blobs directly into `.bin` files:
+
+```dart
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // 1. Point to application documents directory (e.g. path_provider):
+  final docsDir = await getApplicationDocumentsDirectory();
+
+  // 2. Configure permanent binary file driver:
+  configurePersistence(FileStateConfig(docsDir));
+
+  runApp(const MyApp());
+}
+```
+All persistent states are pre-read synchronously into L1 RAM cache on Frame 0 and written back to disk asynchronously using a coalesced 300ms debounce queue during user typing.
+
+---
+
+### 2. Implementing a Custom Storage Abstraction (`GraftStateConfig`)
+`GraftStateConfig` defines 5 contract methods (`readAllSync`, `read`, `write`, `delete`, and `close`). It does **not** mandate any `init()` method—you simply pass any pre-opened storage instance (such as `SharedPreferences`, encrypted storage, or native box) directly into your class constructor:
+
+```dart
+import 'dart:convert';
+import 'dart:typed_data';
+import 'package:graft/graft.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+class SharedPrefsStateConfig implements GraftStateConfig {
+  final SharedPreferences prefs;
+  SharedPrefsStateConfig(this.prefs);
+
+  static const String _prefix = 'graft_';
+
+  @override
+  Map<String, Uint8List> readAllSync() {
+    // ⚡ Pre-warms L1 RAM cache: enables Frame-0 instant hydration with 0 blank frames!
+    // SharedPreferences keeps all cached keys in memory synchronously:
+    final results = <String, Uint8List>{};
+    for (final key in prefs.getKeys()) {
+      if (key.startsWith(_prefix)) {
+        final base64String = prefs.getString(key);
+        if (base64String != null) {
+          results[key.substring(_prefix.length)] = base64Decode(base64String);
+        }
+      }
+    }
+    return results;
+  }
+
+  @override
+  Future<Uint8List?> read(String key) async {
+    final base64String = prefs.getString('$_prefix$key');
+    return base64String != null ? base64Decode(base64String) : null;
+  }
+
+  @override
+  Future<void> write(String key, Uint8List value) async {
+    // Automatically debounced (300ms) by Graft's internal DebounceQueue:
+    await prefs.setString('$_prefix$key', base64Encode(value));
+  }
+
+  @override
+  Future<void> delete(String key) async {
+    await prefs.remove('$_prefix$key');
+  }
+
+  @override
+  Future<void> close() async {
+    // SharedPreferences maintains no open file handle requiring disposal
+  }
+}
+
+// In main.dart:
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Load SharedPreferences before mounting UI:
+  final prefs = await SharedPreferences.getInstance();
+  configurePersistence(SharedPrefsStateConfig(prefs));
+
+  runApp(const MyApp());
+}
+```
+
+---
+
+### 3. In-Memory Driver for Testing (`MemoryStateConfig`)
+For unit tests, widget tests, and CI pipelines, use `MemoryStateConfig` for 100% in-memory isolation without disk I/O:
+```dart
+void main() {
+  setUp(() {
+    configurePersistence(MemoryStateConfig());
+  });
+
+  tearDown(() {
+    GraftDI.reset();
+  });
+
+  test('Frame-0 dry persistence unit test', () {
+    // Tests run with 0 file system side effects!
+  });
+}
+```
+
+---
+
+## Linter & Architectural Best Practices
+
+Use the official **[`graft_lint`](https://pub.dev/packages/graft_lint)** analyzer plugin to catch anti-patterns and enforce architectural contracts directly in your IDE:
+
+### 1. `avoid_nested_graft_slot` (Severity: 🔴 `error`)
+Graft slots (`graft((s) => ...)`, `graft.slot`, `graft.slots`, `graft.builder`) are already isolated micro-diffing engines. Nesting a slot inside another slot of the same controller creates redundant reconciliation loops and subverts fine-grained rebuild insulation.
+```dart
+// ❌ BAD: Illegal nesting of slots of the same controller
+graft.slot(
+  builder: (s) => Column(
+    children: [
+      Text('Title: ${s.title}'),
+      graft((s) => Text('Name: ${s.name}')), // 🔴 avoid_nested_graft_slot error!
+    ],
+  ),
+);
+
+// ✅ GOOD: Use graft.slots for multi-child layouts
+graft.slots(
+  layout: Column(children: slots),
+  slots: (s) => [
+    Text('Title: ${s.title}'),
+    Text('Name: ${s.name}'),
+  ],
+);
+```
+
+### 2. `prefer_props_in_graft_state` (Severity: 🔴 `error`)
+Every `GraftState` class must declare `GraftProps get props => propsOf(...)` to enable 1-cycle CPU bitmask diffing and 0-GC state evaluation:
+```dart
+// ❌ BAD: Missing props contract
+class ProfileState extends GraftState {
+  String name = '';
+}
+
+// ✅ GOOD: Declares tracked fields for hardware bitmask diffing
+class ProfileState extends GraftState {
+  String name = '';
+  @override
+  GraftProps get props => propsOf(name);
+}
+```
+
+### 3. `require_graft_route_observer` (Severity: 🔴 `error`)
+Guarantees that `GraftRouteTracker.observer` is registered in `MaterialApp.navigatorObservers` or `CupertinoApp.navigatorObservers` so that controllers are automatically disposed when their owner route pops:
+```dart
+// ✅ GOOD: Route observer registered
+MaterialApp(
+  navigatorObservers: [GraftRouteTracker.observer],
+  home: const HomeScreen(),
+);
+```
+
+---
+
 ## 📚 Related Technical Guides & Reports
 
-- 🏛️ **[ARCHITECTURE.md](file:///Users/km/Documents/km%20muzahid/graft/ARCHITECTURE.md):** Deep dive into the 6 Core Engineering Pillars, bitmask diffing, monotonic TypeId, and DAG teardowns.
-- 💉 **[DI_GUIDE.md](file:///Users/km/Documents/km%20muzahid/graft/DI_GUIDE.md):** Dedicated guide for the DI engine (developer enum scopes, zero-scope boot, singleton lock, non-blocking async DB/network, route leasing).
-- 📊 **[BENCHMARK_REPORT.md](file:///Users/km/Documents/km%20muzahid/graft/BENCHMARK_REPORT.md):** Empirical benchmark methodology, hardware specs, and full logs across all 21 benchmark scenarios (including Frame-0 dry persistence at ~1.5 µs latency).
-- 🧪 **[TEST_REPORT.md](file:///Users/km/Documents/km%20muzahid/graft/TEST_REPORT.md):** Comprehensive test verification report across 283 passing tests (including 51 persistence and dry state tests).
+- 🏛️ **[ARCHITECTURE.md](ARCHITECTURE.md):** Deep dive into the 6 Core Engineering Pillars, bitmask diffing, monotonic TypeId, and DAG teardowns.
+- 💉 **[DI_GUIDE.md](DI_GUIDE.md):** Dedicated guide for the DI engine (developer enum scopes, zero-scope boot, singleton lock, non-blocking async DB/network, route leasing).
+- 📊 **[BENCHMARK_REPORT.md](BENCHMARK_REPORT.md):** Empirical benchmark methodology, hardware specs, and full logs across all 21 benchmark scenarios (including Frame-0 dry persistence at ~1.5 µs latency).
+- 🧪 **[TEST_REPORT.md](TEST_REPORT.md):** Comprehensive test verification report across 283 passing tests (including 51 persistence and dry state tests).
 

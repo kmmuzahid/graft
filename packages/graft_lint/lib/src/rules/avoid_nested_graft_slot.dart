@@ -17,7 +17,14 @@ class AvoidNestedGraftSlotRule extends DartLintRule {
     errorSeverity: ErrorSeverity.ERROR,
   );
 
-  static const _slotMethodNames = {'slot', 'slots', 'compute', 'builder', 'item', 'async'};
+  static const _slotMethodNames = {
+    'slot',
+    'slots',
+    'compute',
+    'builder',
+    'item',
+    'async'
+  };
 
   @override
   void run(
