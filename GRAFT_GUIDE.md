@@ -519,9 +519,22 @@ void submitOrder() {
   state..customerName = ''..update();
 }
 ```
-Or invalidate a single controller:
 ```dart
 graft.invalidateDry();
+```
+
+When using `GraftDevObserver`, Frame-0 dry state creation, updates, hydrations, and invalidations are logged automatically with distinct emoji badges:
+
+```text
+[🌱 GRAFT CREATED] | SignupGraft 💾 [DRY: signup_draft]
+
+[❄️ GRAFT DRY HYDRATED] | SignupState 💾 [key: signup_draft] | restored from L1 RAM in <50ns
+
+[⚡ GRAFT CHANGE] | SignupGraft 💾 [DRY: signup_draft]
+  SignupState(name: "", email: "")
+  ➡️ SignupState(name: "Alice", email: "alice@example.com")
+
+[🧹 GRAFT DRY INVALIDATED] | SignupState 💾 [key: signup_draft] | persistence cleared for session
 ```
 
 ---

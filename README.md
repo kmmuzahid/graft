@@ -599,30 +599,91 @@ class EditProfileScreen extends StatelessWidget {
 
 ### D. Observability & DevTools
 
-#### 1. `GraftObserver` & `GraftDevObserver`
-Global hook for monitoring lifecycle, state transitions, slot rebuilds, errors, and Flutter DevTools Timeline profiling:
+#### 1. `GraftDevObserver` & `GraftObserver`
+`Graft` features a centralized observability engine for monitoring state transitions, DI scope lifecycles, Frame-0 Dry persistence, slot rebuilds, and Flutter DevTools Timeline profiling:
 
 ```dart
 void main() {
-  // Colorized terminal logging + Flutter DevTools Timeline profiling:
-  Graft.observer = GraftDevObserver(
-    logRebuilds: true,    // Formats slot rebuild events in ANSI terminal output
-    enableTimeline: true, // 👈 Emits timeline events directly into Flutter DevTools Performance trace!
-  );
+  if (kDebugMode) {
+    Graft.observer = GraftDevObserver(
+      logDI: true,          // 📦 DI scope creation & member teardown (default: true)
+      logDry: true,         // 💾 Dry state badges, hydration & invalidation (default: true)
+      logState: true,       // 🌱 State creation, onChange diffs, onDispose (default: true)
+      logBindings: false,   // 🔗 Individual dependency registrations (default: false)
+      logRebuilds: false,   // 🔄 Fine-grained slot widget rebuilds (default: false)
+      logErrors: true,      // 💥 Unhandled errors and stack traces (default: true)
+      asyncLog: true,       // ⚡ Non-blocking async queue (zero frame budget impact) (default: true)
+      enableTimeline: false // ⏱️ Flutter DevTools Performance Timeline slices (default: false)
+    );
+  }
+
   runApp(const MyApp());
 }
+```
 
-// Or implement custom analytics/error reporting:
+#### 2. Smart Visual Terminal Telemetry
+
+##### 📦 DI Scopes & Active Member Teardown
+Logs scope creation with lifecycle tier (transient vs preserved), and inspects which active concrete dependency instances were living inside that scope upon disposal:
+
+```text
+[📦 GRAFT DI SCOPE CREATED] | AppScope.signup (transient)
+
+[💥 GRAFT DI SCOPE DESTROYED] | AppScope.signup
+   Disposed Members (2):
+  • AuthService
+  • SignupGraft
+```
+
+##### 💾 Frame-0 Dry Persistence Badges
+Any state utilizing Frame-0 dry persistence is automatically badged across creation, transition, and disposal:
+
+```text
+[🌱 GRAFT CREATED] | SignupGraft 💾 [DRY: signup_draft]
+
+[⚡ GRAFT CHANGE] | SignupGraft 💾 [DRY: signup_draft]
+  SignupState(name: "", email: "")
+  ➡️ SignupState(name: "Alice", email: "alice@example.com")
+
+[🗑️ GRAFT DISPOSED] | SignupGraft 💾 [DRY: signup_draft]
+```
+
+##### ❄️ Frame-0 Dry Hydration & Invalidation
+Logs synchronous L1 RAM cache restorations (< 50ns) and tracks state or scope prefix invalidations:
+
+```text
+[❄️ GRAFT DRY HYDRATED] | SignupState 💾 [key: signup_draft] | restored from L1 RAM in <50ns
+
+[🧹 GRAFT DRY INVALIDATED] | SignupState 💾 [key: signup_draft] | persistence cleared for session
+
+[🧹 GRAFT DRY SCOPE PURGED] | AppScope.signup 💾 [prefix: signup] | L1 RAM & disk cache cleared
+```
+
+#### 3. Non-Blocking Asynchronous Microtask Queue
+Console writes and system log daemon calls (OSLog/Logcat) can consume valuable milliseconds during rapid state bursts or animations. When `asyncLog: true` (default):
+* Log events are queued in-memory in **< 5 nanoseconds** ($O(1)$ list push).
+* State mutations and widget rebuilds return **immediately with zero delay**.
+* Queued logs are flushed asynchronously in a microtask, preserving 60/120fps frame budgets.
+
+#### 4. Production Telemetry & Custom Observers
+Implement `GraftObserver` for production diagnostics (Sentry, Firebase Crashlytics, Datadog):
+
+```dart
 class ProductionObserver extends GraftObserver {
   @override
   void onError(dynamic graft, Object error, StackTrace stackTrace) {
     FirebaseCrashlytics.instance.recordError(error, stackTrace);
   }
+
+  @override
+  void onScopeDropped(Object scopeId, {List<Type> members = const [], List<Type> registeredTypes = const []}) {
+    // Track DI graph health and memory reclamation
+  }
 }
 ```
 
-* **Zero Release Overhead**: `GraftDevObserver` automatically disables console output and timeline emission in production release mode (`kReleaseMode`).
-* **DevTools Performance Trace**: When `enableTimeline: true`, every controller transition (`Graft: MyGraft.update()`) and slot rebuild (`Graft: Slot #$index rebuild`) appears as a named slice in Flutter DevTools.
+* **Zero Release Overhead**: `GraftDevObserver` completely bypasses console I/O and timeline emission in release mode (`kReleaseMode`).
+* **DevTools Performance Trace**: When `enableTimeline: true`, every transition (`Graft: MyGraft.update()`), DI event, and slot rebuild appears as an inspectable slice in Flutter DevTools.
 
 ---
 

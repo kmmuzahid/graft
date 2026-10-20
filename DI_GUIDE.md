@@ -439,7 +439,7 @@ class CheckoutScreen extends StatelessWidget {
 }
 ```
 
-### 5. Guaranteed Reverse DAG Teardown Trace
+### 5. Guaranteed Reverse DAG Teardown Trace & Observability
 
 When `AppScope.checkout.drop()` is called or `CheckoutScreen` is popped from the Navigator, Graft's in-degree topological sorter automatically disposes instances in the exact reverse creation order:
 
@@ -447,6 +447,18 @@ When `AppScope.checkout.drop()` is called or `CheckoutScreen` is popped from the
 [DI Teardown 1] CheckoutCoordinator disposed.  ➔ Consumers teardown first!
 [DI Teardown 2] CartDao disposed.              ➔ Intermediate DAOs teardown second!
 [DI Teardown 3] DatabaseService closed safely. ➔ Root connection closed last!
+```
+
+When using `GraftDevObserver`, scope creation and active member disposal are tracked automatically in real time:
+
+```text
+[📦 GRAFT DI SCOPE CREATED] | AppScope.checkout (transient)
+
+[💥 GRAFT DI SCOPE DESTROYED] | AppScope.checkout
+   Disposed Members (3):
+  • CheckoutCoordinator
+  • CartDao
+  • DatabaseService
 ```
 
 > [!TIP]
