@@ -2,6 +2,7 @@
 library;
 
 import 'dart:async';
+import '../core/graft.dart';
 import 'scope_node.dart';
 import 'scope_tier.dart';
 
@@ -24,11 +25,15 @@ final class GraftDI {
   static ScopeNode getScope(Object scopeId, {bool preserved = false}) {
     return _scopes.putIfAbsent(
       scopeId,
-      () => ScopeNode(
-        scopeId: scopeId,
-        tier: preserved ? ScopeTier.preserved : ScopeTier.transient,
-        parent: root,
-      ),
+      () {
+        final node = ScopeNode(
+          scopeId: scopeId,
+          tier: preserved ? ScopeTier.preserved : ScopeTier.transient,
+          parent: root,
+        );
+        Graft.observer?.onScopeCreated(scopeId, preserved: preserved);
+        return node;
+      },
     );
   }
 

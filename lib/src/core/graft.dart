@@ -183,10 +183,13 @@ class Graft<S extends GraftState> extends ChangeNotifier {
     String? key,
   }) {
     final dryKey = key ?? S.toString();
-    _state = DryStateHook.hydrateFactory<S>(stateFactory, dryKey);
+    final (state, fromCache) =
+        DryStateHook.hydrateFactoryWithStatus<S>(stateFactory, dryKey);
+    _state = state;
     _state.setCustomDryKeyInternal(key);
     _state.bindGraft(this);
     DryStateHook.enableDryForState(_state, dryKey);
+    observer?.onDryHydrated(_state, key: dryKey, fromCache: fromCache);
     onInit();
     observer?.onCreate(this);
   }

@@ -2,6 +2,7 @@
 library;
 
 import 'dart:async';
+import '../core/graft.dart';
 import 'async_binding.dart';
 import 'disposable.dart';
 import 'scope_tier.dart';
@@ -16,6 +17,7 @@ final class ScopeNode {
   final ScopeNode? parent;
   final List<ScopeNode> children = [];
 
+  final Map<int, Type> _registeredTypes = {};
   final Map<int, Object? Function()> _factories = {};
   final Map<int, AsyncBinding<Object?>> _asyncBindings = {};
   final List<Object?> _instances = [];
@@ -29,19 +31,52 @@ final class ScopeNode {
     parent?.children.add(this);
   }
 
+  /// Returns the runtime types of all currently instantiated members in this scope.
+  List<Type> get activeMemberTypes {
+    final types = <Type>[];
+    for (int i = 0; i < _instances.length; i++) {
+      final inst = _instances[i];
+      if (inst != null) {
+        types.add(_registeredTypes[i] ?? inst.runtimeType);
+      }
+    }
+    for (final e in _asyncBindings.entries) {
+      final inst = e.value.resolvedInstance;
+      if (inst != null) {
+        types.add(_registeredTypes[e.key] ?? inst.runtimeType);
+      }
+    }
+    return types;
+  }
+
   void bind<T>(T Function() factory, {bool singleton = true, bool preserved = false}) {
     final id = TypeId.of<T>();
+    _registeredTypes[id] = T;
     _factories[id] = factory;
     if (singleton) _singletons.add(id);
     if (preserved) _preserved.add(id);
+    Graft.observer?.onDependencyBound(
+      T,
+      scopeId: scopeId,
+      singleton: singleton,
+      preserved: preserved,
+    );
   }
 
   void bindAsync<T>(Future<T> Function() factory, {bool singleton = true, bool preserved = false, bool eager = false}) {
     final id = TypeId.of<T>();
+    _registeredTypes[id] = T;
     final binding = AsyncBinding<Object?>(factory, singleton: singleton, preserved: preserved);
     _asyncBindings[id] = binding;
     if (singleton) _singletons.add(id);
     if (preserved) _preserved.add(id);
+    Graft.observer?.onDependencyBound(
+      T,
+      scopeId: scopeId,
+      singleton: singleton,
+      preserved: preserved,
+      isAsync: true,
+    );
     if (eager) {
       binding.resolve();
     }
@@ -150,6 +185,16 @@ final class ScopeNode {
   }
 
   void drop() {
+    final activeMembers = activeMemberTypes;
+    final allRegistered = _registeredTypes.values.toList();
+    if (scopeId != null && scopeId != 'root') {
+      Graft.observer?.onScopeDropped(
+        scopeId!,
+        members: activeMembers,
+        registeredTypes: allRegistered,
+      );
+    }
+
     final consumerCount = {for (final e in _dependents.entries) e.key: e.value.length};
     final queue = <int>[
       for (int i = 0; i < _instances.length; i++)

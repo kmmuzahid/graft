@@ -1,6 +1,7 @@
 /// Engine hooks for Frame-0 synchronous hydration, updates, and invalidations.
 library;
 
+import '../../core/graft.dart';
 import '../../core/graft_state.dart';
 import '../ambient_locator.dart';
 import '../model/binary_serializer.dart';
@@ -14,6 +15,11 @@ final class DryStateHook {
 
   /// Restores state instance using constructor tear-off [factory] from Frame-0 binary cache.
   static S hydrateFactory<S extends GraftState>(Function factory, String key) {
+    return hydrateFactoryWithStatus<S>(factory, key).$1;
+  }
+
+  /// Restores state instance and returns whether it was hydrated from binary cache.
+  static (S, bool) hydrateFactoryWithStatus<S extends GraftState>(Function factory, String key) {
     final cached = ambientStorageCoordinator.readSync(key);
     if (cached != null && cached.isNotEmpty) {
       final decoded = BinarySerializer.decode(cached);
@@ -37,7 +43,7 @@ final class DryStateHook {
             }
             final restored = Function.apply(factory, args) as S;
             DryExpando.setFingerprint(restored, currentFp);
-            return restored;
+            return (restored, true);
           } else {
             ambientStorageCoordinator.delete(key);
           }
@@ -46,7 +52,7 @@ final class DryStateHook {
         }
       }
     }
-    return Function.apply(factory, const []) as S;
+    return (Function.apply(factory, const []) as S, false);
   }
 
   /// Activates dry persistence tracking for [state] initialized via tear-off.
@@ -76,13 +82,20 @@ final class DryStateHook {
       final decoded = BinarySerializer.decode(cached);
       if (decoded != null && decoded.fingerprint == currentFp) {
         state.hydrate(decoded.data);
+        Graft.observer?.onDryHydrated(state, key: key, fromCache: true);
       } else {
         // Mismatch or corrupt: discard stale cache
         ambientStorageCoordinator.delete(key);
         state.probeWithoutCache();
+        if (state.isDryEnabled) {
+          Graft.observer?.onDryHydrated(state, key: key, fromCache: false);
+        }
       }
     } else {
       state.probeWithoutCache();
+      if (state.isDryEnabled) {
+        Graft.observer?.onDryHydrated(state, key: key, fromCache: false);
+      }
     }
 
     DryExpando.setHydrated(state);
@@ -113,10 +126,12 @@ final class DryStateHook {
   static void invalidate(GraftState state) {
     DryExpando.invalidate(state);
     ambientStorageCoordinator.delete(state.dryKey);
+    Graft.observer?.onDryInvalidated(state, key: state.dryKey);
   }
 
   /// Purges all dry state matching [prefix].
   static void invalidatePrefix(String prefix) {
     ambientStorageCoordinator.invalidatePrefix(prefix);
+    Graft.observer?.onDryInvalidated(prefix, key: prefix, isScopePurge: true);
   }
 }

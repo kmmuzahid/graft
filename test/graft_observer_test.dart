@@ -169,5 +169,168 @@ void main() {
       GraftRegistry.unregister<CounterGraft>();
       expect(GraftRegistry.isRegistered<CounterGraft>(), isFalse);
     });
+
+    test('GraftObserver receives DI scope creation, bindings, and drop with active members', () {
+      final scopeCreatedLogs = <String>[];
+      final scopeDroppedLogs = <String>[];
+      final boundTypes = <Type>[];
+
+      final observer = _FullTestObserver(
+        onScopeCreatedCallback: (s, {preserved = false}) =>
+            scopeCreatedLogs.add('$s (preserved: $preserved)'),
+        onScopeDroppedCallback: (s, {members = const [], registeredTypes = const []}) =>
+            scopeDroppedLogs.add('$s: members=$members, registered=$registeredTypes'),
+        onDependencyBoundCallback: (t, {scopeId, singleton = true, preserved = false, isAsync = false}) =>
+            boundTypes.add(t),
+      );
+      Graft.observer = observer;
+
+      scope(TestScope.auth, () {
+        bind(CounterGraft.new);
+        bindAsync(() async => 'async_val');
+      });
+
+      expect(scopeCreatedLogs, contains('${TestScope.auth} (preserved: false)'));
+      expect(boundTypes, contains(CounterGraft));
+      expect(boundTypes, contains(String));
+
+      // Resolve member inside scope
+      final resolved = GraftDI.getScope(TestScope.auth).resolve<CounterGraft>();
+      expect(resolved, isNotNull);
+
+      // Drop scope
+      TestScope.auth.drop();
+
+      expect(scopeDroppedLogs.length, 1);
+      expect(scopeDroppedLogs.first, contains('${TestScope.auth}'));
+      expect(scopeDroppedLogs.first, contains('CounterGraft'));
+    });
+
+    test('GraftObserver receives Frame-0 dry persistence hydration and invalidation events', () {
+      resetAmbientPersistence();
+
+      final dryHydratedLogs = <String>[];
+      final dryInvalidatedLogs = <String>[];
+
+      final observer = _FullTestObserver(
+        onDryHydratedCallback: (state, {required key, required fromCache}) =>
+            dryHydratedLogs.add('${state.runtimeType}: key=$key, fromCache=$fromCache'),
+        onDryInvalidatedCallback: (target, {required key, isScopePurge = false}) =>
+            dryInvalidatedLogs.add('key=$key, isScopePurge=$isScopePurge'),
+      );
+      Graft.observer = observer;
+
+      final authGraft = AuthGraft();
+      expect(dryHydratedLogs.any((l) => l.contains('AuthState')), isTrue);
+
+      // Invalidate dry state
+      authGraft.invalidateDry();
+      expect(dryInvalidatedLogs.any((l) => l.contains('auth_session')), isTrue);
+
+      // Invalidate via scope prefix
+      TestScope.auth.invalidateDry();
+      expect(dryInvalidatedLogs.any((l) => l.contains('auth') && l.contains('isScopePurge=true')), isTrue);
+
+      authGraft.dispose();
+      resetAmbientPersistence();
+    });
+
+    test('GraftDevObserver handles all DI and Dry persistence callbacks with selective flags', () {
+      final devObserver = GraftDevObserver(
+        logDI: true,
+        logDry: true,
+        logState: true,
+        logBindings: true,
+        logErrors: true,
+      );
+      Graft.observer = devObserver;
+
+      // Exercise all methods on GraftDevObserver
+      devObserver.onScopeCreated(TestScope.auth, preserved: false);
+      devObserver.onDependencyBound(CounterGraft, scopeId: TestScope.auth);
+      devObserver.onScopeDropped(TestScope.auth, members: [CounterGraft], registeredTypes: [CounterGraft]);
+      devObserver.onScopeDropped(TestScope.cart, registeredTypes: [String]);
+      devObserver.onScopeDropped('empty_scope');
+
+      final authState = AuthState();
+      devObserver.onDryHydrated(authState, key: 'auth_session', fromCache: true);
+      devObserver.onDryHydrated(authState, key: 'auth_session', fromCache: false);
+      devObserver.onDryInvalidated(authState, key: 'auth_session');
+      devObserver.onDryInvalidated('auth', key: 'auth', isScopePurge: true);
+
+      // Test with all flags disabled (0 output)
+      final silentObserver = GraftDevObserver(
+        logDI: false,
+        logDry: false,
+        logState: false,
+        logBindings: false,
+        logErrors: false,
+        logRebuilds: false,
+      );
+      silentObserver.onScopeCreated(TestScope.auth);
+      silentObserver.onScopeDropped(TestScope.auth, members: [CounterGraft]);
+      silentObserver.onDependencyBound(CounterGraft);
+      silentObserver.onDryHydrated(authState, key: 'k', fromCache: true);
+      silentObserver.onDryInvalidated(authState, key: 'k');
+    });
   });
+}
+
+enum TestScope { auth, cart }
+
+class AuthState extends GraftState {
+  String token = 'jwt';
+  @override
+  String get dryKey => 'auth_session';
+  @override
+  GraftProps get props => propsOf(token);
+  @override
+  void onDry() {
+    token = dry(token);
+  }
+}
+
+class AuthGraft extends Graft<AuthState> {
+  AuthGraft() : super.dry(AuthState.new, key: 'auth_session');
+}
+
+class _FullTestObserver extends GraftObserver {
+  final void Function(Object scopeId, {bool preserved})? onScopeCreatedCallback;
+  final void Function(Object scopeId, {List<Type> members, List<Type> registeredTypes})? onScopeDroppedCallback;
+  final void Function(Type type, {Object? scopeId, bool singleton, bool preserved, bool isAsync})? onDependencyBoundCallback;
+  final void Function(GraftState state, {required String key, required bool fromCache})? onDryHydratedCallback;
+  final void Function(Object target, {required String key, bool isScopePurge})? onDryInvalidatedCallback;
+
+  _FullTestObserver({
+    this.onScopeCreatedCallback,
+    this.onScopeDroppedCallback,
+    this.onDependencyBoundCallback,
+    this.onDryHydratedCallback,
+    this.onDryInvalidatedCallback,
+  });
+
+  @override
+  void onScopeCreated(Object scopeId, {bool preserved = false}) {
+    onScopeCreatedCallback?.call(scopeId, preserved: preserved);
+  }
+
+  @override
+  void onScopeDropped(Object scopeId, {List<Type> members = const [], List<Type> registeredTypes = const []}) {
+    onScopeDroppedCallback?.call(scopeId, members: members, registeredTypes: registeredTypes);
+  }
+
+  @override
+  void onDependencyBound(Type type, {Object? scopeId, bool singleton = true, bool preserved = false, bool isAsync = false}) {
+    onDependencyBoundCallback?.call(type, scopeId: scopeId, singleton: singleton, preserved: preserved, isAsync: isAsync);
+  }
+
+  @override
+  void onDryHydrated(GraftState state, {required String key, required bool fromCache}) {
+    onDryHydratedCallback?.call(state, key: key, fromCache: fromCache);
+  }
+
+  @override
+  void onDryInvalidated(Object target, {required String key, bool isScopePurge = false}) {
+    onDryInvalidatedCallback?.call(target, key: key, isScopePurge: isScopePurge);
+  }
 }
