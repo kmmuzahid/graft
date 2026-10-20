@@ -182,7 +182,8 @@ class Graft<S extends GraftState> extends ChangeNotifier {
     Function stateFactory, {
     String? key,
   }) {
-    final dryKey = key ?? S.toString();
+    final dryKey =
+        key ?? (Function.apply(stateFactory, const []) as S).dryKey;
     final (state, fromCache) =
         DryStateHook.hydrateFactoryWithStatus<S>(stateFactory, dryKey);
     _state = state;

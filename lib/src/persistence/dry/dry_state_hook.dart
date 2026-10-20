@@ -26,23 +26,33 @@ final class DryStateHook {
       if (decoded != null) {
         try {
           final probe = Function.apply(factory, const []) as S;
-          final currentFp = SchemaFingerprint.compute(probe.props);
+          final dryVals = probe.captureDryValues();
+          final persistentProps =
+              dryVals.isNotEmpty ? GraftProps.fromList(dryVals) : probe.props;
+          final currentFp = SchemaFingerprint.compute(persistentProps);
           if (decoded.fingerprint == currentFp) {
-            final args = <Object?>[];
-            final probeProps = probe.props;
-            final data = decoded.data;
-            for (int i = 0; i < probeProps.length && i < data.length; i++) {
-              final defaultVal = probeProps[i];
-              final cachedVal = data[i];
-              if (defaultVal is GraftModel && cachedVal is List) {
-                defaultVal.hydrate(cachedVal.cast<Object?>());
-                args.add(defaultVal);
-              } else {
-                args.add(cachedVal);
+            S restored;
+            try {
+              final args = <Object?>[];
+              final probeProps = probe.props;
+              final data = decoded.data;
+              for (int i = 0; i < probeProps.length && i < data.length; i++) {
+                final defaultVal = probeProps[i];
+                final cachedVal = data[i];
+                if (defaultVal is GraftModel && cachedVal is List) {
+                  defaultVal.hydrate(cachedVal.cast<Object?>());
+                  args.add(defaultVal);
+                } else {
+                  args.add(cachedVal);
+                }
               }
+              restored = Function.apply(factory, args) as S;
+            } catch (_) {
+              probe.hydrate(decoded.data);
+              restored = probe;
             }
-            final restored = Function.apply(factory, args) as S;
             DryExpando.setFingerprint(restored, currentFp);
+            DryExpando.setHydrated(restored);
             return (restored, true);
           } else {
             ambientStorageCoordinator.delete(key);
