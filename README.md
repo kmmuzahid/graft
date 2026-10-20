@@ -19,11 +19,11 @@
 ## 📚 Dedicated Technical Guides & Documentation Hub
 
 For deep dives into specific subsystems, architecture philosophy, empirical benchmarks, and test matrices:
-- 🏛️ **[ARCHITECTURE.md](ARCHITECTURE.md):** Deep dive into the 6 Core Engineering Pillars, bitmask diffing, monotonic TypeId, DAG teardowns, automated async gates, and dry persistence.
-- 💉 **[DI_GUIDE.md](DI_GUIDE.md):** Major dedicated guide for the DI engine (developer enum scopes, zero-scope boot, singleton lock, non-blocking async DB/network, route leasing).
-- 💾 **[GRAFT_GUIDE.md](GRAFT_GUIDE.md):** Major dedicated guide for State Management & Frame-0 Persistence (propsOf, surgical slots, zero-controller forms, Option B GraftModel, Frame-0 dry state).
-- 📊 **[BENCHMARK_REPORT.md](BENCHMARK_REPORT.md):** Empirical benchmark methodology, hardware specs, and full logs across all 21 benchmark scenarios.
-- 🧪 **[TEST_REPORT.md](TEST_REPORT.md):** Comprehensive test verification report across 283 passing tests.
+- 🏛️ **[ARCHITECTURE.md](https://github.com/kmmuzahid/graft/blob/main/ARCHITECTURE.md):** Deep dive into the 6 Core Engineering Pillars, bitmask diffing, monotonic TypeId, DAG teardowns, automated async gates, and dry persistence.
+- 💉 **[DI_GUIDE.md](https://github.com/kmmuzahid/graft/blob/main/DI_GUIDE.md):** Major dedicated guide for the DI engine (developer enum scopes, zero-scope boot, singleton lock, non-blocking async DB/network, route leasing).
+- 💾 **[GRAFT_GUIDE.md](https://github.com/kmmuzahid/graft/blob/main/GRAFT_GUIDE.md):** Major dedicated guide for State Management & Frame-0 Persistence (propsOf, surgical slots, zero-controller forms, Option B GraftModel, Frame-0 dry state).
+- 📊 **[BENCHMARK_REPORT.md](https://github.com/kmmuzahid/graft/blob/main/BENCHMARK_REPORT.md):** Empirical benchmark methodology, hardware specs, and full logs across all 21 benchmark scenarios.
+- 🧪 **[TEST_REPORT.md](https://github.com/kmmuzahid/graft/blob/main/TEST_REPORT.md):** Comprehensive test verification report across 283 passing tests.
 
 ---
 
@@ -289,7 +289,7 @@ Graft rejects this compromise through 6 foundational pillars:
 
 Empirically verified across 15+ measured runs per scenario against **Riverpod**, **flutter_bloc / Cubit**, **Signals**, **GetX**, and **Provider** on both Native IO and Web.
 
-> 📊 For the complete statistical breakdown (Mean, Median, p95, Min, Max, StdDev, Rebuilds), see [`BENCHMARK_REPORT.md`](BENCHMARK_REPORT.md).
+> 📊 For the complete statistical breakdown (Mean, Median, p95, Min, Max, StdDev, Rebuilds), see [`BENCHMARK_REPORT.md`](https://github.com/kmmuzahid/graft/blob/main/BENCHMARK_REPORT.md).
 
 | Benchmark Scenario | Metric | Native IO Winner | Native IO Graft (Rank & Gap) | Web Browser Winner | Web Browser Graft (Rank & Gap) |
 | :--- | :--- | :---: | :---: | :---: | :---: |
@@ -545,7 +545,7 @@ asyncValue.when(
 
 ### C. Dependency Injection & Scope Management
 
-> 📘 For the comprehensive DI deep dive, see **[`DI_GUIDE.md`](DI_GUIDE.md)**.
+> 📘 For the comprehensive DI deep dive, see **[`DI_GUIDE.md`](https://github.com/kmmuzahid/graft/blob/main/DI_GUIDE.md)**.
 
 #### 1. `bind<T>()` & `bindAsync<T>()`
 Registers synchronous and non-blocking asynchronous dependencies into the active scope:
@@ -657,7 +657,7 @@ void main() {
 
 ### F. Frame-0 Dry State Persistence & Cascaded Models
 
-> 💾 For the comprehensive state and persistence deep dive, see **[`GRAFT_GUIDE.md`](GRAFT_GUIDE.md)**.
+> 💾 For the comprehensive state and persistence deep dive, see **[`GRAFT_GUIDE.md`](https://github.com/kmmuzahid/graft/blob/main/GRAFT_GUIDE.md)**.
 
 > [!NOTE]
 > ### 💡 When is `onDry()` needed?
@@ -1028,7 +1028,7 @@ Graft's dependency injection coordinates with Flutter's `Navigator` stack to eli
 
 ## 🧪 Test Verification & Quality Assurance
 
-> 🧪 For the complete test matrix and verification logs across all 71 test files, see **[`TEST_REPORT.md`](TEST_REPORT.md)**.
+> 🧪 For the complete test matrix and verification logs across all 71 test files, see **[`TEST_REPORT.md`](https://github.com/kmmuzahid/graft/blob/main/TEST_REPORT.md)**.
 
 Graft is verified against **283 passing tests** with zero static analysis warnings and zero rebuild leakage:
 
