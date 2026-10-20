@@ -1,7 +1,7 @@
 /// Hierarchy tiers and route-lease tracking tokens for Graft DI scopes.
 library;
 
-/// Declares the persistence tier of a [ScopeNode].
+/// Declares the persistence tier of a DI scope node.
 enum ScopeTier {
   /// Immortal root container. Never disposes during app lifetime.
   root,

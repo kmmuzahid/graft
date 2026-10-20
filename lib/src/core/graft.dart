@@ -170,7 +170,7 @@ class Graft<S extends GraftState> extends ChangeNotifier {
   /// Creates a new [Graft] with Frame-0 dry state hydration using constructor tear-off [stateFactory].
   ///
   /// Restores persisted properties from L1 RAM in < 50ns directly into constructor arguments.
-  /// Eliminates all [onHydrate], `read()`, and magic strings completely!
+  /// Eliminates all [GraftState.onHydrate], `read()`, and magic strings completely!
   ///
   /// ### Example:
   /// ```dart

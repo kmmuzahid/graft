@@ -105,7 +105,7 @@ extension GraftWidgetsX<S extends GraftState> on Graft<S> {
   /// Creates a reactive multi-child container whose child slots diff independently.
   ///
   /// Takes a required named [layout] function (e.g. `(children) => Column(children: children)`),
-  /// and required named [children] function returning the list of child widgets.
+  /// and required named [slots] function returning the list of child widgets.
   ///
   /// ### Why use `graft.slots(...)`?
   /// Automatically isolates each child into its own diffing slot:
@@ -211,7 +211,7 @@ extension GraftWidgetsX<S extends GraftState> on Graft<S> {
   /// - [GridView.builder]
   /// - [PageView.builder]
   /// - [SliverList.builder] / [SliverGrid.builder]
-  /// - [CarouselView]
+  /// - `CarouselView`
   ///
   /// ### How it works:
   /// - **Zero Layout Plumbing**: Defaults automatically to `ListView.builder`.
@@ -305,7 +305,7 @@ extension GraftWidgetsX<S extends GraftState> on Graft<S> {
   /// - [ListView.builder]
   /// - [PageView.builder]
   /// - [SliverList.builder] / [SliverGrid.builder]
-  /// - [CarouselView]
+  /// - `CarouselView`
   ///
   /// Rebuilds **ONLY** when [selector] returns a new or modified item.
   /// When [index] is supplied, enables direct O(1) indexed routing from [Graft.updateItem]

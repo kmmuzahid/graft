@@ -15,7 +15,7 @@
 ///    ); // Batched 64-bit bitmask diffing: notifies listeners once!
 ///    ```
 ///
-/// 2. **Zero-Setup Dependency Injection ([BuildContext.use]):**
+/// 2. **Zero-Setup Dependency Injection ([GraftContextX.use]):**
 ///    Instantiate and borrow controllers on-demand with zero configuration in `main.dart`:
 ///    ```dart
 ///    final graft = context.use(UserGraft.new);

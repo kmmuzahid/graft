@@ -1,7 +1,7 @@
 /// Monotonic integer type identifier for zero-collision flat array indexing.
 library;
 
-/// Assigns a unique, monotonic, 0-indexed integer ID to type [T].
+/// Assigns a unique, monotonic, 0-indexed integer ID to each type.
 final class TypeId {
   TypeId._();
 

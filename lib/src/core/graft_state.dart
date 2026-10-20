@@ -70,7 +70,7 @@ abstract class GraftState {
   }
 
   /// Optional storage key identifying this state in persistence.
-  /// Defaults to the class name ([runtimeType.toString()]).
+  /// Defaults to the class name (`runtimeType.toString()`).
   String get dryKey => _customDryKey ?? runtimeType.toString();
 
   /// Primary lifecycle hook called during Frame-0 dry hydration to map persistent fields.
@@ -2421,7 +2421,7 @@ class _Sentinel {
 
 /// Represents the hardware-aligned domain property container for [GraftState].
 ///
-/// Guaranteed zero heap allocations when constructed via [propsOf].
+/// Guaranteed zero heap allocations when constructed via [GraftState.propsOf].
 /// Returning a `List` literal (e.g. `[a, b]`) is a compile-time error.
 abstract final class GraftProps extends Iterable<Object?> {
   const GraftProps();
