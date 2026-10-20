@@ -272,6 +272,14 @@ void main() {
       silentObserver.onDependencyBound(CounterGraft);
       silentObserver.onDryHydrated(authState, key: 'k', fromCache: true);
       silentObserver.onDryInvalidated(authState, key: 'k');
+
+      // Test async vs sync logging modes
+      final asyncObserver = GraftDevObserver(asyncLog: true);
+      asyncObserver.onScopeCreated('async_scope');
+      asyncObserver.flushLogs();
+
+      final syncObserver = GraftDevObserver(asyncLog: false);
+      syncObserver.onScopeCreated('sync_scope');
     });
   });
 }

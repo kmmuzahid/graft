@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:developer' as developer;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
@@ -80,10 +81,13 @@ abstract class GraftObserver {
 }
 
 /// Out-of-the-box development observer featuring high-visibility ANSI colorized terminal logs,
-/// DI scope tracking, Frame-0 persistence identification, and Flutter DevTools Timeline integration.
+/// DI scope tracking, Frame-0 persistence identification, non-blocking asynchronous dispatch,
+/// and Flutter DevTools Timeline integration.
 ///
 /// ### Why use GraftDevObserver?
 /// - Formats lifecycle events with distinctive emoji badges and terminal colors.
+/// - **Non-blocking Async Logging:** By default ([asyncLog] is `true`), logs are batched into
+///   an asynchronous microtask, ensuring console I/O never blocks the main UI thread or state budget.
 /// - **DI Scope Tracking:** Logs scope creation and lists all disposed member dependencies on teardown.
 /// - **Dry State Identification:** Clearly marks persistent states with `💾 [DRY: key]` and logs invalidation.
 /// - Clearly prints current vs next state differences on every transition.
@@ -100,6 +104,7 @@ abstract class GraftObserver {
 ///       logDI: true,
 ///       logDry: true,
 ///       logState: true,
+///       asyncLog: true, // Non-blocking async console output (default)
 ///     );
 ///   }
 ///   runApp(const MyApp());
@@ -127,6 +132,13 @@ class GraftDevObserver extends GraftObserver {
   /// Whether to emit DevTools Timeline events for performance profiling.
   final bool enableTimeline;
 
+  /// Whether logs are flushed asynchronously to prevent blocking the UI thread.
+  ///
+  /// When `true` (default), log messages are queued and flushed in an asynchronous
+  /// microtask, decoupling console I/O from state mutation and frame rendering budgets.
+  /// When `false`, logs are emitted synchronously via [debugPrint].
+  final bool asyncLog;
+
   GraftDevObserver({
     this.logState = true,
     this.logDI = true,
@@ -135,7 +147,38 @@ class GraftDevObserver extends GraftObserver {
     this.logRebuilds = false,
     this.logErrors = true,
     this.enableTimeline = false,
+    this.asyncLog = true,
   });
+
+  List<String> _logQueue = [];
+  bool _flushScheduled = false;
+
+  void _output(String message) {
+    if (!kDebugMode) return;
+    if (!asyncLog) {
+      debugPrint(message);
+      return;
+    }
+    _logQueue.add(message);
+    if (!_flushScheduled) {
+      _flushScheduled = true;
+      scheduleMicrotask(_flushLogs);
+    }
+  }
+
+  void _flushLogs() {
+    _flushScheduled = false;
+    if (_logQueue.isEmpty) return;
+    final batch = _logQueue;
+    _logQueue = [];
+    for (var i = 0; i < batch.length; i++) {
+      debugPrint(batch[i]);
+    }
+  }
+
+  /// Flushes any pending asynchronous logs immediately.
+  @visibleForTesting
+  void flushLogs() => _flushLogs();
 
   static const _reset = '\x1B[0m';
   static const _bold = '\x1B[1m';
@@ -159,7 +202,7 @@ class GraftDevObserver extends GraftObserver {
     }
     if (kDebugMode && logDI) {
       final mode = preserved ? 'preserved' : 'transient';
-      debugPrint(
+      _output(
         '$_bold$_blue[📦 GRAFT DI SCOPE CREATED]$_reset | '
         '$_cyan$scopeId$_reset '
         '($_yellow$mode$_reset)',
@@ -205,7 +248,7 @@ class GraftDevObserver extends GraftObserver {
       } else {
         buffer.write('  (no members active)\n');
       }
-      debugPrint(buffer.toString().trimRight());
+      _output(buffer.toString().trimRight());
     }
   }
 
@@ -220,7 +263,7 @@ class GraftDevObserver extends GraftObserver {
     if (kDebugMode && logBindings) {
       final scopeName = scopeId ?? 'root';
       final asyncFlag = isAsync ? ' async' : '';
-      debugPrint(
+      _output(
         '$_bold$_blue[🔗 GRAFT DI BIND]$_reset | '
         '$_cyan$type$_reset in $_yellow$scopeName$_reset$asyncFlag',
       );
@@ -247,7 +290,7 @@ class GraftDevObserver extends GraftObserver {
       final source = fromCache
           ? '$_green restored from L1 RAM in <50ns$_reset'
           : '$_yellow initial defaults loaded$_reset';
-      debugPrint(
+      _output(
         '$_bold$_cyan[❄️ GRAFT DRY HYDRATED]$_reset | '
         '$_magenta${state.runtimeType}$_reset '
         '💾 [key: $_yellow$key$_reset] | $source',
@@ -272,14 +315,14 @@ class GraftDevObserver extends GraftObserver {
     }
     if (kDebugMode && logDry) {
       if (isScopePurge) {
-        debugPrint(
+        _output(
           '$_bold$_red[🧹 GRAFT DRY SCOPE PURGED]$_reset | '
           '$_cyan$target$_reset '
           '💾 [prefix: $_yellow$key$_reset] | L1 RAM & disk cache cleared',
         );
       } else {
         final typeName = target is GraftState ? target.runtimeType : target;
-        debugPrint(
+        _output(
           '$_bold$_red[🧹 GRAFT DRY INVALIDATED]$_reset | '
           '$_magenta$typeName$_reset '
           '💾 [key: $_yellow$key$_reset] | persistence cleared for session',
@@ -301,7 +344,7 @@ class GraftDevObserver extends GraftObserver {
       );
     }
     if (kDebugMode && logRebuilds) {
-      debugPrint(
+      _output(
         '$_bold$_cyan[🔄 GRAFT SLOT REBUILD]$_reset | '
         '$_magenta${graft.runtimeType}$_reset | '
         'Slot #$slotIndex (${widget.runtimeType})',
@@ -322,7 +365,7 @@ class GraftDevObserver extends GraftObserver {
       final dryBadge = isDry
           ? ' 💾 $_yellow[DRY: ${graft.state.dryKey}]$_reset'
           : '';
-      debugPrint(
+      _output(
         '$_bold$_green[🌱 GRAFT CREATED]$_reset | $_cyan${graft.runtimeType}$_reset$dryBadge',
       );
     }
@@ -345,7 +388,7 @@ class GraftDevObserver extends GraftObserver {
       final dryBadge = isDry
           ? ' 💾 $_yellow[DRY: ${graft.state.dryKey}]$_reset'
           : '';
-      debugPrint(
+      _output(
         '$_bold$_yellow[⚡ GRAFT CHANGE]$_reset | '
         '$_cyan${graft.runtimeType}$_reset$dryBadge\n'
         '  $_magenta${change.currentState}$_reset\n'
@@ -366,7 +409,7 @@ class GraftDevObserver extends GraftObserver {
       );
     }
     if (kDebugMode && logErrors) {
-      debugPrint(
+      _output(
         '$_bold$_red[💥 GRAFT ERROR]$_reset | '
         '$_cyan${graft.runtimeType}$_reset: $error\n$stackTrace',
       );
@@ -386,7 +429,7 @@ class GraftDevObserver extends GraftObserver {
       final dryBadge = isDry
           ? ' 💾 $_yellow[DRY: ${graft.state.dryKey}]$_reset'
           : '';
-      debugPrint(
+      _output(
         '$_bold$_red[🗑️ GRAFT DISPOSED]$_reset | $_cyan${graft.runtimeType}$_reset$dryBadge',
       );
     }
