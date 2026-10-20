@@ -51,7 +51,7 @@ final class GraftDI {
 /// Resolves an ambient dependency of type [T].
 ///
 /// ### Performance:
-/// - **Cold Lookup:** ≤ 12ns via monotonic integer [TypeId] array offset.
+/// - **Cold Lookup:** ≤ 12ns via monotonic integer `TypeId` array offset.
 /// - **Hot Access:** Cache via `late final _repo = use<OrderRepo>();` for < 0.8ns V-table access.
 T use<T>() {
   final overrides = Zone.current[GraftDI.testZoneKey];

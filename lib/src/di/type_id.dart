@@ -1,7 +1,10 @@
 /// Monotonic integer type identifier for zero-collision flat array indexing.
 library;
 
+import 'package:flutter/foundation.dart';
+
 /// Assigns a unique, monotonic, 0-indexed integer ID to each type.
+@internal
 final class TypeId {
   TypeId._();
 

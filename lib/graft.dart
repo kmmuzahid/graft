@@ -42,8 +42,6 @@ export 'src/di/disposable.dart';
 export 'src/di/graft_di.dart';
 export 'src/di/graft_registry.dart';
 export 'src/di/scope_block.dart';
-export 'src/di/scope_tier.dart';
-export 'src/di/type_id.dart';
 export 'src/persistence/ambient_locator.dart'
     show configurePersistence, resetAmbientPersistence;
 export 'src/persistence/file_state_config.dart';

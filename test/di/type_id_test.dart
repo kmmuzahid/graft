@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:graft/graft.dart';
+import 'package:graft/src/di/type_id.dart';
 
 class ServiceA {}
 class ServiceB {}

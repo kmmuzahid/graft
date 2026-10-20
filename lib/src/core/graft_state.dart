@@ -95,6 +95,7 @@ abstract class GraftState {
   /// name = dry(name);
   /// score = dry(score);
   /// ```
+  @nonVirtual
   T dry<T>(T fallback) {
     if (_isCapturingDry) {
       _capturedDry.add(fallback);
@@ -104,6 +105,7 @@ abstract class GraftState {
   }
 
   /// Declares and restores a nested [GraftModel] during [onDry].
+  @nonVirtual
   M dryModel<M extends GraftModel>(M model) {
     if (_isCapturingDry) {
       _capturedDry.add(model);
@@ -139,6 +141,7 @@ abstract class GraftState {
   }
 
   /// Type-safe auto-incrementing property reader for Frame-0 hydration.
+  @nonVirtual
   T read<T>([T? fallback]) {
     final buf = _hydrationBuffer;
     if (buf != null) {
@@ -168,6 +171,7 @@ abstract class GraftState {
   }
 
   /// Hydrates a nested [GraftModel] using the next value in the hydration sequence.
+  @nonVirtual
   void readModel(GraftModel model) {
     final buf = _hydrationBuffer;
     if (buf != null) {
@@ -247,6 +251,7 @@ abstract class GraftState {
   }
 
   /// Permanently deactivates and invalidates dry state persistence for this session.
+  @nonVirtual
   void invalidateDry() => DryStateHook.invalidate(this);
 
   /// Binds this state instance to its owning [Graft] controller.

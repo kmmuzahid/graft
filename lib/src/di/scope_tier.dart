@@ -1,7 +1,10 @@
 /// Hierarchy tiers and route-lease tracking tokens for Graft DI scopes.
 library;
 
+import 'package:flutter/foundation.dart';
+
 /// Declares the persistence tier of a DI scope node.
+@internal
 enum ScopeTier {
   /// Immortal root container. Never disposes during app lifetime.
   root,

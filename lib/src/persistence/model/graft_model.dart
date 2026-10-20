@@ -1,6 +1,7 @@
 /// Cascaded mutable domain model contract for nested state properties.
 library;
 
+import 'package:flutter/foundation.dart';
 import '../../core/graft_state.dart';
 
 /// Base class for domain sub-models supporting automatic serialization and bitmask diffing.
@@ -35,15 +36,18 @@ abstract class GraftModel {
   void onHydrate() {}
 
   /// Declares and restores a persistent model property during [onDry].
+  @nonVirtual
   T dry<T>(T fallback) => read<T>(fallback);
 
   /// Declares and restores a nested [GraftModel] during [onDry].
+  @nonVirtual
   M dryModel<M extends GraftModel>(M model) {
     readModel(model);
     return model;
   }
 
   /// Hydrates a nested [GraftModel] using the next value in the hydration sequence.
+  @nonVirtual
   void readModel(GraftModel model) {
     final buf = _hydrationBuffer;
     if (buf != null) {
@@ -69,6 +73,7 @@ abstract class GraftModel {
   }
 
   /// Type-safe auto-incrementing property reader for Frame-0 hydration.
+  @nonVirtual
   T read<T>([T? fallback]) {
     final buf = _hydrationBuffer;
     if (buf != null) {
@@ -96,6 +101,9 @@ abstract class GraftModel {
   }
 
   /// In-place hydration method restoring domain fields and nested models.
+  /// Internal engine method: must not be called or overridden by user code.
+  @internal
+  @nonVirtual
   void hydrate(List<Object?> tuple) {
     _hydrationBuffer = tuple;
     _hydrationReadIndex = 0;
@@ -117,6 +125,9 @@ abstract class GraftModel {
   }
 
   /// Internal probe execution when no cached data exists.
+  /// Internal engine method: must not be called or overridden by user code.
+  @internal
+  @nonVirtual
   void probeModel() {
     final p = props;
     _probeProps = List<Object?>.generate(p.length, (i) => p[i], growable: false);
@@ -135,6 +146,8 @@ abstract class GraftModel {
   }
 
   /// Convenience helper to create [GraftProps].
+  @protected
+  @nonVirtual
   GraftProps propsOf([
     Object? p0 = const _Sentinel(),
     Object? p1 = const _Sentinel(),

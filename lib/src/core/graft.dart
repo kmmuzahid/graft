@@ -269,6 +269,7 @@ class Graft<S extends GraftState> extends ChangeNotifier {
 
   /// Whether this [Graft] has any registered listeners.
   @override
+  @nonVirtual
   bool get hasListeners =>
       _singleListener != null ||
       (_extraListeners != null && _extraListeners!.isNotEmpty) ||
@@ -293,6 +294,7 @@ class Graft<S extends GraftState> extends ChangeNotifier {
   ///
   /// Remember to remove the listener using [removeListener] when no longer needed.
   @override
+  @nonVirtual
   void addListener(VoidCallback listener) {
     if (!_isDisposed) {
       if (_singleListener == null) {
@@ -308,6 +310,7 @@ class Graft<S extends GraftState> extends ChangeNotifier {
 
   /// Removes a previously registered [listener].
   @override
+  @nonVirtual
   void removeListener(VoidCallback listener) {
     if (!_isDisposed) {
       if (identical(_singleListener, listener)) {
@@ -368,6 +371,7 @@ class Graft<S extends GraftState> extends ChangeNotifier {
   bool get hasOnlyFastDirectReceiver => _hasOnlyFastDirectReceiver;
 
   @override
+  @nonVirtual
   void notifyListeners() {
     if (_isDisposed) return;
     final single = _singleListener;
