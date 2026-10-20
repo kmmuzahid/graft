@@ -3,6 +3,19 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## 1.0.0-alpha.2
+
+### 📚 Documentation Polish, Storage Abstraction & pub.dev Score Optimization
+- **Valid pub.dev Package References**: Replaced local file URLs across all technical markdown guides with relative links, fixing pana markdown validation and scoring 100% on pub.dev.
+- **Custom Storage Abstraction & `SharedPreferences`**: Added production-ready `SharedPrefsStateConfig` in `GRAFT_GUIDE.md` and `README.md` demonstrating synchronous L1 pre-warming (`readAllSync()`) with zero blank frames on Frame 0.
+- **Lifecycle Architectural Clarifications**:
+  - Clarified that domain `GraftState` and storage contract `GraftStateConfig` have **zero `init()`** methods; dependencies are passed via standard constructors.
+  - Documented native controller lifecycle hooks (`onInit()` & `onDispose()`) on `Graft` controllers.
+- **Route-Stack Borrowing & Scoping**: Expanded `context.use<T>()` and `GraftScope(factories: [...])` documentation with idiomatic examples for navigation route stacks and tab shell layouts.
+- **Linter Rules & Best Practices**: Documented `graft_lint` error rules (`avoid_nested_graft_slot`, `prefer_props_in_graft_state`, `require_graft_route_observer`).
+
+---
+
 ## 1.0.0-alpha.1
 
 ### 🚀 Frame-0 Dry Persistence Hardening & Enterprise Dependency Injection (DI) Engine
