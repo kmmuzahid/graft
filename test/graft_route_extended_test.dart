@@ -133,6 +133,33 @@ void main() {
 
       expect(graft.isDisposed, isTrue);
     });
+
+    testWidgets('GraftRouteTracker tombstones oldRoute and prevents duplicate controller creation on replaced route', (tester) async {
+      final oldRoute = MaterialPageRoute(builder: (_) => const SizedBox());
+      final newRoute = MaterialPageRoute(builder: (_) => const SizedBox());
+
+      GraftRouteTracker.didPush(oldRoute, null);
+
+      int createCount = 0;
+      MockGraft createMock() {
+        createCount++;
+        return MockGraft();
+      }
+
+      final graft1 = createMock();
+      GraftRouteTracker.registerOwned(oldRoute, graft1);
+      expect(createCount, equals(1));
+      expect(graft1.isDisposed, isFalse);
+
+      // Route is replaced
+      GraftRouteTracker.didReplace(newRoute: newRoute, oldRoute: oldRoute);
+      expect(graft1.isDisposed, isTrue);
+
+      // An unmount/exit build pass attempts to resolve the graft on oldRoute
+      final resolved = GraftRouteTracker.findInStack<MockGraft>(oldRoute);
+      expect(resolved, equals(graft1));
+      expect(createCount, equals(1));
+    });
   });
 }
 

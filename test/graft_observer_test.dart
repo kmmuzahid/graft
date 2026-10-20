@@ -273,6 +273,24 @@ void main() {
       silentObserver.onDryHydrated(authState, key: 'k', fromCache: true);
       silentObserver.onDryInvalidated(authState, key: 'k');
 
+      // Test default flags (state and changes disabled by default, DI and Dry enabled)
+      final defaultDevObserver = GraftDevObserver();
+      expect(defaultDevObserver.logState, isFalse);
+      expect(defaultDevObserver.logChanges, isFalse);
+      expect(defaultDevObserver.logDI, isTrue);
+      expect(defaultDevObserver.logDry, isTrue);
+
+      final changesObserver = GraftDevObserver(logChanges: true);
+      expect(changesObserver.logChanges, isTrue);
+
+      final stateObserver = GraftDevObserver(logState: true);
+      expect(stateObserver.logState, isTrue);
+      expect(stateObserver.logChanges, isTrue);
+
+      final stateOnlyObserver = GraftDevObserver(logState: true, logChanges: false);
+      expect(stateOnlyObserver.logState, isTrue);
+      expect(stateOnlyObserver.logChanges, isFalse);
+
       // Test async vs sync logging modes
       final asyncObserver = GraftDevObserver(asyncLog: true);
       asyncObserver.onScopeCreated('async_scope');

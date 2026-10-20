@@ -57,6 +57,16 @@ extension GraftContextX on BuildContext {
       if (existing != null) {
         return existing;
       }
+
+      // If the route has already completed/popped or is inactive and in tombstone phase,
+      // prevent instantiating and registering zombie instances during exit frames.
+      if (GraftRouteTracker.isRouteTombstoned(route)) {
+        final ghost = factory != null ? factory() : GraftRegistry.create<T>();
+        if (!ghost.isDisposed) {
+          ghost.dispose();
+        }
+        return ghost;
+      }
     }
 
     final newInstance = factory != null ? factory() : GraftRegistry.create<T>();

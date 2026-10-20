@@ -111,8 +111,15 @@ abstract class GraftObserver {
 /// }
 /// ```
 class GraftDevObserver extends GraftObserver {
-  /// Whether to log state mutations, creations, and disposals.
+  /// Whether to log controller creations and disposals (`🌱`, `🗑️`).
   final bool logState;
+
+  final bool? _logChanges;
+
+  /// Whether to log state mutations and transitions (`⚡`).
+  ///
+  /// Defaults to `false`. If not explicitly set, falls back to [logState].
+  bool get logChanges => _logChanges ?? logState;
 
   /// Whether to log DI scope lifecycle (creation, members, and teardowns).
   final bool logDI;
@@ -141,11 +148,16 @@ class GraftDevObserver extends GraftObserver {
 
   /// Creates a development observer with configurable logging flags and async dispatch.
   GraftDevObserver({
-    /// Whether to log state mutations, creations, and disposals (`🌱`, `⚡`, `🗑️`).
+    /// Whether to log controller creations and disposals (`🌱`, `🗑️`).
+    ///
+    /// Defaults to `false`.
+    this.logState = false,
+
+    /// Whether to log state mutations and transitions (`⚡`).
     ///
     /// When enabled, prints state changes with current vs next state differences.
-    /// Defaults to `true`.
-    this.logState = true,
+    /// Defaults to `false`.
+    bool? logChanges,
 
     /// Whether to log DI scope lifecycle, including scope creation and active member teardowns (`📦`, `💥`).
     ///
@@ -188,7 +200,7 @@ class GraftDevObserver extends GraftObserver {
     /// When `true`, console I/O is decoupled from state updates to preserve 60/120fps frame budgets.
     /// Defaults to `true`.
     this.asyncLog = true,
-  });
+  }) : _logChanges = logChanges;
 
   List<String> _logQueue = [];
   bool _flushScheduled = false;
@@ -423,7 +435,7 @@ class GraftDevObserver extends GraftObserver {
         },
       );
     }
-    if (kDebugMode && logState) {
+    if (kDebugMode && logChanges) {
       final isDry = graft is Graft && graft.state.isDryEnabled;
       final dryBadge = isDry
           ? ' 💾 $_yellow[DRY: ${graft.state.dryKey}]$_reset'

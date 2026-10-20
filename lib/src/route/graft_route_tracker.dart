@@ -33,6 +33,7 @@ class GraftRouteTracker {
   static final List<Route<dynamic>> _routeStack = [];
   static final Map<Route<dynamic>, Map<Type, Graft>> _routeInstances = {};
   static final Map<Graft, Route<dynamic>> _owners = {};
+  static final Map<Route<dynamic>, Map<Type, Graft>> _tombstones = {};
 
   /// Shared [GraftRouteObserver] instance for convenient registration in `MaterialApp.navigatorObservers`.
   static final GraftRouteObserver observer = GraftRouteObserver();
@@ -105,8 +106,19 @@ class GraftRouteTracker {
         _owners.remove(graft);
       }
     }
-    _routeInstances.remove(route);
+    final removed = _routeInstances.remove(route);
+    if (removed != null && removed.isNotEmpty) {
+      _tombstones[route] = removed;
+      route.popped.whenComplete(() {
+        _tombstones.remove(route);
+      });
+    }
   }
+
+  /// Checks whether [route] has been disposed and is currently in unmount/tombstone phase.
+  @internal
+  static bool isRouteTombstoned(Route<dynamic> route) =>
+      _tombstones.containsKey(resolveOwnerRoute(route));
 
   /// Resolves the true persistent owner route for [requestedRoute].
   ///
@@ -144,6 +156,12 @@ class GraftRouteTracker {
       return currentInstances[T] as T;
     }
 
+    // Check tombstones if current route was already disposed during unmount
+    final tombstoned = _tombstones[effectiveCurrent];
+    if (tombstoned != null && tombstoned.containsKey(T)) {
+      return tombstoned[T] as T;
+    }
+
     // 2. Search backwards in the active route stack
     final currentIndex = _routeStack.lastIndexOf(effectiveCurrent);
     final startIndex = currentIndex != -1 ? currentIndex - 1 : _routeStack.length - 1;
@@ -174,6 +192,14 @@ class GraftRouteTracker {
   @internal
   static void registerOwned<T extends Graft>(Route<dynamic> ownerRoute, T graft) {
     final effectiveOwner = resolveOwnerRoute(ownerRoute);
+
+    if (_tombstones.containsKey(effectiveOwner)) {
+      _tombstones.putIfAbsent(effectiveOwner, () => {})[T] = graft;
+      if (!graft.isDisposed) {
+        graft.dispose();
+      }
+      return;
+    }
 
     if (!_routeStack.contains(effectiveOwner)) {
       _routeStack.add(effectiveOwner);
@@ -214,6 +240,7 @@ class GraftRouteTracker {
     }
     _owners.clear();
     _routeInstances.clear();
+    _tombstones.clear();
   }
 }
 

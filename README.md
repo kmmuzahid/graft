@@ -608,7 +608,8 @@ void main() {
     Graft.observer = GraftDevObserver(
       logDI: true,          // 📦 DI scope creation & member teardown (default: true)
       logDry: true,         // 💾 Dry state badges, hydration & invalidation (default: true)
-      logState: true,       // 🌱 State creation, onChange diffs, onDispose (default: true)
+      logState: false,      // 🌱 State creation & disposal (default: false)
+      logChanges: false,    // ⚡ State change transitions & diffs (default: false)
       logBindings: false,   // 🔗 Individual dependency registrations (default: false)
       logRebuilds: false,   // 🔄 Fine-grained slot widget rebuilds (default: false)
       logErrors: true,      // 💥 Unhandled errors and stack traces (default: true)
