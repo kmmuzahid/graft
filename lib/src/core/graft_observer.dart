@@ -139,14 +139,54 @@ class GraftDevObserver extends GraftObserver {
   /// When `false`, logs are emitted synchronously via [debugPrint].
   final bool asyncLog;
 
+  /// Creates a development observer with configurable logging flags and async dispatch.
   GraftDevObserver({
+    /// Whether to log state mutations, creations, and disposals (`🌱`, `⚡`, `🗑️`).
+    ///
+    /// When enabled, prints state changes with current vs next state differences.
+    /// Defaults to `true`.
     this.logState = true,
+
+    /// Whether to log DI scope lifecycle, including scope creation and active member teardowns (`📦`, `💥`).
+    ///
+    /// When a scope drops, lists all instantiated member types that were disposed.
+    /// Defaults to `true`.
     this.logDI = true,
+
+    /// Whether to log Frame-0 dry persistence badges, hydrations, and invalidations (`💾`, `❄️`, `🧹`).
+    ///
+    /// Displays `💾 [DRY: key]` badges on states, and logs L1 RAM cache restores vs default loads.
+    /// Defaults to `true`.
     this.logDry = true,
+
+    /// Whether to log individual dependency binding registrations (`🔗`).
+    ///
+    /// Useful for debugging the initial wiring of your dependency injection tree.
+    /// Defaults to `false`.
     this.logBindings = false,
+
+    /// Whether to print diagnostics on fine-grained slot widget rebuilds (`🔄`).
+    ///
+    /// Useful for verifying that only targeted slots rebuild during state mutations.
+    /// Defaults to `false`.
     this.logRebuilds = false,
+
+    /// Whether to format and log unhandled errors caught by Graft (`💥`).
+    ///
+    /// Formats errors and stack traces caught through [Graft.addError].
+    /// Defaults to `true`.
     this.logErrors = true,
+
+    /// Whether to emit Flutter DevTools Timeline performance events for profiling.
+    ///
+    /// Visible in DevTools > Timeline / Performance view.
+    /// Defaults to `false`.
     this.enableTimeline = false,
+
+    /// Whether logs are flushed asynchronously in a microtask to avoid blocking the main UI thread.
+    ///
+    /// When `true`, console I/O is decoupled from state updates to preserve 60/120fps frame budgets.
+    /// Defaults to `true`.
     this.asyncLog = true,
   });
 
