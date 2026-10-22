@@ -413,7 +413,7 @@ class GraftDevObserver extends GraftObserver {
       );
     }
     if (kDebugMode && logState) {
-      final isDry = graft is Graft && graft.state.isDryEnabled;
+      final isDry = graft is Graft && GraftStateEngine.isDryEnabled(graft.state);
       final dryBadge = isDry
           ? ' 💾 $_yellow[DRY: ${graft.state.dryKey}]$_reset'
           : '';
@@ -436,7 +436,7 @@ class GraftDevObserver extends GraftObserver {
       );
     }
     if (kDebugMode && logChanges) {
-      final isDry = graft is Graft && graft.state.isDryEnabled;
+      final isDry = graft is Graft && GraftStateEngine.isDryEnabled(graft.state);
       final dryBadge = isDry
           ? ' 💾 $_yellow[DRY: ${graft.state.dryKey}]$_reset'
           : '';
@@ -477,7 +477,7 @@ class GraftDevObserver extends GraftObserver {
       );
     }
     if (kDebugMode && logState) {
-      final isDry = graft is Graft && graft.state.isDryEnabled;
+      final isDry = graft is Graft && GraftStateEngine.isDryEnabled(graft.state);
       final dryBadge = isDry
           ? ' 💾 $_yellow[DRY: ${graft.state.dryKey}]$_reset'
           : '';

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graft/graft.dart';
+import 'package:graft/src/core/graft.dart';
 import 'package:graft/src/widgets/slot_metadata.dart';
 
 class LifecycleState extends GraftState {
@@ -50,7 +51,7 @@ void main() {
 
       // Subsequent actions must be no-ops without throwing
       graft.addMaskListener(listener);
-      graft.notifyMask(GraftMask.fromIndex(0));
+      GraftEngine.notifyMask(graft, GraftMask.fromIndex(0));
       expect(maskCalls, 1);
     });
 

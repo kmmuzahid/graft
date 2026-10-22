@@ -7,22 +7,22 @@ import 'package:graft/src/persistence/model/schema_fingerprint.dart';
 enum AppScope { checkout, profile }
 
 class CheckoutFormState extends GraftState {
-  String notes = 'Urgent delivery';
+  @override
+  int get schemaVersion => 1;
+
+  String notes;
+
+  CheckoutFormState([this.notes = 'Urgent delivery']);
 
   @override
   String get dryKey => 'checkout_form';
 
   @override
   GraftProps get props => propsOf(notes);
-
-  @override
-  void onHydrate() {
-    notes = read();
-  }
 }
 
 class CheckoutFormGraft extends Graft<CheckoutFormState> {
-  CheckoutFormGraft() : super(CheckoutFormState());
+  CheckoutFormGraft() : super.dry(CheckoutFormState.new);
 }
 
 void main() {
@@ -53,7 +53,7 @@ void main() {
 
     test('scope.invalidateDry purges matching keys flow-wide', () {
       final s1 = CheckoutFormState();
-      final fp1 = SchemaFingerprint.compute(s1.props);
+      final fp1 = SchemaFingerprint.compute(s1.props, schemaVersion: 1);
       ambientStorageCoordinator.write(
         'checkout_step1',
         BinarySerializer.encode(s1.propsOf('step 1 data'), fp1),

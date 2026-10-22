@@ -722,45 +722,26 @@ void main() {
 > 💾 For the comprehensive state and persistence deep dive, see **[`GRAFT_GUIDE.md`](https://github.com/kmmuzahid/graft/blob/main/GRAFT_GUIDE.md)**.
 
 > [!NOTE]
-> ### 💡 When is `onDry()` needed?
-> Overriding `onDry()` is **strictly optional**. You only implement `onDry()` when you want that state or model's data saved permanently across app restarts (e.g. auth tokens, cart items, user preferences). For **transient UI states** (dialogs, search bars, loading flags), **do NOT implement `onDry()`**—simply declare `props => propsOf(...)`.
+> ### 💡 Frame-0 Dry Persistence Architecture (Alpha)
+> Graft features zero-magic-string, constructor-driven persistence. States declare constructor parameters with defaults once, override `schemaVersion => 1`, and instantiate via `super.dry(State.new)`. Restorations complete from L1 RAM in $< 50\text{ ns}$ on Frame 0 before initial paint!
 
-#### 1. Zero-Magic-String Persistence (`onDry` & `dry`)
-Declare plain Dart variables. List all domain properties in `propsOf` for surgical UI rebuilds, and map persistent fields in `onDry()`:
-```dart
-class ProfileState extends GraftState {
-  String name = 'Guest';
-  int score = 0;
-  bool isLoading = false; // Transient UI state: starts fresh on app launch!
-
-  // 1. All fields listed for surgical UI rebuilds:
-  @override
-  GraftProps get props => propsOf(name, score, isLoading);
-
-  // 2. ONLY persistent fields listed here (zero strings, type-inferred!):
-  @override
-  void onDry() {
-    name = dry(name);
-    score = dry(score);
-  }
-}
-
-class ProfileGraft extends Graft<ProfileState> {
-  // ⚡ Automatically hydrates from binary L1 RAM in ~1.5 µs on Frame 0!
-  ProfileGraft() : super(ProfileState());
-}
-```
-
-#### 2. Constructor Tear-Off Hydration (`super.dry(State.new)`)
-Zero `onDry()`, zero `read()`, and zero magic strings. Define standard constructor defaults and pass the tear-off:
+#### 1. Ultra-Clean Constructor Hydration (`super.dry(State.new)`)
+Zero `onDry()`, zero manual index casting, and zero magic strings. Declare constructor defaults once, provide `@override int get schemaVersion => 1;`, and pass the constructor tear-off:
 ```dart
 class FormState extends GraftState {
-  String notes;
+  @override
+  int get schemaVersion => 1;
 
-  FormState([this.notes = 'Initial note']);
+  String notes;
+  bool isSubmitting; // Transient UI field: starts fresh on launch!
+
+  FormState([
+    this.notes = 'Initial note',
+    this.isSubmitting = false,
+  ]);
 
   @override
-  GraftProps get props => propsOf(notes);
+  GraftProps get props => propsOf(notes, isSubmitting);
 }
 
 class FormGraft extends Graft<FormState> {
@@ -769,7 +750,32 @@ class FormGraft extends Graft<FormState> {
 }
 ```
 
-#### 3. Controller Lifecycle Hooks (`onInit()` & `onDispose()`)
+#### 2. Ultra-Clean Cascaded Sub-Models (`GraftModel`)
+Cascaded domain sub-models with plain mutable fields, `propsOf`, and a 1-line constructor tear-off (`factory => Model.new`). Sub-models are restored automatically with zero index casting:
+```dart
+class AddressModel extends GraftModel {
+  @override
+  int get schemaVersion => 1;
+
+  String street;
+  String city;
+
+  AddressModel([this.street = '', this.city = '']);
+
+  @override
+  GraftProps get props => propsOf(street, city);
+
+  @override
+  Function get factory => AddressModel.new; // ✨ 1-line constructor tear-off!
+}
+```
+
+#### 3. Two-Tier Contract Enforcement (Static Lints & Runtime Guards)
+To guarantee 100% deterministic persistence and safe schema evolutions across app restarts:
+- **Static Analysis (`graft_lint`)**: The `RequireDryContractsRule` analyzer rule automatically flags any class used with `super.dry` lacking `schemaVersion`, or any nested model lacking `factory`.
+- **Runtime Guard**: Throws a fail-fast, actionable `StateError` on launch if contracts are missing.
+
+#### 4. Controller Lifecycle Hooks (`onInit()` & `onDispose()`)
 `onInit()` runs immediately after Frame-0 hydration:
 ```dart
 class FormGraft extends Graft<FormState> {
@@ -790,23 +796,11 @@ class FormGraft extends Graft<FormState> {
 }
 ```
 
-#### 4. Micro-State Persistence (`ValueGraft.dry`)
+#### 5. Micro-State Persistence (`ValueGraft.dry`)
 Standalone persistent micro-state with zero boilerplate:
 ```dart
 final theme = ValueGraft<String>.dry('dark', key: 'app_theme');
 theme.value = 'light'; // Synchronous L1 save + debounced disk write!
-```
-
-#### 5. Cascaded Sub-Models (`GraftModel`)
-Cascaded domain sub-models with plain mutable fields and `propsOf`. Sub-models only need `onDry()` if persisted via `dryModel()`:
-```dart
-class AddressModel extends GraftModel {
-  String street = '';
-  @override
-  GraftProps get props => propsOf(street);
-  @override
-  void onDry() => street = dry(street);
-}
 ```
 
 #### 6. Purging Dry State (`invalidateDry`)
@@ -862,11 +856,16 @@ state..name = 'Alice'..age = 25..update();
 // 4. state.reset(): Restores initial domain values via onReset()
 state.reset();
 
-// 5. GraftModel: Option B cascaded mutable sub-model
+// 5. GraftModel: Cascaded mutable sub-model with auto-hydration tear-off
 class AddressModel extends GraftModel {
-  String street = '';
+  @override
+  int get schemaVersion => 1;
+  String street;
+  AddressModel([this.street = '']);
   @override
   GraftProps get props => propsOf(street);
+  @override
+  Function get factory => AddressModel.new;
 }
 ```
 
@@ -956,35 +955,40 @@ GraftDI.reset();
 
 ### 💾 5. Frame-0 Persistence & Dry State
 ```dart
-// 29. onDry(): Overriding automatically enables Frame-0 dry persistence with zero boilerplate
-@override
-void onDry() {
-  name = dry(name);   // Zero strings, type-inferred!
-  score = dry(score); // Transient fields omitted start fresh!
+// 29. super.dry(State.new): Automatically hydrates state on Frame 0 into constructor arguments
+class UserGraft extends Graft<UserState> {
+  UserGraft() : super.dry(UserState.new);
 }
 
-// 30. dryKey: Optional storage key (defaults to class name runtimeType.toString())
+// 30. schemaVersion: Mandatory version contract for deterministic persistence and safe evolution
+@override
+int get schemaVersion => 1;
+
+// 31. factory: 1-line constructor tear-off for auto-hydrating nested GraftModels
+@override
+Function get factory => AddressModel.new;
+
+// 32. dryKey: Optional storage key (defaults to class name runtimeType.toString())
 @override
 String get dryKey => 'user_profile';
 
-// 31. graft.invalidateDry(): Purges controller's persisted dry cache
+// 33. graft.invalidateDry(): Purges controller's persisted dry cache
 graft.invalidateDry();
 
-// 32. Enum.invalidateDry(): Purges all dry caches across entire flow
+// 34. Enum.invalidateDry(): Purges all dry caches across entire flow
 AppScope.checkout.invalidateDry();
 
-// 33. ValueGraft.dry(): Persistent micro-state on Frame 0
+// 35. ValueGraft.dry(): Persistent micro-state on Frame 0
 final count = ValueGraft<int>.dry(0, key: 'counter');
 
-// 34. FileStateConfig: High-performance binary file driver (.bin) for production
+// 36. FileStateConfig: High-performance binary file driver (.bin) for production
 configurePersistence(FileStateConfig(Directory('path/to/storage')));
 
-// 35. MemoryStateConfig: In-memory binary driver for unit tests
+// 37. MemoryStateConfig: In-memory binary driver for unit tests
 configurePersistence(MemoryStateConfig());
 
-// 36. GraftStateConfig: Custom storage interface contract (SharedPreferences, Encrypted, MMKV)
-class MyStorageConfig implements GraftStateConfig { /* readAllSync, read, write, delete, close */ }
-configurePersistence(MyStorageConfig());
+// 38. GraftLifecycleObserver: Automatic debounced write flushing on app background/pause
+GraftLifecycleObserver.instance.attach();
 ```
 
 ---

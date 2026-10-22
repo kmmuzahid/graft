@@ -3,6 +3,37 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## 1.0.0-alpha.4
+
+### 💾 Deterministic 32-bit FNV-1a Fingerprinting, Ultra-Clean Constructor Hydration & Two-Tier Contract Enforcement
+
+- **Deterministic 32-bit FNV-1a Schema Fingerprinting**:
+  - Replaced non-deterministic `Object.hash()` and `Type.hashCode` across separate Dart VM process launches / isolates with an invariant 32-bit FNV-1a integer hashing algorithm (`.toSigned(32)`).
+  - Eliminates Frame-0 cold start / hot restart cache invalidation while preserving strict deterministic invalidation on real schema evolution (order swap, field mutation, or version change).
+- **Ultra-Clean Constructor Hydration (`super.dry(State.new)` & `factory => Model.new`)**:
+  - State and domain sub-models declare constructor defaults once; Graft auto-hydrates into constructor arguments on Frame 0 with **zero** `hydrate(tuple)` casting and **zero** manual index cursors.
+  - Domain sub-models extending `GraftModel` declare a 1-line constructor tear-off: `@override Function get factory => Model.new;`.
+- **Mandatory `schemaVersion` for Deterministic Safety**:
+  - Added `@override int get schemaVersion => 1;` contract on `GraftState` and `GraftModel`. Guarantees deterministic invalidation even when all properties share the identical Dart type (e.g., 10 `String` fields) and order is swapped.
+- **Two-Tier Enforcement (Static Lint + Runtime Fail-Fast)**:
+  - **Static (`graft_lint`)**: Added `RequireDryContractsRule` to flag missing `schemaVersion` on persistent states and missing `factory` or `schemaVersion` on nested models at compile-time.
+  - **Runtime**: Fail-fast `StateError` in `DryStateHook` / `Graft.dry` with descriptive messages if `schemaVersion` or `factory` is missing.
+- **Automatic App Lifecycle Flush (`GraftLifecycleObserver`)**:
+  - Flushes debounced storage writes immediately upon `AppLifecycleState.paused`, `inactive`, `detached`, or `hidden`, preventing lost writes on immediate app backgrounding or OS process termination.
+  - Exported `GraftLifecycleObserver` in `lib/graft.dart` and auto-registered in `GraftRouteTracker` and `configurePersistence`.
+- **Crash-Proof Deserializer & Atomic Disk Writes**:
+  - Corrupt or truncated binary files safely return `null` instead of throwing `RangeError`, automatically purging invalid cache entries.
+  - Reversible URI key encoding in `FileStateConfig` (`Uri.encodeComponent` / `Uri.decodeComponent`).
+  - Atomic disk writes using `.bin.tmp` file renaming to avoid corrupted files on process kill.
+- **Strict Developer API Encapsulation & Surface Lockdown**:
+  - Encapsulated internal state engine plumbing (`bindGraft`, `initBaseline`, `baselineSnapshot`, `diffChanges`, `version`, `isDryEnabled`, `customDryKey`) into `@internal abstract final class GraftStateEngine` (hidden from `lib/graft.dart`).
+  - Encapsulated slot engine receivers (`_fastDirectReceiver`, `_indexedItemReceivers`, `_registerItemReceiver`, `_notifyItem`, `_notifyMask`) into `@internal abstract final class GraftEngine` (hidden from `lib/graft.dart`).
+  - Marked `operator ==` and `hashCode` with `@override @nonVirtual` on `GraftState`, `GraftModel`, and `Graft`, ensuring reference equality is strictly preserved and preventing developers from overriding them with equatable-style value equality.
+  - Locked all operational methods on `GraftState`, `GraftModel`, and `Graft` with `@nonVirtual`, exposing only intended overridables (`props`, `schemaVersion`, `dryKey`, `factory`, `onReset`, `onInit`, `onDispose`, `dispose`).
+  - Added recursive nested `GraftModel` constructor hydration and typed collection casting (`List<String>`, `List<int>`, `List<double>`, `List<bool>`) in `DryStateHook`.
+
+---
+
 ## 1.0.0-alpha.3
 
 ### 🔍 Intelligent DI Observability, Frame-0 Dry Telemetry & Non-Blocking Async Logging

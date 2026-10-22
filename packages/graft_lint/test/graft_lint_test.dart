@@ -3,6 +3,7 @@ import 'package:analyzer/error/error.dart' show ErrorSeverity;
 import 'package:graft_lint/graft_lint.dart';
 import 'package:graft_lint/src/rules/avoid_nested_graft_slot.dart';
 import 'package:graft_lint/src/rules/prefer_props_in_graft_state.dart';
+import 'package:graft_lint/src/rules/require_dry_contracts_rule.dart';
 import 'package:graft_lint/src/rules/require_graft_route_observer.dart';
 import 'package:test/test.dart';
 
@@ -36,6 +37,14 @@ void main() {
       expect(rule.code.correctionMessage, contains('hardware bitmask'));
       // ignore: deprecated_member_use
       expect(rule.code.errorSeverity, ErrorSeverity.INFO);
+    });
+
+    test('RequireDryContractsRule has correct codes, names, and error severity', () {
+      const rule = RequireDryContractsRule();
+      expect(rule.code.name, 'require_dry_schema_version');
+      expect(rule.code.problemMessage, contains('schemaVersion'));
+      // ignore: deprecated_member_use
+      expect(rule.code.errorSeverity, ErrorSeverity.ERROR);
     });
   });
 }

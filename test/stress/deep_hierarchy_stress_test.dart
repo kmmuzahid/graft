@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graft/graft.dart';
+import 'package:graft/src/core/graft_state.dart';
 
 class LeafState extends GraftState {
   int value;
@@ -114,24 +115,24 @@ void main() {
       final parent = CollectionParentState(items);
 
       // Initial baseline
-      final initialMask = parent.diffChanges();
+      final initialMask = GraftStateEngine.diff(parent);
       expect(initialMask.isAllDirty, isTrue);
 
       // 1. Mutate element at index 500 in-place
       items[500].score = 999;
-      final mask1 = parent.diffChanges();
+      final mask1 = GraftStateEngine.diff(parent);
       expect(mask1.isEmpty, isFalse,
           reason: 'In-place mutation of collection item must be marked dirty');
 
       // 2. Unchanged pass -> clean mask
-      final mask2 = parent.diffChanges();
+      final mask2 = GraftStateEngine.diff(parent);
       expect(mask2.isEmpty, isTrue,
           reason: 'Clean pass without mutations must return empty mask');
 
       // 3. Mutate elements at index 0 and 999
       items[0].score = 111;
       items[999].score = 888;
-      final mask3 = parent.diffChanges();
+      final mask3 = GraftStateEngine.diff(parent);
       expect(mask3.isEmpty, isFalse);
     });
   });

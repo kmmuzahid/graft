@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graft/graft.dart';
+import 'package:graft/src/core/graft_state.dart';
 
 class BenchmarkState extends GraftState {
   int id;
@@ -32,7 +33,7 @@ void main() {
     final state = graft.state;
 
     // Verify baseline was captured during bindGraft
-    expect(state.diffChanges(), GraftMask.empty,
+    expect(GraftStateEngine.diff(state), GraftMask.empty,
         reason: 'Initial diff with no mutations must be empty (clean)');
 
     final stopwatch = Stopwatch()..start();
@@ -44,18 +45,18 @@ void main() {
       // Odd iterations: mutate tier (field index 4)
       if (i % 2 == 0) {
         state.balance = 50000.0 + i + 1;
-        final mask = state.diffChanges();
+        final mask = GraftStateEngine.diff(state);
         expect(mask, GraftMask.fromIndex(2),
             reason: 'Field index 2 (balance) must be marked dirty');
       } else {
         state.tier = (i % 5) + 10;
-        final mask = state.diffChanges();
+        final mask = GraftStateEngine.diff(state);
         expect(mask, GraftMask.fromIndex(4),
             reason: 'Field index 4 (tier) must be marked dirty');
       }
 
       // Immediate subsequent diff without mutations must be empty
-      final cleanMask = state.diffChanges();
+      final cleanMask = GraftStateEngine.diff(state);
       expect(cleanMask, GraftMask.empty, reason: 'Immediate clean diff must return empty mask');
     }
 

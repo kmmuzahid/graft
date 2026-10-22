@@ -77,39 +77,16 @@ class Graft<S extends GraftState> extends ChangeNotifier {
   bool _isNotifying = false;
   ValueListenable<S>? _listenableCache;
 
-  /// Direct fast receiver pointer for the ultra-fast single-slot dispatch path.
-  /// Set by [_GraftSingleSlotElement] or single dynamic [_ChildSlotElement]
   GraftFastReceiver? _fastDirectReceiver;
-
-  /// Single-element fast receiver pointer registered by [_GraftSingleSlotElement]
-  /// after the first confirmed-dynamic rebuild.
-  /// When non-null and conditions are met, [notifyMask] skips all listener
-  /// machinery and calls [GraftFastReceiver.markFastDirty] directly.
-  @internal
-  GraftFastReceiver? get fastDirectReceiver => _fastDirectReceiver;
-
-  @internal
-  set fastDirectReceiver(GraftFastReceiver? r) {
-    _fastDirectReceiver = r;
-    _recomputeSingleListenerFlag();
-  }
-
-  /// The dirty mask subset under which [fastDirectReceiver] applies.
-  @internal
-  GraftMask fastDirectMask = GraftMask.empty;
-
+  GraftMask _fastDirectMask = GraftMask.empty;
   Map<int, GraftItemReceiver>? _indexedItemReceivers;
 
-  /// Registers an index-addressed item receiver.
-  @internal
-  void registerItemReceiver(int index, GraftItemReceiver receiver) {
+  void _registerItemReceiver(int index, GraftItemReceiver receiver) {
     _indexedItemReceivers ??= <int, GraftItemReceiver>{};
     _indexedItemReceivers![index] = receiver;
   }
 
-  /// Unregisters an index-addressed item receiver.
-  @internal
-  void unregisterItemReceiver(int index, GraftItemReceiver receiver) {
+  void _unregisterItemReceiver(int index, GraftItemReceiver receiver) {
     final map = _indexedItemReceivers;
     if (map != null) {
       if (identical(map[index], receiver)) {
@@ -118,17 +95,12 @@ class Graft<S extends GraftState> extends ChangeNotifier {
     }
   }
 
-  /// Checks if an item receiver is registered at [index].
-  @internal
   @pragma('vm:prefer-inline')
-  bool hasItemReceiver(int index) => _indexedItemReceivers?.containsKey(index) ?? false;
+  bool _hasItemReceiver(int index) =>
+      _indexedItemReceivers?.containsKey(index) ?? false;
 
-  /// Dispatches an update directly to the item slot at [index] with O(1) pointer dispatch.
-  /// Internal engine method: must not be called or overridden by user code.
-  @internal
-  @nonVirtual
   @pragma('vm:prefer-inline')
-  void notifyItem(int index) {
+  void _notifyItem(int index) {
     if (_isDisposed) return;
     final r = _indexedItemReceivers?[index];
     if (r != null && r.mounted) {
@@ -146,7 +118,7 @@ class Graft<S extends GraftState> extends ChangeNotifier {
       }
       return;
     }
-    notifyMask(GraftMask.bit0);
+    _notifyMask(GraftMask.bit0);
   }
 
   /// Mutates state and notifies the item receiver at [index] directly in O(1) time.
@@ -162,7 +134,7 @@ class Graft<S extends GraftState> extends ChangeNotifier {
   /// dry state if enabled, invokes [onInit], and notifies [observer].
   Graft(S initialState) {
     _state = initialState;
-    initialState.bindGraft(this);
+    GraftStateEngine.bind(initialState, this);
     onInit();
     observer?.onCreate(this);
   }
@@ -187,8 +159,8 @@ class Graft<S extends GraftState> extends ChangeNotifier {
     final (state, fromCache) =
         DryStateHook.hydrateFactoryWithStatus<S>(stateFactory, dryKey);
     _state = state;
-    _state.setCustomDryKeyInternal(key);
-    _state.bindGraft(this);
+    GraftStateEngine.setCustomDryKey(_state, key);
+    GraftStateEngine.bind(_state, this);
     DryStateHook.enableDryForState(_state, dryKey);
     observer?.onDryHydrated(_state, key: dryKey, fromCache: fromCache);
     onInit();
@@ -271,6 +243,14 @@ class Graft<S extends GraftState> extends ChangeNotifier {
         observer == null;
   }
 
+  @override
+  @nonVirtual
+  bool operator ==(Object other) => identical(this, other);
+
+  @override
+  @nonVirtual
+  int get hashCode => identityHashCode(this);
+
   /// Whether this [Graft] has any registered listeners.
   @override
   @nonVirtual
@@ -279,9 +259,7 @@ class Graft<S extends GraftState> extends ChangeNotifier {
       (_extraListeners != null && _extraListeners!.isNotEmpty) ||
       super.hasListeners;
 
-  /// Internal engine check: whether any standard, mask, or ChangeNotifier listeners exist.
-  @internal
-  bool get hasAnyListeners =>
+  bool get _hasAnyListeners =>
       _singleListener != null ||
       _singleMaskListener != null ||
       (_extraListeners != null && _extraListeners!.isNotEmpty) ||
@@ -341,7 +319,7 @@ class Graft<S extends GraftState> extends ChangeNotifier {
       }
       (_extraMaskListeners ??= []).add(listener);
       _fastDirectReceiver = null;
-      fastDirectMask = GraftMask.empty;
+      _fastDirectMask = GraftMask.empty;
       _recomputeSingleListenerFlag();
     }
   }
@@ -363,17 +341,6 @@ class Graft<S extends GraftState> extends ChangeNotifier {
     }
   }
 
-  @internal
-  VoidCallback? get singleListener => _singleListener;
-
-  @internal
-  @pragma('vm:prefer-inline')
-  bool get hasOnlySingleListener => _hasOnlySingleListener;
-
-  @internal
-  @pragma('vm:prefer-inline')
-  bool get hasOnlyFastDirectReceiver => _hasOnlyFastDirectReceiver;
-
   @override
   @nonVirtual
   void notifyListeners() {
@@ -391,18 +358,14 @@ class Graft<S extends GraftState> extends ChangeNotifier {
     }
   }
 
-  /// Dispatches [dirtyMask] to all mask listeners, then triggers notification.
-  /// Internal engine method: must not be called or overridden by user code.
-  @internal
-  @nonVirtual
   @pragma('vm:prefer-inline')
-  void notifyMask(GraftMask dirtyMask, {GraftChange<dynamic>? change}) {
+  void _notifyMask(GraftMask dirtyMask, {GraftChange<dynamic>? change}) {
     if (_isDisposed) return;
 
     // ⚡ 0-cycle fast return if no listeners whatsoever (Scenario D1, D2, C3)
     if (_singleListener == null &&
         _singleMaskListener == null &&
-        fastDirectReceiver == null &&
+        _fastDirectReceiver == null &&
         observer == null) {
       return;
     }
@@ -413,26 +376,26 @@ class Graft<S extends GraftState> extends ChangeNotifier {
         observer == null &&
         _extraListeners == null &&
         _singleMaskListener == null &&
-        fastDirectReceiver == null) {
+        _fastDirectReceiver == null) {
       single();
       return;
     }
 
     // ⚡ Ultra-fast direct element path (Scenario B1, B2, A1 with leaf slots).
-    // Active post-warmup when exactly one single-slot scope is subscribed and
-    // its field dependency mask has been confirmed. Bypasses the entire
-    // listener chain with a single markFastDirty() call — same depth as Signals.
-    if (hasOnlyFastDirectReceiver) {
-      final fe = fastDirectReceiver!;
+    if (_hasOnlyFastDirectReceiver) {
+      final fe = _fastDirectReceiver!;
       if (fe.mounted) {
         fe.markFastDirty();
         return;
       }
-      fastDirectReceiver = null;
-      fastDirectMask = GraftMask.empty;
+      _fastDirectReceiver = null;
+      _fastDirectMask = GraftMask.empty;
     }
 
-    if (single != null && fastDirectReceiver == null && observer == null && _singleMaskListener == null) {
+    if (single != null &&
+        _fastDirectReceiver == null &&
+        observer == null &&
+        _singleMaskListener == null) {
       single();
       final extra = _extraListeners;
       if (extra != null && extra.isNotEmpty) {
@@ -471,7 +434,7 @@ class Graft<S extends GraftState> extends ChangeNotifier {
           GraftChange<S>(
             currentState: _state,
             nextState: _state,
-            previousProps: _state.baselineSnapshot,
+            previousProps: GraftStateEngine.baselineSnapshot(_state),
             nextProps: List<Object?>.of(_state.props, growable: false),
             dirtyMask: dirtyMask,
           );
@@ -525,7 +488,7 @@ class Graft<S extends GraftState> extends ChangeNotifier {
             GraftChange<S>(
               currentState: _state,
               nextState: _state,
-              previousProps: _state.baselineSnapshot,
+              previousProps: GraftStateEngine.baselineSnapshot(_state),
               nextProps: List<Object?>.of(_state.props, growable: false),
               dirtyMask: _state.dirtyMask,
             );
@@ -650,8 +613,8 @@ class Graft<S extends GraftState> extends ChangeNotifier {
     _hasOnlySingle = false;
     _singleMaskListener = null;
     _extraMaskListeners?.clear();
-    fastDirectReceiver = null;
-    fastDirectMask = GraftMask.empty;
+    _fastDirectReceiver = null;
+    _fastDirectMask = GraftMask.empty;
     super.dispose();
     observer?.onDispose(this);
   }
@@ -679,7 +642,7 @@ class _GraftListenable<S extends GraftState> implements ValueListenable<S> {
 
 /// Internal interface for zero-overhead direct element notification.
 ///
-/// Implemented by slot elements to allow [Graft.notifyMask] to directly mark
+/// Implemented by slot elements to allow [GraftEngine.notifyMask] to directly mark
 /// the element dirty in Flutter's pipeline without invoking closure listener chains.
 @internal
 abstract interface class GraftFastReceiver {
@@ -698,5 +661,61 @@ abstract interface class GraftItemReceiver {
 
   /// Directly marks the item slot dirty for rebuilding in Flutter's build pass.
   void markItemDirty();
+}
+
+/// Internal engine accessor for [Graft].
+/// Internal to package:graft; never exported in public API.
+@internal
+abstract final class GraftEngine {
+  /// Gets the registered fast direct receiver for [graft].
+  static GraftFastReceiver? getFastDirectReceiver(Graft graft) =>
+      graft._fastDirectReceiver;
+
+  /// Sets the fast direct receiver for [graft].
+  static void setFastDirectReceiver(Graft graft, GraftFastReceiver? r) =>
+      graft._fastDirectReceiver = r;
+
+  /// Gets the dirty mask under which fast direct receiver applies.
+  static GraftMask getFastDirectMask(Graft graft) => graft._fastDirectMask;
+
+  /// Sets the dirty mask under which fast direct receiver applies.
+  static void setFastDirectMask(Graft graft, GraftMask mask) =>
+      graft._fastDirectMask = mask;
+
+  /// Registers an index-addressed item receiver.
+  static void registerItemReceiver(
+          Graft graft, int index, GraftItemReceiver receiver) =>
+      graft._registerItemReceiver(index, receiver);
+
+  /// Unregisters an index-addressed item receiver.
+  static void unregisterItemReceiver(
+          Graft graft, int index, GraftItemReceiver receiver) =>
+      graft._unregisterItemReceiver(index, receiver);
+
+  /// Checks if an item receiver is registered at [index].
+  static bool hasItemReceiver(Graft graft, int index) =>
+      graft._hasItemReceiver(index);
+
+  /// Dispatches an update directly to the item slot at [index].
+  static void notifyItem(Graft graft, int index) => graft._notifyItem(index);
+
+  /// Dispatches [mask] to all mask listeners on [graft].
+  static void notifyMask(Graft graft, GraftMask mask,
+          {GraftChange<dynamic>? change}) =>
+      graft._notifyMask(mask, change: change);
+
+  /// Whether any listeners exist on [graft].
+  static bool hasAnyListeners(Graft graft) => graft._hasAnyListeners;
+
+  /// The single listener callback on [graft].
+  static VoidCallback? singleListener(Graft graft) => graft._singleListener;
+
+  /// Whether [graft] has only a single VoidCallback listener.
+  static bool hasOnlySingleListener(Graft graft) =>
+      graft._hasOnlySingleListener;
+
+  /// Whether [graft] has only a fast direct receiver.
+  static bool hasOnlyFastDirectReceiver(Graft graft) =>
+      graft._hasOnlyFastDirectReceiver;
 }
 

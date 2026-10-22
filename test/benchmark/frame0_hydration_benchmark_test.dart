@@ -5,24 +5,23 @@ import 'package:graft/src/persistence/model/binary_serializer.dart';
 import 'package:graft/src/persistence/model/schema_fingerprint.dart';
 
 class BenchState extends GraftState {
-  String name = '';
-  int counter = 0;
+  @override
+  int get schemaVersion => 1;
+
+  String name;
+  int counter;
+
+  BenchState([this.name = '', this.counter = 0]);
 
   @override
   String get dryKey => 'bench_state';
 
   @override
   GraftProps get props => propsOf(name, counter);
-
-  @override
-  void onDry() {
-    name = dry(name);
-    counter = dry(counter);
-  }
 }
 
 class BenchGraft extends Graft<BenchState> {
-  BenchGraft() : super(BenchState());
+  BenchGraft() : super.dry(BenchState.new);
 }
 
 void main() {
@@ -38,7 +37,7 @@ void main() {
       'Frame-0 L1 cache synchronous hydration latency benchmark with BinarySerializer',
       () {
     final probe = BenchState();
-    final fp = SchemaFingerprint.compute(probe.props);
+    final fp = SchemaFingerprint.compute(probe.props, schemaVersion: 1);
     final payload = BinarySerializer.encode(probe.propsOf('John Doe', 42), fp);
     ambientStorageCoordinator.write('bench_state', payload);
 

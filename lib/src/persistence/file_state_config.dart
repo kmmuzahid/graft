@@ -16,8 +16,8 @@ final class FileStateConfig implements GraftStateConfig {
   }
 
   File _fileForKey(String key) {
-    final sanitized = key.replaceAll(RegExp(r'[^\w\.-]'), '_');
-    return File('${directory.path}/$sanitized.bin');
+    final encoded = Uri.encodeComponent(key);
+    return File('${directory.path}/$encoded.bin');
   }
 
   @override
@@ -30,7 +30,9 @@ final class FileStateConfig implements GraftStateConfig {
   @override
   Future<void> write(String key, Uint8List value) async {
     final file = _fileForKey(key);
-    await file.writeAsBytes(value, flush: true);
+    final tempFile = File('${file.path}.tmp');
+    await tempFile.writeAsBytes(value, flush: true);
+    await tempFile.rename(file.path);
   }
 
   @override
@@ -55,7 +57,8 @@ final class FileStateConfig implements GraftStateConfig {
     for (final entity in entities) {
       if (entity is File && entity.path.endsWith('.bin')) {
         final filename = entity.uri.pathSegments.last;
-        final key = filename.substring(0, filename.length - 4);
+        final rawKey = filename.substring(0, filename.length - 4);
+        final key = Uri.decodeComponent(rawKey);
         try {
           result[key] = entity.readAsBytesSync();
         } catch (_) {

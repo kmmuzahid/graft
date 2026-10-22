@@ -31,12 +31,13 @@
 library;
 
 export 'src/context/graft_context.dart';
-export 'src/core/graft.dart' hide GraftFastReceiver, GraftItemReceiver;
+export 'src/core/graft.dart'
+    hide GraftFastReceiver, GraftItemReceiver, GraftEngine;
 export 'src/core/graft_async.dart';
 export 'src/core/graft_change.dart';
 export 'src/core/graft_mask.dart';
 export 'src/core/graft_observer.dart';
-export 'src/core/graft_state.dart';
+export 'src/core/graft_state.dart' hide GraftStateEngine;
 export 'src/core/value_graft.dart';
 export 'src/di/disposable.dart';
 export 'src/di/graft_di.dart';
@@ -45,6 +46,8 @@ export 'src/di/scope_block.dart';
 export 'src/persistence/ambient_locator.dart'
     show configurePersistence, resetAmbientPersistence;
 export 'src/persistence/file_state_config.dart';
+export 'src/persistence/lifecycle_observer.dart'
+    show GraftLifecycleObserver;
 export 'src/persistence/memory_state_config.dart';
 export 'src/persistence/model/graft_model.dart';
 export 'src/persistence/state_config.dart';

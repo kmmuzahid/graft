@@ -1025,9 +1025,10 @@ class _ChildSlotElement extends ComponentElement implements GraftFastReceiver {
       oldSlot.notifier.detachElement();
       _slot.notifier.attachElement();
       final dynamic oldG = oldSlot.graft;
-      if (oldG is Graft && identical(oldG.fastDirectReceiver, this)) {
-        oldG.fastDirectReceiver = null;
-        oldG.fastDirectMask = GraftMask.empty;
+      if (oldG is Graft &&
+          identical(GraftEngine.getFastDirectReceiver(oldG), this)) {
+        GraftEngine.setFastDirectReceiver(oldG, null);
+        GraftEngine.setFastDirectMask(oldG, GraftMask.empty);
       }
     }
     _slot.element = this;
@@ -1042,9 +1043,9 @@ class _ChildSlotElement extends ComponentElement implements GraftFastReceiver {
       _slot.element = null;
     }
     final dynamic g = _slot.graft;
-    if (g is Graft && identical(g.fastDirectReceiver, this)) {
-      g.fastDirectReceiver = null;
-      g.fastDirectMask = GraftMask.empty;
+    if (g is Graft && identical(GraftEngine.getFastDirectReceiver(g), this)) {
+      GraftEngine.setFastDirectReceiver(g, null);
+      GraftEngine.setFastDirectMask(g, GraftMask.empty);
     }
     super.unmount();
   }
@@ -1170,9 +1171,9 @@ class _GraftSingleSlotElement<S extends GraftState> extends ComponentElement
       return true;
     }());
     _graft.addMaskListener(_onMaskDirty);
-    if (!_fastPathActive && _graft.fastDirectReceiver == null) {
-      _graft.fastDirectReceiver = this;
-      _graft.fastDirectMask = GraftMask.allDirty;
+    if (!_fastPathActive && GraftEngine.getFastDirectReceiver(_graft) == null) {
+      GraftEngine.setFastDirectReceiver(_graft, this);
+      GraftEngine.setFastDirectMask(_graft, GraftMask.allDirty);
       _fastPathActive = true;
     }
   }
@@ -1185,9 +1186,10 @@ class _GraftSingleSlotElement<S extends GraftState> extends ComponentElement
     _graft = newWidget.graft;
     if (oldGraft != _graft) {
       oldGraft.removeMaskListener(_onMaskDirty);
-      if (_fastPathActive && identical(oldGraft.fastDirectReceiver, this)) {
-        oldGraft.fastDirectReceiver = null;
-        oldGraft.fastDirectMask = GraftMask.empty;
+      if (_fastPathActive &&
+          identical(GraftEngine.getFastDirectReceiver(oldGraft), this)) {
+        GraftEngine.setFastDirectReceiver(oldGraft, null);
+        GraftEngine.setFastDirectMask(oldGraft, GraftMask.empty);
       }
       _fastPathActive = false;
       _ignoredMask = GraftMask.empty;
@@ -1197,9 +1199,9 @@ class _GraftSingleSlotElement<S extends GraftState> extends ComponentElement
         () => _builder(_graft.state),
       );
       _graft.addMaskListener(_onMaskDirty);
-      if (_graft.fastDirectReceiver == null) {
-        _graft.fastDirectReceiver = this;
-        _graft.fastDirectMask = GraftMask.allDirty;
+      if (GraftEngine.getFastDirectReceiver(_graft) == null) {
+        GraftEngine.setFastDirectReceiver(_graft, this);
+        GraftEngine.setFastDirectMask(_graft, GraftMask.allDirty);
         _fastPathActive = true;
       }
     } else {
@@ -1214,9 +1216,10 @@ class _GraftSingleSlotElement<S extends GraftState> extends ComponentElement
   void unmount() {
     _graft.removeMaskListener(_onMaskDirty);
     // Clear direct receiver reference if this element owns it.
-    if (_fastPathActive && identical(_graft.fastDirectReceiver, this)) {
-      _graft.fastDirectReceiver = null;
-      _graft.fastDirectMask = GraftMask.empty;
+    if (_fastPathActive &&
+        identical(GraftEngine.getFastDirectReceiver(_graft), this)) {
+      GraftEngine.setFastDirectReceiver(_graft, null);
+      GraftEngine.setFastDirectMask(_graft, GraftMask.empty);
       _fastPathActive = false;
     }
     super.unmount();
@@ -1349,7 +1352,7 @@ class _GraftItemSlotState<S extends GraftState, T> extends State<GraftItemSlot<S
     _resolveInitialItem();
     _graft.addMaskListener(_onMaskChange);
     if (widget.index != null) {
-      _graft.registerItemReceiver(widget.index!, this);
+      GraftEngine.registerItemReceiver(_graft, widget.index!, this);
     }
   }
 
@@ -1424,10 +1427,11 @@ class _GraftItemSlotState<S extends GraftState, T> extends State<GraftItemSlot<S
     _valueBuilder = widget.valueBuilder;
     if (oldWidget.index != widget.index || oldWidget.graft != widget.graft) {
       if (oldWidget.index != null) {
-        oldWidget.graft.unregisterItemReceiver(oldWidget.index!, this);
+        GraftEngine.unregisterItemReceiver(
+            oldWidget.graft, oldWidget.index!, this);
       }
       if (widget.index != null) {
-        widget.graft.registerItemReceiver(widget.index!, this);
+        GraftEngine.registerItemReceiver(widget.graft, widget.index!, this);
       }
     }
     if (oldWidget.graft != widget.graft) {
@@ -1445,7 +1449,7 @@ class _GraftItemSlotState<S extends GraftState, T> extends State<GraftItemSlot<S
   void dispose() {
     _graft.removeMaskListener(_onMaskChange);
     if (widget.index != null) {
-      _graft.unregisterItemReceiver(widget.index!, this);
+      GraftEngine.unregisterItemReceiver(_graft, widget.index!, this);
     }
     super.dispose();
   }

@@ -82,19 +82,23 @@ final class BinarySerializer {
   /// Decodes [bytes] into a schema fingerprint and list of unpacked data, or null on error.
   static ({int fingerprint, List<Object?> data})? decode(Uint8List bytes) {
     if (bytes.length < 7) return null;
-    final bd = ByteData.sublistView(bytes);
-    final fp = bd.getInt32(0);
-    final count = bd.getUint16(5);
-    int offset = 7;
-    final list = <Object?>[];
+    try {
+      final bd = ByteData.sublistView(bytes);
+      final fp = bd.getInt32(0);
+      final count = bd.getUint16(5);
+      int offset = 7;
+      final list = <Object?>[];
 
-    for (int i = 0; i < count; i++) {
-      if (offset >= bytes.length) break;
-      final (val, newOffset) = _readField(bytes, bd, offset);
-      list.add(val);
-      offset = newOffset;
+      for (int i = 0; i < count; i++) {
+        if (offset >= bytes.length) break;
+        final (val, newOffset) = _readField(bytes, bd, offset);
+        list.add(val);
+        offset = newOffset;
+      }
+      return (fingerprint: fp, data: list);
+    } catch (_) {
+      return null;
     }
-    return (fingerprint: fp, data: list);
   }
 
   static (Object?, int) _readField(Uint8List bytes, ByteData bd, int offset) {

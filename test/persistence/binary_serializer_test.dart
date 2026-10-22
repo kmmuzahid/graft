@@ -10,13 +10,6 @@ class TestAddress extends GraftModel {
 
   @override
   GraftProps get props => propsOf(street, city, zip);
-
-  @override
-  void onHydrate() {
-    street = read();
-    city = read();
-    zip = read();
-  }
 }
 
 class TestUser extends GraftState {
@@ -28,14 +21,6 @@ class TestUser extends GraftState {
 
   @override
   GraftProps get props => propsOf(name, age, score, isActive, address);
-
-  @override
-  void onHydrate() {
-    name = read();
-    age = read();
-    score = read();
-    isActive = read();
-  }
 }
 
 void main() {

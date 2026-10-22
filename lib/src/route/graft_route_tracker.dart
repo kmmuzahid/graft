@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import '../core/graft.dart';
+import '../persistence/lifecycle_observer.dart';
 
 /// Manages route-stack scoping, dependency inheritance, and owner-based automatic disposal
 /// for [Graft] instances.
@@ -260,6 +261,10 @@ class GraftRouteTracker {
 /// );
 /// ```
 class GraftRouteObserver extends NavigatorObserver {
+  GraftRouteObserver() {
+    GraftLifecycleObserver.instance.attach();
+  }
+
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
     GraftRouteTracker.didPush(route, previousRoute);

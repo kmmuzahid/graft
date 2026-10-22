@@ -19,112 +19,114 @@ final class DryStateHook {
   }
 
   /// Restores state instance and returns whether it was hydrated from binary cache.
-  static (S, bool) hydrateFactoryWithStatus<S extends GraftState>(Function factory, String key) {
-    final cached = ambientStorageCoordinator.readSync(key);
-    if (cached != null && cached.isNotEmpty) {
-      final decoded = BinarySerializer.decode(cached);
-      if (decoded != null) {
-        try {
-          final probe = Function.apply(factory, const []) as S;
-          final dryVals = probe.captureDryValues();
-          final persistentProps =
-              dryVals.isNotEmpty ? GraftProps.fromList(dryVals) : probe.props;
-          final currentFp = SchemaFingerprint.compute(persistentProps);
-          if (decoded.fingerprint == currentFp) {
-            S restored;
-            try {
-              final args = <Object?>[];
-              final probeProps = probe.props;
-              final data = decoded.data;
-              for (int i = 0; i < probeProps.length && i < data.length; i++) {
-                final defaultVal = probeProps[i];
-                final cachedVal = data[i];
-                if (defaultVal is GraftModel && cachedVal is List) {
-                  defaultVal.hydrate(cachedVal.cast<Object?>());
-                  args.add(defaultVal);
-                } else {
-                  args.add(cachedVal);
-                }
-              }
-              restored = Function.apply(factory, args) as S;
-            } catch (_) {
-              probe.hydrate(decoded.data);
-              restored = probe;
-            }
-            DryExpando.setFingerprint(restored, currentFp);
-            DryExpando.setHydrated(restored);
-            return (restored, true);
-          } else {
-            ambientStorageCoordinator.delete(key);
-          }
-        } catch (_) {
-          ambientStorageCoordinator.delete(key);
+  static (S, bool) hydrateFactoryWithStatus<S extends GraftState>(
+    Function factory,
+    String key,
+  ) {
+    final S probe;
+    try {
+      probe = Function.apply(factory, const []) as S;
+    } catch (e) {
+      throw StateError(
+        'Graft.dry Error: Factory "$factory" could not be instantiated with zero arguments: $e',
+      );
+    }
+
+    // Tier 2 Runtime Guard: Require schemaVersion on State
+    if (probe.schemaVersion <= 0) {
+      throw StateError(
+        'Graft.dry Error: Class "${probe.runtimeType}" must override '
+        '"@override int get schemaVersion => 1;" to guarantee deterministic persistence '
+        'and safe schema evolution across app restarts.',
+      );
+    }
+
+    // Tier 2 Runtime Guard: Require schemaVersion and factory on nested GraftModels
+    for (final prop in probe.props) {
+      if (prop is GraftModel) {
+        if (prop.schemaVersion <= 0) {
+          throw StateError(
+            'Graft.dry Error: Nested model "${prop.runtimeType}" in "${probe.runtimeType}" '
+            'must override "@override int get schemaVersion => 1;".',
+          );
+        }
+        if (prop.factory == null) {
+          throw StateError(
+            'Graft.dry Error: Nested model "${prop.runtimeType}" in "${probe.runtimeType}" '
+            'must override "@override Function get factory => ${prop.runtimeType}.new;" '
+            'to enable Frame-0 constructor hydration.',
+          );
         }
       }
     }
-    return (Function.apply(factory, const []) as S, false);
+
+    final currentFp = SchemaFingerprint.compute(
+      probe.props,
+      schemaVersion: probe.schemaVersion,
+    );
+
+    final cached = ambientStorageCoordinator.readSync(key);
+    if (cached != null && cached.isNotEmpty) {
+      final decoded = BinarySerializer.decode(cached);
+      if (decoded != null && decoded.fingerprint == currentFp) {
+        try {
+          final args = <Object?>[];
+          final probeProps = probe.props;
+          final data = decoded.data;
+          for (int i = 0; i < probeProps.length && i < data.length; i++) {
+            args.add(_hydrateValue(probeProps[i], data[i]));
+          }
+          final restored = Function.apply(factory, args) as S;
+          DryExpando.setFingerprint(restored, currentFp);
+          DryExpando.setHydrated(restored);
+          return (restored, true);
+        } catch (_) {
+          // Fall back to probe defaults
+        }
+      } else {
+        // Stale or corrupted cache: purge
+        ambientStorageCoordinator.delete(key);
+      }
+    }
+    DryExpando.setFingerprint(probe, currentFp);
+    return (probe, false);
   }
 
   /// Activates dry persistence tracking for [state] initialized via tear-off.
   static void enableDryForState(GraftState state, String dryKey) {
     DryExpando.setDryEnabled(state, true);
-    state.setDryEnabledInternal(true);
+    GraftStateEngine.setDryEnabled(state, true);
     DryExpando.setHydrated(state);
+    if (DryExpando.getFingerprint(state) == null) {
+      final fp = SchemaFingerprint.compute(
+        state.props,
+        schemaVersion: state.schemaVersion > 0 ? state.schemaVersion : 1,
+      );
+      DryExpando.setFingerprint(state, fp);
+    }
   }
 
   /// Synchronously restores persisted state from L1 RAM in < 50ns on Frame 0.
   @pragma('vm:prefer-inline')
   static void hydrateSync(GraftState state) {
-    if (DryExpando.isHydrated(state) || DryExpando.isInvalidated(state)) {
-      return;
-    }
-
-    final dryVals = state.captureDryValues();
-    final persistentProps =
-        dryVals.isNotEmpty ? GraftProps.fromList(dryVals) : state.props;
-    final currentFp = SchemaFingerprint.compute(persistentProps);
-    DryExpando.setFingerprint(state, currentFp);
-
-    final key = state.dryKey;
-    final cached = ambientStorageCoordinator.readSync(key);
-
-    if (cached != null && cached.isNotEmpty) {
-      final decoded = BinarySerializer.decode(cached);
-      if (decoded != null && decoded.fingerprint == currentFp) {
-        state.hydrate(decoded.data);
-        Graft.observer?.onDryHydrated(state, key: key, fromCache: true);
-      } else {
-        // Mismatch or corrupt: discard stale cache
-        ambientStorageCoordinator.delete(key);
-        state.probeWithoutCache();
-        if (state.isDryEnabled) {
-          Graft.observer?.onDryHydrated(state, key: key, fromCache: false);
-        }
-      }
-    } else {
-      state.probeWithoutCache();
-      if (state.isDryEnabled) {
-        Graft.observer?.onDryHydrated(state, key: key, fromCache: false);
-      }
-    }
-
-    DryExpando.setHydrated(state);
+    // Frame-0 hydration is performed directly by Graft.dry
   }
 
   /// Saves mutated state to L1 RAM synchronously and debounces disk write.
   @pragma('vm:prefer-inline')
   static void onStateUpdated(GraftState state) {
-    if (!state.isDryEnabled || DryExpando.isInvalidated(state)) {
+    if (!GraftStateEngine.isDryEnabled(state) || DryExpando.isInvalidated(state)) {
       return;
     }
 
-    final dryVals = state.captureDryValues();
-    final persistentProps =
-        dryVals.isNotEmpty ? GraftProps.fromList(dryVals) : state.props;
+    final persistentProps = state.props;
 
     int? fp = DryExpando.getFingerprint(state);
     if (fp == null) {
-      fp = SchemaFingerprint.compute(persistentProps);
+      fp = SchemaFingerprint.compute(
+        persistentProps,
+        schemaVersion: state.schemaVersion > 0 ? state.schemaVersion : 1,
+      );
       DryExpando.setFingerprint(state, fp);
     }
 
@@ -143,5 +145,34 @@ final class DryStateHook {
   static void invalidatePrefix(String prefix) {
     ambientStorageCoordinator.invalidatePrefix(prefix);
     Graft.observer?.onDryInvalidated(prefix, key: prefix, isScopePurge: true);
+  }
+
+  static Object? _hydrateValue(Object? defaultVal, Object? cachedVal) {
+    if (defaultVal is GraftModel && cachedVal is List) {
+      if (defaultVal.factory != null) {
+        final subProps = defaultVal.props;
+        final subArgs = <Object?>[];
+        for (int j = 0; j < subProps.length && j < cachedVal.length; j++) {
+          subArgs.add(_hydrateValue(subProps[j], cachedVal[j]));
+        }
+        return Function.apply(defaultVal.factory!, subArgs);
+      }
+      return defaultVal;
+    }
+    if (defaultVal is List && cachedVal is List) {
+      if (defaultVal is List<String>) {
+        return cachedVal.cast<String>();
+      } else if (defaultVal is List<int>) {
+        return cachedVal.cast<int>();
+      } else if (defaultVal is List<double>) {
+        return cachedVal.map((e) => (e as num).toDouble()).toList();
+      } else if (defaultVal is List<num>) {
+        return cachedVal.cast<num>();
+      } else if (defaultVal is List<bool>) {
+        return cachedVal.cast<bool>();
+      }
+      return cachedVal;
+    }
+    return cachedVal;
   }
 }

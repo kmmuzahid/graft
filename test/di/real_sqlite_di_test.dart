@@ -138,22 +138,25 @@ class UserRepository implements Disposable {
 // GRAFT STATE & CONTROLLER CONNECTED TO DI
 // ============================================================================
 class UserProfileState extends GraftState {
-  String userName = 'Guest';
-  int orderCount = 0;
-  bool isRegistered = false;
+  @override
+  int get schemaVersion => 1;
+
+  String userName;
+  int orderCount;
+  bool isRegistered;
+
+  UserProfileState([
+    this.userName = 'Guest',
+    this.orderCount = 0,
+    this.isRegistered = false,
+  ]);
 
   @override
-  GraftProps get props => propsOf(userName, orderCount, isRegistered);
-
-  @override
-  void onDry() {
-    userName = dry(userName);
-    orderCount = dry(orderCount);
-  }
+  GraftProps get props => propsOf(userName, orderCount);
 }
 
 class UserGraft extends Graft<UserProfileState> {
-  UserGraft() : super(UserProfileState());
+  UserGraft() : super.dry(UserProfileState.new);
 
   void register(String name, String email, String item, double amount) {
     final repo = use<UserRepository>();

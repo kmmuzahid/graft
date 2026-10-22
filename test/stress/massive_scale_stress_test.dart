@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graft/graft.dart';
+import 'package:graft/src/core/graft_state.dart';
 
 /// A massive 128-property domain state model spanning multiple 64-bit mask words.
 class Massive128State extends GraftState {
@@ -72,7 +73,7 @@ void main() {
       // Warm up
       for (int i = 0; i < 1000; i++) {
         state.values[0] = i;
-        state.diffChanges();
+        GraftStateEngine.diff(state);
       }
 
       final sw = Stopwatch()..start();
@@ -81,7 +82,7 @@ void main() {
       for (int i = 0; i < iterations; i++) {
         final targetIndex = i & 127; // Cycle through all 128 properties
         state.values[targetIndex] = i + 1000;
-        final mask = state.diffChanges();
+        final mask = GraftStateEngine.diff(state);
         assert(!mask.isEmpty);
       }
       sw.stop();
@@ -99,7 +100,7 @@ void main() {
 
     test('Multi-word simultaneous dirty bits across boundaries', () {
       final state = Massive128State();
-      state.diffChanges(); // initialize baseline
+      GraftStateEngine.diff(state); // initialize baseline
 
       // Mutate bits 0, 31, 32, 63, 64, 127 simultaneously
       state.values[0] = -1;
@@ -109,7 +110,7 @@ void main() {
       state.values[64] = -1;
       state.values[127] = -1;
 
-      final mask = state.diffChanges();
+      final mask = GraftStateEngine.diff(state);
 
       expect(mask.isBitSet(0), isTrue);
       expect(mask.isBitSet(31), isTrue);

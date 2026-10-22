@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graft/graft.dart';
+import 'package:graft/src/core/graft_state.dart';
 
 class AddressState extends GraftState {
   String city;
@@ -59,7 +60,7 @@ void main() {
       final state = graft.state;
 
       // Initial diff is clean
-      expect(state.diffChanges(), GraftMask.empty);
+      expect(GraftStateEngine.diff(state), GraftMask.empty);
 
       // Mutate nested AddressState in-place
       graft.updateCity('Berlin');
@@ -73,7 +74,7 @@ void main() {
           reason: 'Hobbies index 2 must be untouched');
 
       // Subsequent diff without changes must be clean
-      expect(state.diffChanges(), GraftMask.empty);
+      expect(GraftStateEngine.diff(state), GraftMask.empty);
 
       graft.dispose();
     });
@@ -82,7 +83,7 @@ void main() {
       final graft = UserProfileGraft();
       final state = graft.state;
 
-      expect(state.diffChanges(), GraftMask.empty);
+      expect(GraftStateEngine.diff(state), GraftMask.empty);
 
       // Add hobby in-place
       graft.addHobby('gaming');
@@ -99,7 +100,7 @@ void main() {
       final graft = UserProfileGraft();
       final state = graft.state;
 
-      expect(state.diffChanges(), GraftMask.empty);
+      expect(GraftStateEngine.diff(state), GraftMask.empty);
 
       // Modify existing element in-place without replacing list instance
       graft.modifyHobby(0, 'architecture');

@@ -240,19 +240,24 @@ class LiveCounterGraft extends Graft<LiveCounterState> {
 // -----------------------------------------------------------------------------
 
 class AddressModel extends GraftModel {
-  String street = '221B Baker Street';
-  String city = 'London';
-  int zipCode = 10001;
+  @override
+  int get schemaVersion => 1;
+
+  String street;
+  String city;
+  int zipCode;
+
+  AddressModel([
+    this.street = '221B Baker Street',
+    this.city = 'London',
+    this.zipCode = 10001,
+  ]);
 
   @override
   GraftProps get props => propsOf(street, city, zipCode);
 
   @override
-  void onDry() {
-    street = dry(street);
-    city = dry(city);
-    zipCode = dry(zipCode);
-  }
+  Function get factory => AddressModel.new;
 
   @override
   void onReset() {
@@ -263,31 +268,35 @@ class AddressModel extends GraftModel {
 }
 
 class PersistentProfileState extends GraftState {
-  String fullName = 'Sherlock Holmes';
-  String notes = 'Consulting Detective';
-  bool isSyncing = false; // Transient UI state (starts fresh on app launch)
-  AddressModel address = AddressModel(); // Nested GraftModel created once!
+  @override
+  int get schemaVersion => 1;
+
+  String fullName;
+  String notes;
+  bool isSyncing; // Transient UI state (starts fresh on app launch)
+  AddressModel address; // Nested GraftModel created once!
+
+  PersistentProfileState([
+    this.fullName = 'Sherlock Holmes',
+    this.notes = 'Consulting Detective',
+    this.isSyncing = false,
+    AddressModel? address,
+  ]) : address = address ?? AddressModel();
 
   @override
   GraftProps get props => propsOf(fullName, notes, isSyncing, address);
-
-  @override
-  void onDry() {
-    fullName = dry(fullName);
-    notes = dry(notes);
-    address = dryModel(address); // Deep nested model persistence!
-  }
 
   @override
   void onReset() {
     fullName = 'Sherlock Holmes';
     notes = 'Consulting Detective';
     isSyncing = false;
+    address.onReset();
   }
 }
 
 class PersistentProfileGraft extends Graft<PersistentProfileState> {
-  PersistentProfileGraft() : super(PersistentProfileState());
+  PersistentProfileGraft() : super.dry(PersistentProfileState.new);
 
   void updateName(String name) {
     state
@@ -1536,13 +1545,13 @@ class PersistentModelScreen extends StatelessWidget {
                     profile((s) => ListTile(
                           leading: const Icon(Icons.badge, color: Colors.blue),
                           title: Text('Name: ${s.fullName}'),
-                          subtitle: const Text('Persisted via dry(fullName)'),
+                          subtitle: const Text('Frame-0 Constructor Hydrated'),
                         )),
                     // Slot 2: Notes
                     profile((s) => ListTile(
                           leading: const Icon(Icons.notes, color: Colors.blue),
                           title: Text('Notes: ${s.notes}'),
-                          subtitle: const Text('Persisted via dry(notes)'),
+                          subtitle: const Text('Frame-0 Constructor Hydrated'),
                         )),
                     // Slot 3: Nested AddressModel
                     profile((s) => ListTile(
@@ -1551,7 +1560,7 @@ class PersistentModelScreen extends StatelessWidget {
                             'Address: ${s.address.street}, ${s.address.city} (${s.address.zipCode})',
                           ),
                           subtitle:
-                              const Text('Persisted via dryModel(address)'),
+                              const Text('Auto-hydrated via AddressModel.new tear-off'),
                         )),
                     // Slot 4: Transient Syncing Status
                     profile((s) => ListTile(

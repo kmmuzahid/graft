@@ -50,7 +50,7 @@ When `update()` executes, Graft compares the current values of `props` against a
 
 ### Pillar 2: Surgical Leaf Slot Isolation
 Flutter's standard `setState` or coarse `AnimatedBuilder` marks entire subtrees dirty. Graft's `graft.slot()` and `graft.slots()` register direct C-level Element pointers (`GraftFastReceiver`):
-- When a field bitmask changes, `Graft.notifyMask()` marks **only the specific leaf Element dirty** in Flutter's build pipeline.
+- When a field bitmask changes, `GraftEngine.notifyMask()` marks **only the specific leaf Element dirty** in Flutter's build pipeline.
 - Intermediate parent and sibling widgets experience **0 rebuilds**.
 - Closures and selector evaluation trees are completely bypassed.
 
@@ -93,7 +93,7 @@ Hydrating persisted form states via asynchronous storage engines (SQLite, Shared
 - **Synchronous L1 RAM Cache:** Pre-warmed during bootstrap or lazy mount, providing state data in $< 50\text{ ns}$ during widget build.
 - **Zero-Controller Forms:** Standard Flutter `TextFormField(initialValue: graft.state.customerName)` takes the Frame-0 restored state directly with ZERO controllers and ZERO `initState`.
 - **Coalescing 300ms Background Queue:** Keystrokes update L1 RAM synchronously on every frame, while coalescing disk writes into a single debounced 300ms I/O operation.
-- **Structural Schema Fingerprinting:** Automatically hashes `propsOf` length and runtime types. If a developer re-orders fields or modifies types in a future release, stale cache is automatically discarded with zero manual version numbers.
+- **Structural Schema Fingerprinting with `schemaVersion`:** Combines deterministic 32-bit FNV-1a hashing of `props` structure with `schemaVersion`. Stale caches are discarded safely across app updates with zero migration scripts.
 
 ---
 

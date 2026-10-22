@@ -19,131 +19,43 @@ import '../../core/graft_state.dart';
 /// }
 /// ```
 abstract class GraftModel {
+  @override
+  @nonVirtual
+  bool operator ==(Object other) => identical(this, other);
+
+  @override
+  @nonVirtual
+  int get hashCode => identityHashCode(this);
+
   /// Defines domain properties for serialization and diffing.
   GraftProps get props;
 
+  /// Schema version for deterministic persistence and safe evolution across app restarts.
+  ///
+  /// When embedded in a state used with [Graft.dry] or `super.dry(State.new)`,
+  /// this must be overridden to a positive integer:
+  /// ```dart
+  /// @override
+  /// int get schemaVersion => 1;
+  /// ```
+  int get schemaVersion => 0;
+
+  /// Constructor tear-off for automatic Frame-0 hydration.
+  ///
+  /// When embedded in a persistent state, override this with the class constructor tear-off:
+  /// ```dart
+  /// @override
+  /// Function get factory => AddressModel.new;
+  /// ```
+  Function? get factory => null;
+
   /// Optional reset callback to restore baseline values.
+  @protected
   void onReset() {}
 
-  List<Object?>? _hydrationBuffer;
-  int _hydrationReadIndex = 0;
-  List<Object?>? _probeProps;
-
-  /// Hook called during Frame-0 dry hydration to map restored values.
-  void onDry() => onHydrate();
-
-  /// Legacy hydration hook. Prefer [onDry].
-  void onHydrate() {}
-
-  /// Declares and restores a persistent model property during [onDry].
+  /// Resets this model by invoking [onReset].
   @nonVirtual
-  T dry<T>(T fallback) => read<T>(fallback);
-
-  /// Declares and restores a nested [GraftModel] during [onDry].
-  @nonVirtual
-  M dryModel<M extends GraftModel>(M model) {
-    readModel(model);
-    return model;
-  }
-
-  /// Hydrates a nested [GraftModel] using the next value in the hydration sequence.
-  @nonVirtual
-  void readModel(GraftModel model) {
-    final buf = _hydrationBuffer;
-    if (buf != null) {
-      if (_hydrationReadIndex < buf.length) {
-        final val = buf[_hydrationReadIndex++];
-        if (val is List) {
-          model.hydrate(val.cast<Object?>());
-        } else if (val is GraftProps) {
-          model.hydrate(val.cast<Object?>().toList());
-        }
-        return;
-      }
-      _hydrationReadIndex++;
-      return;
-    }
-    final p = _probeProps;
-    if (p != null && _hydrationReadIndex < p.length) {
-      _hydrationReadIndex++;
-      model.probeModel();
-      return;
-    }
-    _hydrationReadIndex++;
-  }
-
-  /// Type-safe auto-incrementing property reader for Frame-0 hydration.
-  @nonVirtual
-  T read<T>([T? fallback]) {
-    final buf = _hydrationBuffer;
-    if (buf != null) {
-      if (_hydrationReadIndex < buf.length) {
-        final val = buf[_hydrationReadIndex++];
-        if (val == null && fallback != null) return fallback;
-        if (val is T) return val;
-        if (fallback != null) return fallback;
-        return val as T;
-      }
-      _hydrationReadIndex++;
-      if (fallback != null) return fallback;
-      throw StateError('read() called beyond available model hydration data');
-    }
-    final p = _probeProps;
-    if (p != null && _hydrationReadIndex < p.length) {
-      final val = p[_hydrationReadIndex++];
-      if (val is T) return val;
-      if (fallback != null) return fallback;
-      return val as T;
-    }
-    _hydrationReadIndex++;
-    if (fallback != null) return fallback;
-    return null as T;
-  }
-
-  /// In-place hydration method restoring domain fields and nested models.
-  /// Internal engine method: must not be called or overridden by user code.
-  @internal
-  @nonVirtual
-  void hydrate(List<Object?> tuple) {
-    _hydrationBuffer = tuple;
-    _hydrationReadIndex = 0;
-    try {
-      onDry();
-      final currentProps = props;
-      for (int i = _hydrationReadIndex;
-          i < currentProps.length && i < tuple.length;
-          i++) {
-        final prop = currentProps[i];
-        final val = tuple[i];
-        if (prop is GraftModel && val is List) {
-          prop.hydrate(val.cast<Object?>());
-        }
-      }
-    } finally {
-      _hydrationBuffer = null;
-    }
-  }
-
-  /// Internal probe execution when no cached data exists.
-  /// Internal engine method: must not be called or overridden by user code.
-  @internal
-  @nonVirtual
-  void probeModel() {
-    final p = props;
-    _probeProps = List<Object?>.generate(p.length, (i) => p[i], growable: false);
-    _hydrationReadIndex = 0;
-    try {
-      onDry();
-      for (int i = _hydrationReadIndex; i < p.length; i++) {
-        final prop = p[i];
-        if (prop is GraftModel) {
-          prop.probeModel();
-        }
-      }
-    } finally {
-      _probeProps = null;
-    }
-  }
+  void reset() => onReset();
 
   /// Convenience helper to create [GraftProps].
   @protected

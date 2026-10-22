@@ -75,10 +75,10 @@ class UserState extends GraftState {
 ```
 
 > [!NOTE]
-> ### 💡 When is `onDry()` needed in a `GraftState`?
-> Overriding `onDry()` is **strictly optional**. You only need to implement `onDry()` if you want this specific state's data saved permanently across app restarts and restored on Frame 0 (e.g. authentication sessions, checkout drafts, user preferences).
+> ### 💡 Frame-0 Dry Persistence vs Transient State
+> Frame-0 dry persistence is **strictly optional**. You only use `super.dry(State.new)` and declare `@override int get schemaVersion => 1;` when you want that state or model's data saved permanently across app restarts (e.g. auth tokens, checkout drafts, user preferences).
 >
-> For **transient UI states** (e.g. search queries, bottom sheet filters, confirmation dialogs, animation flags), **do NOT implement `onDry()`**! Simply declare `props => propsOf(...)` and mutate in-place with `update()`.
+> For **transient UI states** (e.g. search queries, bottom sheet filters, confirmation dialogs, animation flags), simply use standard `super(State())` with `props => propsOf(...)` and mutate in-place with `update()`.
 
 > [!TIP]
 > ### 🧠 State vs. Controller Lifecycle: `GraftState` Has No `init()`
@@ -233,32 +233,37 @@ Graft completely eliminates this with **`GraftModel`**:
 - **100% Cascade-Mutable:** Mutate nested models in-place with native Dart cascades (`state..address.street = '123'..update();`).
 - **Zero Allocations & Zero GC:** The existing model instance is updated in-place; no ephemeral copy instances or wrapper trees are allocated.
 - **Recursive Bitmask Diffing:** When `update()` executes, Graft recursively diffs nested model `props` against their baseline snapshots in $< 50\text{ ns}$.
-- **Synchronous Frame-0 Binary Hydration:** Hydrate deep nested trees on Frame 0 via `dryModel()` with zero blank frames and zero JSON parsing.
+- **Synchronous Frame-0 Binary Hydration:** Hydrate deep nested trees on Frame 0 directly into constructor arguments with zero blank frames and zero JSON parsing.
 - **Zero Boilerplate:** No `fromJson`, no `toJson`, no `copyWith`, and no constructors needed!
 
 ---
 
 ### 1. Define the Sub-Model (`GraftModel`)
 
-Extend `GraftModel` with plain Dart variables. Override `props` for UI diffing, `onDry()` for Frame-0 persistence, and `onReset()` for in-place resets:
+Extend `GraftModel` with plain Dart variables. Override `schemaVersion => 1`, `props` for UI diffing, and `factory => AddressModel.new` for Frame-0 constructor hydration:
 
 ```dart
 class AddressModel extends GraftModel {
-  String street = '221B Baker Street';
-  String city = 'London';
-  int zipCode = 10001;
+  @override
+  int get schemaVersion => 1;
+
+  String street;
+  String city;
+  int zipCode;
+
+  AddressModel([
+    this.street = '221B Baker Street',
+    this.city = 'London',
+    this.zipCode = 10001,
+  ]);
 
   // 1. Declare properties for recursive slot diffing:
   @override
   GraftProps get props => propsOf(street, city, zipCode);
 
-  // 2. Map persistent fields with zero magic strings:
+  // 2. 1-line constructor tear-off for auto-hydration on Frame 0:
   @override
-  void onDry() {
-    street = dry(street);
-    city = dry(city);
-    zipCode = dry(zipCode);
-  }
+  Function get factory => AddressModel.new;
 
   // 3. Reset in-place to initial baseline:
   @override
@@ -271,39 +276,41 @@ class AddressModel extends GraftModel {
 ```
 
 > [!NOTE]
-> ### 💡 When does a `GraftModel` need `onDry()`?
-> A `GraftModel` only needs to implement `onDry()` if its fields are being persisted to storage via `address = dryModel(address)` in the parent state's `onDry()`.
+> ### 💡 When does a `GraftModel` need `factory`?
+> A `GraftModel` implements `@override Function get factory => Model.new;` so that Frame-0 hydration can instantiate restored models automatically into constructor arguments without any manual index casting.
 >
-> If your domain sub-model is used purely in-memory (or belongs to a transient state), **do NOT implement `onDry()`**! Simply declare `props => propsOf(...)` and optional `onReset()`.
+> If your domain sub-model is used purely in-memory (or belongs to a transient state), no `factory` or `schemaVersion` is needed. Simply declare `props => propsOf(...)` and optional `onReset()`.
 
 ---
 
 ### 2. Embed the Model in Domain State (`GraftState`)
 
-Instantiate `AddressModel` once directly in your `GraftState`. List it in `props` for UI diffing and map it with `dryModel(address)` in `onDry()`:
+Declare `AddressModel` in the state's constructor with a default value. List it in `props` for UI diffing, and pass the constructor tear-off to `super.dry(UserProfileState.new)`:
 
 ```dart
 class UserProfileState extends GraftState {
-  String fullName = 'Sherlock Holmes';
-  bool isSaving = false; // Transient UI flag (starts fresh on app launch)
-  AddressModel address = AddressModel(); // Nested GraftModel created once!
+  @override
+  int get schemaVersion => 1;
+
+  String fullName;
+  bool isSaving; // Transient UI flag (starts fresh on app launch)
+  AddressModel address; // Nested GraftModel
+
+  UserProfileState([
+    this.fullName = 'Sherlock Holmes',
+    this.isSaving = false,
+    AddressModel? address,
+  ]) : address = address ?? AddressModel();
 
   // 1. All fields listed for surgical leaf diffing:
   @override
   GraftProps get props => propsOf(fullName, isSaving, address);
 
-  // 2. Only persistent fields mapped (isSaving starts fresh as false):
-  @override
-  void onDry() {
-    fullName = dry(fullName);
-    address = dryModel(address); // ⚡ Recursively maps and hydrates the nested model!
-  }
-
   @override
   void onReset() {
     fullName = 'Sherlock Holmes';
     isSaving = false;
-    address.reset(); // Recursively resets nested model in-place!
+    address.onReset();
   }
 }
 ```
@@ -316,7 +323,7 @@ Mutate nested fields directly using Dart's native cascade operator:
 
 ```dart
 class UserProfileGraft extends Graft<UserProfileState> {
-  UserProfileGraft() : super(UserProfileState());
+  UserProfileGraft() : super.dry(UserProfileState.new);
 
   // Mutate top-level field:
   void updateName(String name) {
@@ -404,38 +411,41 @@ class UserProfileScreen extends StatelessWidget {
 
 ## Frame-0 Dry State Persistence
 
-Enable automatic Frame-0 state persistence with **100% native Dart, zero boilerplate, zero constructors, and zero magic strings**. 
+Enable automatic Frame-0 state persistence with **100% native Dart, zero boilerplate, zero manual index casting, and zero magic strings**. 
 
-Declare your state with standard plain Dart variables. List domain properties in `props` for surgical UI rebuilds, and map persistent fields in `onDry()`:
+Declare your state with standard constructor parameters and defaults, override `schemaVersion => 1`, and pass the constructor tear-off to `super.dry(State.new)`:
 
 ```dart
 class CheckoutState extends GraftState {
-  String customerName = 'Alice';
-  String notes = 'Leave at door';
-  bool isLoading = false; // Transient UI state (starts fresh every time!)
+  @override
+  int get schemaVersion => 1;
+
+  String customerName;
+  String notes;
+  bool isLoading; // Transient UI state (starts fresh every time!)
+
+  CheckoutState([
+    this.customerName = 'Alice',
+    this.notes = 'Leave at door',
+    this.isLoading = false,
+  ]);
 
   // 1. All domain properties listed for surgical leaf diffing:
   @override
   GraftProps get props => propsOf(customerName, notes, isLoading);
-
-  // 2. ONLY persistent fields listed here (zero strings, type-inferred!):
-  @override
-  void onDry() {
-    customerName = dry(customerName);
-    notes = dry(notes);
-  }
 }
 
 class CheckoutGraft extends Graft<CheckoutState> {
-  // ⚡ Automatically hydrates from binary L1 RAM on Frame 0!
-  CheckoutGraft() : super(CheckoutState());
+  // ⚡ Directly hydrates from binary L1 RAM on Frame 0 into constructor arguments!
+  CheckoutGraft() : super.dry(CheckoutState.new);
 }
 ```
 
-- **Frame 0 (Restoration):** The engine reads the binary cache and directly assigns restored values in < 50ns!
-- **Selective Persistence:** `customerName` and `notes` restore from disk, while `isLoading` always starts fresh as `false`.
-- **First Launch (No Cache):** Naturally falls back to initial defaults (`'Alice'` and `'Leave at door'`).
-- **Zero Boilerplate:** NO `read()`, NO constructors needed, NO magic strings, NO `.value` wrappers. 100% refactor-safe in your IDE!
+- **Frame 0 (Restoration):** The engine reads the binary cache and directly invokes `CheckoutState.new(cached[0], cached[1], ...)` in < 50ns before initial paint!
+- **Selective Persistence:** `customerName` and `notes` restore from cache, while `isLoading` starts fresh as `false`.
+- **First Launch (No Cache):** Naturally falls back to constructor defaults (`'Alice'` and `'Leave at door'`).
+- **Two-Tier Enforcement:** `packages/graft_lint` flags missing `schemaVersion` or `factory` at compile time; runtime throws actionable `StateError` if contracts are omitted.
+- **Zero Boilerplate:** NO `read()`, NO manual index casting, NO magic strings. 100% refactor-safe in your IDE!
 
 ### Native Lifecycle Hooks (`onInit` & `onDispose`)
 When `Graft` is instantiated, Frame-0 hydration completes **before** `onInit()` runs:

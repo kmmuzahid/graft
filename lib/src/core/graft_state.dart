@@ -41,238 +41,40 @@ abstract class GraftState {
   /// Monotonically increasing version counter incremented on every [update] call.
   int _version = 0;
 
-  /// Returns the current version counter of this state instance.
+  @override
   @nonVirtual
-  int get version => _version;
+  bool operator ==(Object other) => identical(this, other);
 
-  List<Object?>? _hydrationBuffer;
-  int _hydrationReadIndex = 0;
-  List<Object?>? _probeProps;
+  @override
+  @nonVirtual
+  int get hashCode => identityHashCode(this);
+
   bool _isDryEnabled = false;
   String? _customDryKey;
-  bool _isCapturingDry = false;
-  final List<Object?> _capturedDry = [];
-
-  /// Whether dry persistence has been activated.
-  @internal
-  bool get isDryEnabled => _isDryEnabled;
-
-  /// Internal engine hook to activate dry persistence.
-  @internal
-  void setDryEnabledInternal(bool enabled) {
-    _isDryEnabled = enabled;
-  }
-
-  /// Internal engine hook to configure custom dry storage key.
-  @internal
-  void setCustomDryKeyInternal(String? key) {
-    _customDryKey = key;
-  }
 
   /// Optional storage key identifying this state in persistence.
   /// Defaults to the class name (`runtimeType.toString()`).
   String get dryKey => _customDryKey ?? runtimeType.toString();
 
-  /// Primary lifecycle hook called during Frame-0 dry hydration to map persistent fields.
+  /// Schema version for deterministic persistence and safe evolution across app restarts.
   ///
-  /// Overriding this method automatically activates Frame-0 dry persistence with zero boilerplate:
+  /// When using [Graft.dry] or `super.dry(State.new)`, this MUST be overridden to a positive integer:
   /// ```dart
   /// @override
-  /// void onDry() {
-  ///   name = dry(name);
-  ///   score = dry(score);
-  /// }
+  /// int get schemaVersion => 1;
   /// ```
-  void onDry() => onHydrate();
-
-  /// Legacy hydration hook. Prefer [onDry].
-  void onHydrate() {}
-
-  /// Declares and restores a persistent domain property during [onDry].
-  ///
-  /// Automatically infers type [T] from [fallback] with zero magic strings:
-  /// ```dart
-  /// name = dry(name);
-  /// score = dry(score);
-  /// ```
-  @nonVirtual
-  T dry<T>(T fallback) {
-    if (_isCapturingDry) {
-      _capturedDry.add(fallback);
-      return fallback;
-    }
-    return read<T>(fallback);
-  }
-
-  /// Declares and restores a nested [GraftModel] during [onDry].
-  @nonVirtual
-  M dryModel<M extends GraftModel>(M model) {
-    if (_isCapturingDry) {
-      _capturedDry.add(model);
-      return model;
-    }
-    readModel(model);
-    return model;
-  }
-
-  /// Captures values declared via [dry] in [onDry].
-  @internal
-  List<Object?> captureDryValues() {
-    _capturedDry.clear();
-    _isCapturingDry = true;
-    final p = props;
-    _probeProps =
-        List<Object?>.generate(p.length, (i) => p[i], growable: false);
-    _hydrationReadIndex = 0;
-    try {
-      onDry();
-      if (_capturedDry.isNotEmpty) {
-        _isDryEnabled = true;
-        return List<Object?>.from(_capturedDry);
-      }
-      if (_hydrationReadIndex > 0) {
-        _isDryEnabled = true;
-      }
-      return const [];
-    } finally {
-      _isCapturingDry = false;
-      _probeProps = null;
-    }
-  }
-
-  /// Type-safe auto-incrementing property reader for Frame-0 hydration.
-  @nonVirtual
-  T read<T>([T? fallback]) {
-    final buf = _hydrationBuffer;
-    if (buf != null) {
-      if (_hydrationReadIndex < buf.length) {
-        final val = buf[_hydrationReadIndex++];
-        if (val == null && fallback != null) return fallback;
-        if (val is T) return val;
-        if (fallback != null) return fallback;
-        return val as T;
-      }
-      _hydrationReadIndex++;
-      if (fallback != null) return fallback;
-      throw StateError(
-        'read() called at index ${_hydrationReadIndex - 1}, but only ${buf.length} values exist in hydration payload.',
-      );
-    }
-    final p = _probeProps;
-    if (p != null && _hydrationReadIndex < p.length) {
-      final val = p[_hydrationReadIndex++];
-      if (val is T) return val;
-      if (fallback != null) return fallback;
-      return val as T;
-    }
-    _hydrationReadIndex++;
-    if (fallback != null) return fallback;
-    return null as T;
-  }
-
-  /// Hydrates a nested [GraftModel] using the next value in the hydration sequence.
-  @nonVirtual
-  void readModel(GraftModel model) {
-    final buf = _hydrationBuffer;
-    if (buf != null) {
-      if (_hydrationReadIndex < buf.length) {
-        final val = buf[_hydrationReadIndex++];
-        if (val is List) {
-          model.hydrate(val.cast<Object?>());
-        } else if (val is GraftProps) {
-          model.hydrate(val.cast<Object?>().toList());
-        }
-        return;
-      }
-      _hydrationReadIndex++;
-      return;
-    }
-    final p = _probeProps;
-    if (p != null && _hydrationReadIndex < p.length) {
-      _hydrationReadIndex++;
-      model.probeModel();
-      return;
-    }
-    _hydrationReadIndex++;
-  }
-
-  /// Restores domain properties and nested models from [tuple] during Frame-0 hydration.
-  @internal
-  void hydrate(List<Object?> tuple) {
-    _hydrationBuffer = tuple;
-    _hydrationReadIndex = 0;
-    try {
-      onDry();
-      if (_hydrationReadIndex > 0) {
-        _isDryEnabled = true;
-      }
-      final currentProps = props;
-      for (int i = _hydrationReadIndex;
-          i < currentProps.length && i < tuple.length;
-          i++) {
-        final prop = currentProps[i];
-        final val = tuple[i];
-        if (prop is GraftModel && val is List) {
-          prop.hydrate(val.cast<Object?>());
-        }
-      }
-    } finally {
-      _hydrationBuffer = null;
-    }
-  }
-
-  /// Probes whether [onDry] or [onHydrate] is overridden when no cached data exists.
-  @internal
-  void probeWithoutCache() {
-    final dryVals = captureDryValues();
-    if (dryVals.isNotEmpty) {
-      _isDryEnabled = true;
-      return;
-    }
-    final p = props;
-    _probeProps =
-        List<Object?>.generate(p.length, (i) => p[i], growable: false);
-    _hydrationReadIndex = 0;
-    try {
-      onDry();
-      if (_hydrationReadIndex > 0) {
-        _isDryEnabled = true;
-      }
-      final currentProps = props;
-      for (int i = _hydrationReadIndex; i < currentProps.length; i++) {
-        final prop = currentProps[i];
-        if (prop is GraftModel) {
-          prop.probeModel();
-        }
-      }
-    } finally {
-      _probeProps = null;
-    }
-  }
+  int get schemaVersion => 0;
 
   /// Permanently deactivates and invalidates dry state persistence for this session.
   @nonVirtual
   void invalidateDry() => DryStateHook.invalidate(this);
 
-  /// Binds this state instance to its owning [Graft] controller.
-  ///
-  /// This method is called automatically by the [Graft] constructor.
-  /// Internal engine method: must not be called or overridden by user code.
-  @internal
-  @nonVirtual
-  void bindGraft(Graft graft) {
+  void _bindGraft(Graft graft) {
     _graft = graft;
-    DryStateHook.hydrateSync(this);
-    initBaseline();
+    _initBaseline();
   }
 
-  /// Initializes the baseline snapshot of tracked properties with zero-copy primitives
-  /// and shallow-cloned snapshots for collection types.
-  ///
-  /// Internal engine method: must not be called or overridden by user code.
-  @internal
-  @nonVirtual
-  void initBaseline() {
+  void _initBaseline() {
     final current = props;
     final len = current.length;
     _baselineNeedsSync = false;
@@ -284,7 +86,7 @@ abstract class GraftState {
       // Capture version for O(1) nested GraftState detection.
       _singleNestedVersion = c is GraftState ? c._version : -1;
       if (c is GraftState) {
-        c.initBaseline();
+        c._initBaseline();
         c._graft = _graft;
         GraftState cur = c;
         while (cur.props.length == 1) {
@@ -292,7 +94,7 @@ abstract class GraftState {
               ? (cur.props as _GraftPropsSingle).value
               : cur.props[0];
           if (next is GraftState) {
-            next.initBaseline();
+            next._initBaseline();
             next._graft = _graft;
             cur = next;
           } else {
@@ -381,9 +183,7 @@ abstract class GraftState {
   /// Writing a `List` literal (e.g. `[a, b]`) is a compile-time error.
   GraftProps get props;
 
-  /// Returns an unmodifiable snapshot of the baseline property values before the current mutation pass.
-  @internal
-  List<Object?> get baselineSnapshot {
+  List<Object?> get _baselineSnapshot {
     if (!identical(_singleBaseline, _undefined)) {
       return [_singleBaseline];
     }
@@ -636,7 +436,7 @@ abstract class GraftState {
       return value;
     }
     if (value is GraftState) {
-      value.diffChanges();
+      value._diffChanges();
       return value;
     }
     if (value is List) {
@@ -727,7 +527,7 @@ abstract class GraftState {
   static bool _isPropertyDirty(Object? p, Object? c) {
     if (identical(p, c)) {
       if (c is GraftState) {
-        return c.diffChanges().isNotEmpty;
+        return c._diffChanges().isNotEmpty;
       }
       if (c is Iterable || c is Map) {
         return !_deepEquals(p, c);
@@ -739,7 +539,7 @@ abstract class GraftState {
       return p != c;
     }
     if (c is GraftState) {
-      return c.diffChanges().isNotEmpty;
+      return c._diffChanges().isNotEmpty;
     }
     if (p is List && c is List) {
       if (p.length != c.length) return true;
@@ -926,11 +726,8 @@ abstract class GraftState {
   /// Compares current [props] against the in-place baseline snapshot.
   /// Returns [GraftMask.allDirty] on first evaluation, or a [GraftMask] of modified property indices.
   /// Handles in-place mutations on collections (List, Set, Map) and nested [GraftState] objects transparently.
-  /// Internal engine method: must not be called or overridden by user code.
-  @internal
-  @nonVirtual
   @pragma('vm:prefer-inline')
-  GraftMask diffChanges() {
+  GraftMask _diffChanges() {
     final p = _singleBaseline;
     if (_baseline == null && !identical(p, _undefined)) {
       if (_allScalarProps) {
@@ -965,7 +762,7 @@ abstract class GraftState {
         // Version changed or not yet captured — run leaf diff directly if cached.
         final leaf = _leafState;
         if (leaf != null) {
-          if (leaf.diffChanges().isNotEmpty) {
+          if (leaf._diffChanges().isNotEmpty) {
             _singleNestedVersion = p._version;
             _dirtyMask = GraftMask.bit0;
             return GraftMask.bit0;
@@ -991,7 +788,7 @@ abstract class GraftState {
             break;
           }
         }
-        if (cur.diffChanges().isNotEmpty) {
+        if (cur._diffChanges().isNotEmpty) {
           _singleNestedVersion = p._version;
           _dirtyMask = GraftMask.bit0;
           return GraftMask.bit0;
@@ -1033,7 +830,7 @@ abstract class GraftState {
           _dirtyMask = GraftMask.empty;
           return GraftMask.empty;
         }
-        if (c.diffChanges().isNotEmpty) {
+        if (c._diffChanges().isNotEmpty) {
           _singleNestedVersion = cv;
           _dirtyMask = GraftMask.bit0;
           return GraftMask.bit0;
@@ -1144,7 +941,7 @@ abstract class GraftState {
           return GraftMask.empty;
         }
         // Version changed: propagate diff to leaf to sync baseline, then stamp.
-        if (c.diffChanges().isNotEmpty) {
+        if (c._diffChanges().isNotEmpty) {
           _singleNestedVersion = cv;
           _dirtyMask = GraftMask.bit0;
           return GraftMask.bit0;
@@ -1264,7 +1061,7 @@ abstract class GraftState {
               d0 = true;
             }
           } else if (c0 is GraftState) {
-            if (!identical(p0, c0) || c0.diffChanges().isNotEmpty) {
+            if (!identical(p0, c0) || c0._diffChanges().isNotEmpty) {
               prev[0] = c0;
               d0 = true;
             }
@@ -1282,7 +1079,7 @@ abstract class GraftState {
             d0 = true;
           }
         } else if (c0 is GraftState) {
-          if (c0.diffChanges().isNotEmpty) {
+          if (c0._diffChanges().isNotEmpty) {
             prev[0] = c0;
             d0 = true;
           }
@@ -1300,7 +1097,7 @@ abstract class GraftState {
               d1 = true;
             }
           } else if (c1 is GraftState) {
-            if (!identical(p1, c1) || c1.diffChanges().isNotEmpty) {
+            if (!identical(p1, c1) || c1._diffChanges().isNotEmpty) {
               prev[1] = c1;
               d1 = true;
             }
@@ -1318,7 +1115,7 @@ abstract class GraftState {
             d1 = true;
           }
         } else if (c1 is GraftState) {
-          if (c1.diffChanges().isNotEmpty) {
+          if (c1._diffChanges().isNotEmpty) {
             prev[1] = c1;
             d1 = true;
           }
@@ -1384,7 +1181,7 @@ abstract class GraftState {
             prev[0] = c0;
             w |= 1;
           } else if (c0 is GraftState) {
-            if (!identical(p0, c0) || c0.diffChanges().isNotEmpty) {
+            if (!identical(p0, c0) || c0._diffChanges().isNotEmpty) {
               prev[0] = c0;
               w |= 1;
             }
@@ -1402,7 +1199,7 @@ abstract class GraftState {
             w |= 1;
           }
         } else if (c0 is GraftState) {
-          if (c0.diffChanges().isNotEmpty) {
+          if (c0._diffChanges().isNotEmpty) {
             prev[0] = c0;
             w |= 1;
           }
@@ -1417,7 +1214,7 @@ abstract class GraftState {
             prev[1] = c1;
             w |= 2;
           } else if (c1 is GraftState) {
-            if (!identical(p1, c1) || c1.diffChanges().isNotEmpty) {
+            if (!identical(p1, c1) || c1._diffChanges().isNotEmpty) {
               prev[1] = c1;
               w |= 2;
             }
@@ -1435,7 +1232,7 @@ abstract class GraftState {
             w |= 2;
           }
         } else if (c1 is GraftState) {
-          if (c1.diffChanges().isNotEmpty) {
+          if (c1._diffChanges().isNotEmpty) {
             prev[1] = c1;
             w |= 2;
           }
@@ -1450,7 +1247,7 @@ abstract class GraftState {
             prev[2] = c2;
             w |= 4;
           } else if (c2 is GraftState) {
-            if (!identical(p2, c2) || c2.diffChanges().isNotEmpty) {
+            if (!identical(p2, c2) || c2._diffChanges().isNotEmpty) {
               prev[2] = c2;
               w |= 4;
             }
@@ -1468,7 +1265,7 @@ abstract class GraftState {
             w |= 4;
           }
         } else if (c2 is GraftState) {
-          if (c2.diffChanges().isNotEmpty) {
+          if (c2._diffChanges().isNotEmpty) {
             prev[2] = c2;
             w |= 4;
           }
@@ -1538,7 +1335,7 @@ abstract class GraftState {
             prev[0] = c0;
             w |= 1;
           } else if (c0 is GraftState) {
-            if (!identical(p0, c0) || c0.diffChanges().isNotEmpty) {
+            if (!identical(p0, c0) || c0._diffChanges().isNotEmpty) {
               prev[0] = c0;
               w |= 1;
             }
@@ -1556,7 +1353,7 @@ abstract class GraftState {
             w |= 1;
           }
         } else if (c0 is GraftState) {
-          if (c0.diffChanges().isNotEmpty) {
+          if (c0._diffChanges().isNotEmpty) {
             prev[0] = c0;
             w |= 1;
           }
@@ -1571,7 +1368,7 @@ abstract class GraftState {
             prev[1] = c1;
             w |= 2;
           } else if (c1 is GraftState) {
-            if (!identical(p1, c1) || c1.diffChanges().isNotEmpty) {
+            if (!identical(p1, c1) || c1._diffChanges().isNotEmpty) {
               prev[1] = c1;
               w |= 2;
             }
@@ -1589,7 +1386,7 @@ abstract class GraftState {
             w |= 2;
           }
         } else if (c1 is GraftState) {
-          if (c1.diffChanges().isNotEmpty) {
+          if (c1._diffChanges().isNotEmpty) {
             prev[1] = c1;
             w |= 2;
           }
@@ -1604,7 +1401,7 @@ abstract class GraftState {
             prev[2] = c2;
             w |= 4;
           } else if (c2 is GraftState) {
-            if (!identical(p2, c2) || c2.diffChanges().isNotEmpty) {
+            if (!identical(p2, c2) || c2._diffChanges().isNotEmpty) {
               prev[2] = c2;
               w |= 4;
             }
@@ -1622,7 +1419,7 @@ abstract class GraftState {
             w |= 4;
           }
         } else if (c2 is GraftState) {
-          if (c2.diffChanges().isNotEmpty) {
+          if (c2._diffChanges().isNotEmpty) {
             prev[2] = c2;
             w |= 4;
           }
@@ -1637,7 +1434,7 @@ abstract class GraftState {
             prev[3] = c3;
             w |= 8;
           } else if (c3 is GraftState) {
-            if (!identical(p3, c3) || c3.diffChanges().isNotEmpty) {
+            if (!identical(p3, c3) || c3._diffChanges().isNotEmpty) {
               prev[3] = c3;
               w |= 8;
             }
@@ -1655,7 +1452,7 @@ abstract class GraftState {
             w |= 8;
           }
         } else if (c3 is GraftState) {
-          if (c3.diffChanges().isNotEmpty) {
+          if (c3._diffChanges().isNotEmpty) {
             prev[3] = c3;
             w |= 8;
           }
@@ -1735,7 +1532,7 @@ abstract class GraftState {
             prev[0] = c0;
             w |= 1;
           } else if (c0 is GraftState) {
-            if (!identical(p0, c0) || c0.diffChanges().isNotEmpty) {
+            if (!identical(p0, c0) || c0._diffChanges().isNotEmpty) {
               prev[0] = c0;
               w |= 1;
             }
@@ -1753,7 +1550,7 @@ abstract class GraftState {
             w |= 1;
           }
         } else if (c0 is GraftState) {
-          if (c0.diffChanges().isNotEmpty) {
+          if (c0._diffChanges().isNotEmpty) {
             prev[0] = c0;
             w |= 1;
           }
@@ -1768,7 +1565,7 @@ abstract class GraftState {
             prev[1] = c1;
             w |= 2;
           } else if (c1 is GraftState) {
-            if (!identical(p1, c1) || c1.diffChanges().isNotEmpty) {
+            if (!identical(p1, c1) || c1._diffChanges().isNotEmpty) {
               prev[1] = c1;
               w |= 2;
             }
@@ -1786,7 +1583,7 @@ abstract class GraftState {
             w |= 2;
           }
         } else if (c1 is GraftState) {
-          if (c1.diffChanges().isNotEmpty) {
+          if (c1._diffChanges().isNotEmpty) {
             prev[1] = c1;
             w |= 2;
           }
@@ -1801,7 +1598,7 @@ abstract class GraftState {
             prev[2] = c2;
             w |= 4;
           } else if (c2 is GraftState) {
-            if (!identical(p2, c2) || c2.diffChanges().isNotEmpty) {
+            if (!identical(p2, c2) || c2._diffChanges().isNotEmpty) {
               prev[2] = c2;
               w |= 4;
             }
@@ -1819,7 +1616,7 @@ abstract class GraftState {
             w |= 4;
           }
         } else if (c2 is GraftState) {
-          if (c2.diffChanges().isNotEmpty) {
+          if (c2._diffChanges().isNotEmpty) {
             prev[2] = c2;
             w |= 4;
           }
@@ -1834,7 +1631,7 @@ abstract class GraftState {
             prev[3] = c3;
             w |= 8;
           } else if (c3 is GraftState) {
-            if (!identical(p3, c3) || c3.diffChanges().isNotEmpty) {
+            if (!identical(p3, c3) || c3._diffChanges().isNotEmpty) {
               prev[3] = c3;
               w |= 8;
             }
@@ -1852,7 +1649,7 @@ abstract class GraftState {
             w |= 8;
           }
         } else if (c3 is GraftState) {
-          if (c3.diffChanges().isNotEmpty) {
+          if (c3._diffChanges().isNotEmpty) {
             prev[3] = c3;
             w |= 8;
           }
@@ -1867,7 +1664,7 @@ abstract class GraftState {
             prev[4] = c4;
             w |= 16;
           } else if (c4 is GraftState) {
-            if (!identical(p4, c4) || c4.diffChanges().isNotEmpty) {
+            if (!identical(p4, c4) || c4._diffChanges().isNotEmpty) {
               prev[4] = c4;
               w |= 16;
             }
@@ -1885,7 +1682,7 @@ abstract class GraftState {
             w |= 16;
           }
         } else if (c4 is GraftState) {
-          if (c4.diffChanges().isNotEmpty) {
+          if (c4._diffChanges().isNotEmpty) {
             prev[4] = c4;
             w |= 16;
           }
@@ -1945,12 +1742,12 @@ abstract class GraftState {
               final cv = c._version;
               if (nv[i] != cv) {
                 nv[i] = cv;
-                if (c.diffChanges().isNotEmpty) {
+                if (c._diffChanges().isNotEmpty) {
                   prev[i] = c;
                   dirty = true;
                 }
               }
-            } else if (c.diffChanges().isNotEmpty) {
+            } else if (c._diffChanges().isNotEmpty) {
               prev[i] = c;
               dirty = true;
             }
@@ -1974,12 +1771,12 @@ abstract class GraftState {
           final cv = c._version;
           if (nv[i] != cv) {
             nv[i] = cv;
-            if (c.diffChanges().isNotEmpty) {
+            if (c._diffChanges().isNotEmpty) {
               prev[i] = c;
               dirty = true;
             }
           }
-        } else if (c.diffChanges().isNotEmpty) {
+        } else if (c._diffChanges().isNotEmpty) {
           prev[i] = c;
           dirty = true;
         }
@@ -2029,26 +1826,31 @@ abstract class GraftState {
   }
 
   @pragma('vm:prefer-inline')
+  void _notifyGraft(Graft g, GraftMask mask) {
+    if (GraftEngine.hasOnlyFastDirectReceiver(g)) {
+      final fast = GraftEngine.getFastDirectReceiver(g)!;
+      if (fast.mounted) {
+        fast.markFastDirty();
+        return;
+      }
+      GraftEngine.setFastDirectReceiver(g, null);
+    }
+    if (GraftEngine.hasOnlySingleListener(g)) {
+      GraftEngine.singleListener(g)!();
+      return;
+    }
+    _dirtyMask = mask;
+    GraftEngine.notifyMask(g, mask);
+  }
+
+  @pragma('vm:prefer-inline')
   void _dispatchNotification(GraftMask mask) {
     if (_isDryEnabled) {
       DryStateHook.onStateUpdated(this);
     }
     final g = _graft;
     if (g != null) {
-      if (g.hasOnlyFastDirectReceiver) {
-        final fast = g.fastDirectReceiver!;
-        if (fast.mounted) {
-          fast.markFastDirty();
-          return;
-        }
-        g.fastDirectReceiver = null;
-      }
-      if (g.hasOnlySingleListener) {
-        g.singleListener!();
-        return;
-      }
-      _dirtyMask = mask;
-      g.notifyMask(mask);
+      _notifyGraft(g, mask);
     }
   }
 
@@ -2063,8 +1865,8 @@ abstract class GraftState {
       if (_isDryEnabled) DryStateHook.onStateUpdated(this);
       _dirtyMask = GraftMask.bit0;
       final g = _graft;
-      if (g != null && g.hasItemReceiver(itemIndex)) {
-        g.notifyItem(itemIndex);
+      if (g != null && GraftEngine.hasItemReceiver(g, itemIndex)) {
+        GraftEngine.notifyItem(g, itemIndex);
         return;
       }
     }
@@ -2081,20 +1883,7 @@ abstract class GraftState {
       _singleBaseline = c;
       final g = _graft;
       if (g != null) {
-        if (g.hasOnlyFastDirectReceiver) {
-          final fast = g.fastDirectReceiver!;
-          if (fast.mounted) {
-            fast.markFastDirty();
-            return;
-          }
-          g.fastDirectReceiver = null;
-        }
-        if (g.hasOnlySingleListener) {
-          g.singleListener!();
-          return;
-        }
-        _dirtyMask = GraftMask.bit0;
-        g.notifyMask(GraftMask.bit0);
+        _notifyGraft(g, GraftMask.bit0);
       }
       return;
     }
@@ -2129,22 +1918,9 @@ abstract class GraftState {
       if (_isDryEnabled) DryStateHook.onStateUpdated(this);
       final g = _graft;
       if (g != null) {
-        if (g.hasOnlyFastDirectReceiver) {
-          final fast = g.fastDirectReceiver!;
-          if (fast.mounted) {
-            fast.markFastDirty();
-            return;
-          }
-          g.fastDirectReceiver = null;
-        }
-        if (g.hasOnlySingleListener) {
-          g.singleListener!();
-          return;
-        }
         final mask =
             w == 31 ? GraftMask.allBitsUpTo(5) : GraftMask.fromWords(w, 0);
-        _dirtyMask = mask;
-        g.notifyMask(mask);
+        _notifyGraft(g, mask);
       }
       return;
     }
@@ -2180,23 +1956,10 @@ abstract class GraftState {
       if (_isDryEnabled) DryStateHook.onStateUpdated(this);
       final g = _graft;
       if (g != null) {
-        if (g.hasOnlyFastDirectReceiver) {
-          final fast = g.fastDirectReceiver!;
-          if (fast.mounted) {
-            fast.markFastDirty();
-            return;
-          }
-          g.fastDirectReceiver = null;
-        }
-        if (g.hasOnlySingleListener) {
-          g.singleListener!();
-          return;
-        }
         final mask = w == ((1 << sc) - 1)
             ? GraftMask.allBitsUpTo(sc)
             : GraftMask.fromWords(w, 0);
-        _dirtyMask = mask;
-        g.notifyMask(mask);
+        _notifyGraft(g, mask);
       }
       return;
     }
@@ -2257,16 +2020,16 @@ abstract class GraftState {
           _singleNestedVersion = p._version; // stamp root's child version
           _dirtyMask = GraftMask.bit0;
           final g = _graft;
-          if (g != null) g.notifyMask(GraftMask.bit0);
+          if (g != null) GraftEngine.notifyMask(g, GraftMask.bit0);
           return;
         }
-        if (cur.diffChanges().isNotEmpty) {
+        if (cur._diffChanges().isNotEmpty) {
           _version++;
           cur._version++;
           _singleNestedVersion = p._version; // stamp root's child version
           _dirtyMask = GraftMask.bit0;
           final g = _graft;
-          if (g != null) g.notifyMask(GraftMask.bit0);
+          if (g != null) GraftEngine.notifyMask(g, GraftMask.bit0);
           return;
         }
       }
@@ -2383,24 +2146,29 @@ abstract class GraftState {
     final hasObserver = Graft.observer != null;
     List<Object?>? prevSnapshot;
     if (hasObserver) {
-      prevSnapshot = baselineSnapshot;
+      prevSnapshot = _baselineSnapshot;
     }
-    final mask = diffChanges();
+    final mask = _diffChanges();
     if (mask.isNotEmpty) {
       if (_isDryEnabled) DryStateHook.onStateUpdated(this);
       if (hasObserver) {
-        _graft?.notifyMask(
-          mask,
-          change: GraftChange<dynamic>(
-            currentState: this,
-            nextState: this,
-            previousProps: prevSnapshot ?? const [],
-            nextProps: List<Object?>.of(props, growable: false),
-            dirtyMask: mask,
-          ),
-        );
+        if (_graft != null) {
+          GraftEngine.notifyMask(
+            _graft!,
+            mask,
+            change: GraftChange<dynamic>(
+              currentState: this,
+              nextState: this,
+              previousProps: prevSnapshot ?? const [],
+              nextProps: List<Object?>.of(props, growable: false),
+              dirtyMask: mask,
+            ),
+          );
+        }
       } else {
-        _graft?.notifyMask(mask);
+        if (_graft != null) {
+          GraftEngine.notifyMask(_graft!, mask);
+        }
       }
     }
   }
@@ -2418,6 +2186,38 @@ abstract class GraftState {
   /// Optional lifecycle hook called during [reset] to restore domain field values.
   @protected
   void onReset() {}
+}
+
+/// Internal engine accessor for [GraftState].
+/// Internal to package:graft; never exported in public API.
+@internal
+abstract final class GraftStateEngine {
+  /// Binds [state] to [graft] and initializes baseline snapshot.
+  static void bind(GraftState state, Graft graft) => state._bindGraft(graft);
+
+  /// Initializes the baseline snapshot of [state].
+  static void initBaseline(GraftState state) => state._initBaseline();
+
+  /// Sets whether dry persistence is enabled for [state].
+  static void setDryEnabled(GraftState state, bool enabled) =>
+      state._isDryEnabled = enabled;
+
+  /// Sets custom dry storage key for [state].
+  static void setCustomDryKey(GraftState state, String? key) =>
+      state._customDryKey = key;
+
+  /// Whether dry persistence is enabled for [state].
+  static bool isDryEnabled(GraftState state) => state._isDryEnabled;
+
+  /// Returns the current version counter of [state].
+  static int version(GraftState state) => state._version;
+
+  /// Returns unmodifiable snapshot of baseline properties for [state].
+  static List<Object?> baselineSnapshot(GraftState state) =>
+      state._baselineSnapshot;
+
+  /// Executes property diffing pass on [state] and returns the dirty bitmask.
+  static GraftMask diff(GraftState state) => state._diffChanges();
 }
 
 class _Sentinel {

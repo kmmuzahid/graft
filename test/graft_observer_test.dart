@@ -305,15 +305,14 @@ void main() {
 enum TestScope { auth, cart }
 
 class AuthState extends GraftState {
-  String token = 'jwt';
+  @override
+  int get schemaVersion => 1;
+  String token;
+  AuthState([this.token = 'jwt']);
   @override
   String get dryKey => 'auth_session';
   @override
   GraftProps get props => propsOf(token);
-  @override
-  void onDry() {
-    token = dry(token);
-  }
 }
 
 class AuthGraft extends Graft<AuthState> {
