@@ -45,6 +45,8 @@ void main() {
       expect(rule.code.problemMessage, contains('schemaVersion'));
       // ignore: deprecated_member_use
       expect(rule.code.errorSeverity, ErrorSeverity.ERROR);
+      expect(RequireDryContractsRule.zeroArgConstructorCode.name, 'require_dry_default_constructor');
+      expect(RequireDryContractsRule.modelZeroArgConstructorCode.name, 'require_model_default_constructor');
     });
   });
 }

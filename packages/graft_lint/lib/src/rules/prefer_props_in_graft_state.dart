@@ -15,7 +15,7 @@ class PreferPropsInGraftStateRule extends DartLintRule {
   static const _code = LintCode(
     name: 'prefer_props_in_graft_state',
     problemMessage:
-        'Class "{0}" extends GraftState with domain fields but does not override "props".',
+        'Class "{0}" extends {1} with domain fields but does not override "props".',
     correctionMessage:
         'Override "GraftProps get props => propsOf(...);" to enable 1-cycle hardware bitmask diffing and 0 GC heap allocations.',
     errorSeverity: ErrorSeverity.INFO,
@@ -32,7 +32,7 @@ class PreferPropsInGraftStateRule extends DartLintRule {
       if (node.abstractKeyword != null) return;
 
       final superclass = node.extendsClause?.superclass.name2.lexeme;
-      if (superclass != 'GraftState') return;
+      if (superclass != 'GraftState' && superclass != 'GraftModel') return;
 
       // Check if class declares non-static instance fields
       final hasInstanceFields = node.members
@@ -47,7 +47,7 @@ class PreferPropsInGraftStateRule extends DartLintRule {
           .any((m) => m.isGetter && m.name.lexeme == 'props');
 
       if (!hasPropsGetter) {
-        reporter.atToken(node.name, _code, arguments: [node.name.lexeme]);
+        reporter.atToken(node.name, _code, arguments: [node.name.lexeme, superclass!]);
       }
     });
   }

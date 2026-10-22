@@ -37,6 +37,24 @@ class RequireDryContractsRule extends DartLintRule {
     errorSeverity: ErrorSeverity.ERROR,
   );
 
+  static const zeroArgConstructorCode = LintCode(
+    name: 'require_dry_default_constructor',
+    problemMessage:
+        'Class "{0}" is used with Graft.dry but does not have a zero-argument or all-optional constructor.',
+    correctionMessage:
+        'Provide default parameter values (e.g. "[this.field = \'\']") so Graft can instantiate the default state on Frame 0.',
+    errorSeverity: ErrorSeverity.ERROR,
+  );
+
+  static const modelZeroArgConstructorCode = LintCode(
+    name: 'require_model_default_constructor',
+    problemMessage:
+        'Nested GraftModel "{0}" in "{1}" must have a zero-argument or all-optional constructor.',
+    correctionMessage:
+        'Provide default parameter values (e.g. "[this.field = \'\']") so Graft can instantiate the nested model on Frame 0.',
+    errorSeverity: ErrorSeverity.ERROR,
+  );
+
   @override
   void run(
     CustomLintResolver resolver,
@@ -109,6 +127,22 @@ class RequireDryContractsRule extends DartLintRule {
       );
     }
 
+    // Verify State has zero-arg or all-optional constructor
+    final constructors = stateClass.members.whereType<ConstructorDeclaration>();
+    for (final c in constructors) {
+      if (c.name == null || c.name?.lexeme == 'new') {
+        final hasRequiredPositional =
+            c.parameters.parameters.any((p) => p.isRequiredPositional);
+        if (hasRequiredPositional) {
+          reporter.atNode(
+            reportTarget,
+            zeroArgConstructorCode,
+            arguments: [stateClass.name.lexeme],
+          );
+        }
+      }
+    }
+
     // Inspect fields for GraftModel subclasses
     final unit = stateClass.thisOrAncestorOfType<CompilationUnit>();
     if (unit == null) return;
@@ -145,6 +179,22 @@ class RequireDryContractsRule extends DartLintRule {
                 _modelSchemaCode,
                 arguments: [typeName, stateClass.name.lexeme],
               );
+            }
+
+            final modelConstructors =
+                declaration.members.whereType<ConstructorDeclaration>();
+            for (final c in modelConstructors) {
+              if (c.name == null || c.name?.lexeme == 'new') {
+                final hasRequiredPositional =
+                    c.parameters.parameters.any((p) => p.isRequiredPositional);
+                if (hasRequiredPositional) {
+                  reporter.atNode(
+                    reportTarget,
+                    modelZeroArgConstructorCode,
+                    arguments: [typeName, stateClass.name.lexeme],
+                  );
+                }
+              }
             }
           }
         }

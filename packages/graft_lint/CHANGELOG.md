@@ -2,6 +2,18 @@
 
 All notable changes to `graft_lint` will be documented in this file.
 
+## 1.0.0-alpha.4
+
+* **Version Alignment with Graft Core (`1.0.0-alpha.4`)**:
+  * Synchronized versioning directly with the `graft` core package.
+* **New Lint Rule (`RequireDryContractsRule`)**:
+  * Added `require_dry_schema_version` enforcing `@override int get schemaVersion => 1;` when state classes are used with `Graft.dry` / `super.dry`.
+  * Added `require_model_factory_in_dry_state` enforcing `@override Function get factory => Model.new;` on nested `GraftModel` classes.
+  * Added `require_model_schema_version_in_dry_state` enforcing `schemaVersion` on nested `GraftModel` classes.
+  * Added `require_dry_default_constructor` and `require_model_default_constructor` to verify zero-argument or all-optional constructor signatures for Frame-0 state and model hydration.
+* **Expanded `prefer_props_in_graft_state`**:
+  * Now inspects domain sub-models extending `GraftModel` alongside `GraftState`, encouraging `propsOf(...)` overrides for CPU bitmask diffing and binary serialization.
+
 ## 0.1.2-alpha.5
 
 * **Architecture Alignment & Rule Hardening:**

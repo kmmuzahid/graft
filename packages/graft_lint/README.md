@@ -16,8 +16,9 @@ The official analyzer plugin and lint rules for **[Graft](https://pub.dev/packag
 | Rule | Default Severity | Recommended Level | Description |
 |---|:---:|:---:|---|
 | [`avoid_nested_graft_slot`](#1-avoid_nested_graft_slot) | **Error** | 🔴 `error` | Flags illegal nesting of slots (`slot`, `slots`, `async`, `builder`) within the same `Graft` instance. |
-| [`prefer_props_in_graft_state`](#2-prefer_props_in_graft_state) | **Info** | 🔴 `error` | Enforces overriding `GraftProps get props => propsOf(...)` in `GraftState` domain models for CPU register diffing. |
+| [`prefer_props_in_graft_state`](#2-prefer_props_in_graft_state) | **Info** | 🔴 `error` | Enforces overriding `GraftProps get props => propsOf(...)` in `GraftState` and `GraftModel` for CPU register diffing. |
 | [`require_graft_route_observer`](#3-require_graft_route_observer) | **Info** | 🔴 `error` | Ensures `GraftRouteTracker.observer` is registered in `MaterialApp` to prevent controller memory leaks. |
+| [`require_dry_contracts`](#4-require_dry_contracts) | **Error** | 🔴 `error` | Enforces mandatory `schemaVersion`, constructor hydration defaults, and `factory` tear-offs for Frame-0 persistent states (`Graft.dry`). |
 
 ---
 
@@ -36,7 +37,7 @@ Or manually in your `pubspec.yaml`:
 ```yaml
 dev_dependencies:
   custom_lint: ^0.8.1
-  graft_lint: ^0.1.2-alpha.5
+  graft_lint: ^1.0.0-alpha.4
 ```
 
 ### 2. Configure `analysis_options.yaml`
@@ -51,6 +52,7 @@ analyzer:
     avoid_nested_graft_slot: error       # 🔴 Flags illegal nested slots (default: error)
     prefer_props_in_graft_state: error   # 🔴 Promoted to error: flags missing propsOf(...)
     require_graft_route_observer: error  # 🔴 Promoted to error: flags missing route observer
+    require_dry_schema_version: error    # 🔴 Mandatory: flags missing schemaVersion in dry states
 ```
 
 > [!TIP]
@@ -158,6 +160,39 @@ MaterialApp(
   navigatorObservers: [GraftRouteTracker.observer], // or GraftRouteObserver()
   home: const HomeScreen(),
 );
+```
+
+---
+
+### 4. `require_dry_contracts`
+* **Default Severity:** `Error` (🔴 Red squiggly line)
+* **Rationale:** Frame-0 dry state persistence requires deterministic schema fingerprinting across VM reboots, and relies on clean constructor hydration (`super.dry(State.new)`). Omitting `schemaVersion`, failing to provide zero-argument constructor defaults, or missing nested `GraftModel` factory tear-offs (`factory => Model.new`) leads to runtime state initialization crashes.
+
+#### ❌ Bad
+```dart
+// ❌ Missing schemaVersion and required positional parameters without defaults
+class SignUpState extends GraftState {
+  String username;
+  SignUpState(this.username); // 🔴 require_dry_default_constructor error!
+  // 🔴 require_dry_schema_version error!
+}
+```
+
+#### ✅ Good
+```dart
+class SignUpState extends GraftState {
+  @override
+  int get schemaVersion => 1;
+
+  String username;
+  SignUpState([this.username = '']);
+
+  @override
+  String get dryKey => 'signup_draft';
+
+  @override
+  GraftProps get props => propsOf(username);
+}
 ```
 
 ---
