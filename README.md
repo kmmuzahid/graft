@@ -19,6 +19,7 @@
 ## 📚 Dedicated Technical Guides & Documentation Hub
 
 For deep dives into specific subsystems, architecture philosophy, empirical benchmarks, and test matrices:
+- 🚀 **[graft_template](https://github.com/kmmuzahid/graft_template):** Official production-ready starter template integrating **Graft** with **CoreKit** (`core_kit`), featuring route scoping, Frame-0 dry persistence, responsive UI, Dio HTTP, and dark/light theming.
 - 🏛️ **[ARCHITECTURE.md](https://github.com/kmmuzahid/graft/blob/main/ARCHITECTURE.md):** Deep dive into the 6 Core Engineering Pillars, bitmask diffing, monotonic TypeId, DAG teardowns, automated async gates, and dry persistence.
 - 💉 **[DI_GUIDE.md](https://github.com/kmmuzahid/graft/blob/main/DI_GUIDE.md):** Major dedicated guide for the DI engine (developer enum scopes, zero-scope boot, singleton lock, non-blocking async DB/network, route leasing).
 - 💾 **[GRAFT_GUIDE.md](https://github.com/kmmuzahid/graft/blob/main/GRAFT_GUIDE.md):** Major dedicated guide for State Management & Frame-0 Persistence (propsOf, surgical slots, zero-controller forms, Option B GraftModel, Frame-0 dry state).
@@ -76,6 +77,10 @@ dart run custom_lint --fatal-warnings
 ---
 
 ## 🛠️ Quick Start
+
+> [!TIP]
+> ### 🚀 Official Starter Template with CoreKit
+> Want to jump straight into a production setup? Clone **[`graft_template`](https://github.com/kmmuzahid/graft_template)** — the official production template featuring Graft with [CoreKit](https://pub.dev/packages/core_kit), complete with auto-scoped route controllers, Frame-0 dry form persistence, responsive layout scaling, and JWT authentication.
 
 ### 1. Define State & Controller
 Extend `GraftState` and declare domain properties in `props` using `propsOf(...)`. No `copyWith` or code-gen needed:

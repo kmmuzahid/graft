@@ -31,6 +31,8 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
   - Marked `operator ==` and `hashCode` with `@override @nonVirtual` on `GraftState`, `GraftModel`, and `Graft`, ensuring reference equality is strictly preserved and preventing developers from overriding them with equatable-style value equality.
   - Locked all operational methods on `GraftState`, `GraftModel`, and `Graft` with `@nonVirtual`, exposing only intended overridables (`props`, `schemaVersion`, `dryKey`, `factory`, `onReset`, `onInit`, `onDispose`, `dispose`).
   - Added recursive nested `GraftModel` constructor hydration and typed collection casting (`List<String>`, `List<int>`, `List<double>`, `List<bool>`) in `DryStateHook`.
+- **Official Starter Template Released (`graft_template`)**:
+  - Published [graft_template](https://github.com/kmmuzahid/graft_template) — the official production-grade starter template combining **Graft** state management, DI, and Frame-0 dry persistence with **CoreKit** (`core_kit`), complete with route-scoped controllers, zero-controller forms, Dio HTTP client, responsive scaling, and authentication.
 
 ---
 

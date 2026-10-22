@@ -11,6 +11,9 @@ Graft includes a specialized, high-performance Dependency Injection engine engin
 - **Developer Enum Scopes:** Group dependencies under type-safe enums (`enum AppScope { auth, checkout }`) with declarative `scope(...)` blocks and flow-wide `AppScope.checkout.drop()`.
 - **Route Leasing:** Automatically bind services to navigation routes and release them when the route pops.
 
+> [!TIP]
+> **Production Starter Template:** Check out **[`graft_template`](https://github.com/kmmuzahid/graft_template)** — the official production-ready starter template integrating Graft DI with CoreKit (`core_kit`), complete with route scoping, clean dependency injection, HTTP client setup, and automated teardowns.
+
 ---
 
 ## 📖 Table of Contents
@@ -512,6 +515,7 @@ final user = context.use(UserGraft.new);
 
 ## 📚 Related Technical Guides & Reports
 
+- 🚀 **[graft_template](https://github.com/kmmuzahid/graft_template):** Official production-ready starter template integrating **Graft** with **CoreKit** (`core_kit`).
 - 🏛️ **[ARCHITECTURE.md](https://github.com/kmmuzahid/graft/blob/main/ARCHITECTURE.md):** Deep dive into the 6 Core Engineering Pillars, monotonic TypeId, in-degree reverse DAG teardowns, and non-blocking async execution gates.
 - 💾 **[GRAFT_GUIDE.md](https://github.com/kmmuzahid/graft/blob/main/GRAFT_GUIDE.md):** Major dedicated guide for State Management & Frame-0 Persistence (propsOf, surgical slots, zero-controller forms, and Frame-0 dry state).
 - 📊 **[BENCHMARK_REPORT.md](https://github.com/kmmuzahid/graft/blob/main/BENCHMARK_REPORT.md):** Empirical benchmark methodology and full logs (including **Scenario F2**: DI Engine lookups $\le 12$ ns cold, $< 0.8$ ns hot V-table access).

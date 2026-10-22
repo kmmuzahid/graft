@@ -11,6 +11,9 @@
 - **Frame-0 Dry State:** Sub-50ns synchronous L1 RAM state hydration on Frame 0 with **zero blank frames** and **zero controllers needed for forms**.
 - **100% DRY Option B Models:** Domain sub-models extend `GraftModel` with plain variables and `propsOf`, matching `GraftState` exactly with zero `fromTuple` constructors and zero tear-offs.
 
+> [!TIP]
+> **Production Starter Template:** Check out **[`graft_template`](https://github.com/kmmuzahid/graft_template)** — the official production-ready starter template integrating Graft with CoreKit (`core_kit`), complete with route scoping, Frame-0 dry persistence, zero-controller forms, and authentication.
+
 ---
 
 ## 📖 Table of Contents
@@ -726,6 +729,7 @@ MaterialApp(
 
 ## 📚 Related Technical Guides & Reports
 
+- 🚀 **[graft_template](https://github.com/kmmuzahid/graft_template):** Official production-ready starter template integrating **Graft** with **CoreKit** (`core_kit`).
 - 🏛️ **[ARCHITECTURE.md](https://github.com/kmmuzahid/graft/blob/main/ARCHITECTURE.md):** Deep dive into the 6 Core Engineering Pillars, bitmask diffing, monotonic TypeId, and DAG teardowns.
 - 💉 **[DI_GUIDE.md](https://github.com/kmmuzahid/graft/blob/main/DI_GUIDE.md):** Dedicated guide for the DI engine (developer enum scopes, zero-scope boot, singleton lock, non-blocking async DB/network, route leasing).
 - 📊 **[BENCHMARK_REPORT.md](https://github.com/kmmuzahid/graft/blob/main/BENCHMARK_REPORT.md):** Empirical benchmark methodology, hardware specs, and full logs across all 21 benchmark scenarios (including Frame-0 dry persistence at ~1.5 µs latency).

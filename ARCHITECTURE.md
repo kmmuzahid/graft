@@ -99,6 +99,7 @@ Hydrating persisted form states via asynchronous storage engines (SQLite, Shared
 
 ## 📚 Architectural Guides & Documentation Hub
 
+- 🚀 **[graft_template](https://github.com/kmmuzahid/graft_template):** Official production-ready starter template integrating **Graft** with **CoreKit** (`core_kit`), complete with route scoping, Frame-0 persistence, and responsive UI.
 - 📘 **[DI Engine Guide](https://github.com/kmmuzahid/graft/blob/main/DI_GUIDE.md):** Complete guide to developer enum scopes, singleton locks, non-blocking async bindings, and route leasing.
 - 📙 **[State & Persistence Guide](https://github.com/kmmuzahid/graft/blob/main/GRAFT_GUIDE.md):** Complete guide to cascade mutations, surgical slot isolation, `GraftModel`, and Frame-0 Dry State.
 - 📊 **[Empirical Benchmark Report](https://github.com/kmmuzahid/graft/blob/main/BENCHMARK_REPORT.md):** Detailed performance methodology, hardware specs, and 21 empirical benchmark scenarios.
