@@ -2,6 +2,11 @@
 
 All notable changes to `graft_lint` will be documented in this file.
 
+## 1.0.0-alpha.5
+
+* **Version Alignment with Graft Core (`1.0.0-alpha.5`)**:
+  * Synchronized versioning directly with the `graft` core package.
+
 ## 1.0.0-alpha.4
 
 * **Version Alignment with Graft Core (`1.0.0-alpha.4`)**:

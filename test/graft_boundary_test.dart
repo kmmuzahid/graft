@@ -128,22 +128,22 @@ void main() {
       expect(buildCount, equals(2));
       expect(find.text('Bob'), findsOneWidget);
 
-      // 2. Mutate 'email' (Field 1) -> Bit 1 does not intersect learned Bit 0 -> BYPASSED IMMEDIATELY!
+      // 2. Mutate 'email' (Field 1) -> Output equivalent -> Field 1 learned as ignored!
       userGraft.updateEmail('bob@newdomain.com');
       await tester.pump();
-      expect(buildCount, equals(2)); // Bypassed without calling builder!
+      expect(buildCount, equals(3)); // Verified output equivalence; learned to ignore
       expect(find.text('Bob'), findsOneWidget);
 
       // 3. Mutate 'email' (Field 1) AGAIN -> Bypassed before running builder!
       userGraft.updateEmail('bob@third.com');
       await tester.pump();
-      expect(buildCount, equals(2)); // Still 2! 0 builder calls, 0 allocations!
+      expect(buildCount, equals(3)); // Still 3! 0 builder calls, 0 allocations!
       expect(find.text('Bob'), findsOneWidget);
 
       // 4. Mutate 'name' again -> Rebuilds because Field 0 is active!
       userGraft.updateName('Charlie');
       await tester.pump();
-      expect(buildCount, equals(3));
+      expect(buildCount, equals(4));
       expect(find.text('Charlie'), findsOneWidget);
     });
 

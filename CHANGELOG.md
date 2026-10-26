@@ -3,6 +3,20 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## 1.0.0-alpha.5
+
+### 🛡️ Dynamic Branch Lifecycle Safety, Self-Healing Mask Invalidation & Conditional Reactivity
+
+- **Dynamic Branch `ignoredMask` Invalidation (`child_slot_engine.dart`)**:
+  - Implemented automatic self-healing cache invalidation in `_GraftMultiChildDiffEngineState` and `_GraftSingleSlotElement`: when a slot's rendered widget content diverges (`!isWidgetEquivalent`), `slot.ignoredMask` is cleanly reset to `GraftMask.empty`.
+  - Completely resolves the permanent freeze bug where fields mutated while an alternative conditional branch was active (e.g. `showB ? B : A`) were permanently blacklisted in `ignoredMask` and ignored when switching back to branch A.
+  - Verified across multi-child diffing (`graft.slots`), single-slot callables (`graft((s) => ...)`), and dynamic slot reconciliation.
+- **Adaptive Branch-Aware `_ignoredMasks` in `GraftBoundary`**:
+  - Replaced the rigid pre-flight allowlist (`_learnedDependencies`) with an adaptive denylist (`_ignoredMasks`) that self-heals upon branch transition.
+  - Eliminates silent mutation dropping when conditional branches toggle to previously unlearned fields (`showB` or `fieldB`), while preserving 1-cycle CPU pre-flight short-circuiting on stable branches.
+- **Correctness & Lifecycle Verification Suite (`conditional_learned_dependency_test.dart`)**:
+  - Added full test suite verifying that conditional UIs drop unread field reactions, immediately react to active branch changes, re-subscribe cleanly upon branch reversal, and release all listeners upon widget disposal without masking bugs behind Element rebuild counts.
+
 ## 1.0.0-alpha.4
 
 ### 💾 Deterministic 32-bit FNV-1a Fingerprinting, Ultra-Clean Constructor Hydration & Two-Tier Contract Enforcement

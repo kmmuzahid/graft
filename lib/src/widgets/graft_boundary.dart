@@ -52,7 +52,7 @@ class GraftBoundary extends StatefulWidget implements GraftEquivalent {
 class _GraftBoundaryState extends State<GraftBoundary> {
   late final ValueNotifier<Widget> _slotNotifier;
   final Set<Graft> _subscribedGrafts = {};
-  final Map<Graft, GraftMask> _learnedDependencies = {};
+  final Map<Graft, GraftMask> _ignoredMasks = {};
   final Map<Graft, void Function(GraftMask)> _listeners = {};
 
   @override
@@ -72,7 +72,7 @@ class _GraftBoundaryState extends State<GraftBoundary> {
       if (listener != null) {
         graft.removeMaskListener(listener);
       }
-      _learnedDependencies.remove(graft);
+      _ignoredMasks.remove(graft);
       _subscribedGrafts.remove(graft);
     }
 
@@ -89,10 +89,10 @@ class _GraftBoundaryState extends State<GraftBoundary> {
   void _onGraftDirty(Graft graft, GraftMask dirtyMask) {
     if (!mounted) return;
 
-    // Fast-path bypass: If dependencies for this graft are already learned
-    // and none of the changed fields intersect, bypass completely in 1 CPU cycle!
-    final learned = _learnedDependencies[graft];
-    if (learned != null && !dirtyMask.isAllDirty && !dirtyMask.intersects(learned)) {
+    // Fast-path bypass: If this mutation is known to be ignored on the current output branch,
+    // bypass completely in 1 CPU cycle!
+    final ignored = _ignoredMasks[graft];
+    if (ignored != null && !dirtyMask.isAllDirty && dirtyMask.isSubsetOf(ignored)) {
       return; // 0 builder execution, 0 widget allocations!
     }
 
@@ -105,21 +105,22 @@ class _GraftBoundaryState extends State<GraftBoundary> {
 
     // Content equivalence check
     if (GraftMultiChildDiffEngine.isWidgetEquivalent(oldWidget, newWidget, context)) {
-      return; // Output identical: do NOT learn this field as a dependency!
+      if (dirtyMask.isNotEmpty && !dirtyMask.isAllDirty) {
+        final single = dirtyMask.singleBitIndex;
+        if (single != null) {
+          _ignoredMasks[graft] =
+              (_ignoredMasks[graft] ?? GraftMask.empty).withBit(single);
+        } else {
+          _ignoredMasks[graft] =
+              (_ignoredMasks[graft] ?? GraftMask.empty).union(dirtyMask);
+        }
+      }
+      return; // Output identical: ignore this field on the current branch!
     }
 
-    // Output changed! Accumulate active fields into learned bitmask
-    if (dirtyMask.isNotEmpty && !dirtyMask.isAllDirty) {
-      final single = dirtyMask.singleBitIndex;
-      if (single != null) {
-        _learnedDependencies[graft] =
-            (_learnedDependencies[graft] ?? GraftMask.empty).withBit(single);
-      } else if (_learnedDependencies[graft] == null || _learnedDependencies[graft]!.isEmpty) {
-        _learnedDependencies[graft] = dirtyMask;
-      } else {
-        _learnedDependencies[graft] = _learnedDependencies[graft]!.union(dirtyMask);
-      }
-    }
+    // Output changed! Clear ignored mask for this graft because the boundary
+    // has transitioned to a new visual state or conditional branch.
+    _ignoredMasks[graft] = GraftMask.empty;
 
     _slotNotifier.value = newWidget;
   }
@@ -131,6 +132,7 @@ class _GraftBoundaryState extends State<GraftBoundary> {
     final tracker = GraftScopeTracker();
     final newWidget = GraftScopeTracker.run(tracker, () => widget.builder(context));
     _syncSubscriptions(tracker.accessedGrafts);
+    _ignoredMasks.clear();
     _slotNotifier.value = newWidget;
   }
 
@@ -141,7 +143,7 @@ class _GraftBoundaryState extends State<GraftBoundary> {
     }
     _listeners.clear();
     _subscribedGrafts.clear();
-    _learnedDependencies.clear();
+    _ignoredMasks.clear();
     _slotNotifier.dispose();
     super.dispose();
   }

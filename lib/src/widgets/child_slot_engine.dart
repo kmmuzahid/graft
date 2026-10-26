@@ -634,6 +634,7 @@ class _GraftMultiChildDiffEngineState<S extends GraftState>
           continue;
         }
 
+        slot.ignoredMask = GraftMask.empty;
         if (Graft.observer != null) {
           slot.contentFingerprint = SlotMetadata.computeFingerprint(newWidget);
         }
@@ -723,6 +724,7 @@ class _GraftMultiChildDiffEngineState<S extends GraftState>
         matchedSlot.slotIndex = i;
         if (!GraftMultiChildDiffEngine.isWidgetEquivalent(
             matchedSlot.currentWidget, newWidgets[i], context)) {
+          matchedSlot.ignoredMask = GraftMask.empty;
           if (Graft.observer != null) {
             matchedSlot.contentFingerprint =
                 SlotMetadata.computeFingerprint(newWidgets[i]);
@@ -1273,6 +1275,7 @@ class _GraftSingleSlotElement<S extends GraftState> extends ComponentElement
       return;
     }
 
+    _ignoredMask = GraftMask.empty;
     _isDirty = false;
     _currentWidget = newWidget;
     markNeedsBuild();
