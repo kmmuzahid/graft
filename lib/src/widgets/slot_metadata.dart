@@ -91,8 +91,12 @@ class SlotMetadata {
   bool isDirty(GraftMask dirtyMask) {
     if (isStatic) return false;
     if (dirtyMask.isAllDirty) return true;
-    if (ignoredMask.isNotEmpty && dirtyMask.isSubsetOf(ignoredMask)) return false;
-    if (fieldDependenciesMask.isEmpty) return true; // All dirty on first build or unmapped
+    if (ignoredMask.isNotEmpty && dirtyMask.isSubsetOf(ignoredMask)) {
+      return false;
+    }
+    if (fieldDependenciesMask.isEmpty) {
+      return true; // All dirty on first build or unmapped
+    }
     return dirtyMask.intersects(fieldDependenciesMask);
   }
 
@@ -192,4 +196,3 @@ class SlotNotifier extends ValueNotifier<Widget> {
   /// Whether external listeners are registered on this notifier.
   bool get hasExternalListeners => super.hasListeners;
 }
-

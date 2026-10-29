@@ -59,7 +59,8 @@ class _GraftBoundaryState extends State<GraftBoundary> {
   void initState() {
     super.initState();
     final tracker = GraftScopeTracker();
-    final initialWidget = GraftScopeTracker.run(tracker, () => widget.builder(context));
+    final initialWidget =
+        GraftScopeTracker.run(tracker, () => widget.builder(context));
     _slotNotifier = ValueNotifier<Widget>(initialWidget);
     _syncSubscriptions(tracker.accessedGrafts);
   }
@@ -92,19 +93,23 @@ class _GraftBoundaryState extends State<GraftBoundary> {
     // Fast-path bypass: If this mutation is known to be ignored on the current output branch,
     // bypass completely in 1 CPU cycle!
     final ignored = _ignoredMasks[graft];
-    if (ignored != null && !dirtyMask.isAllDirty && dirtyMask.isSubsetOf(ignored)) {
+    if (ignored != null &&
+        !dirtyMask.isAllDirty &&
+        dirtyMask.isSubsetOf(ignored)) {
       return; // 0 builder execution, 0 widget allocations!
     }
 
     final tracker = GraftScopeTracker();
-    final newWidget = GraftScopeTracker.run(tracker, () => widget.builder(context));
+    final newWidget =
+        GraftScopeTracker.run(tracker, () => widget.builder(context));
     _syncSubscriptions(tracker.accessedGrafts);
 
     final oldWidget = _slotNotifier.value;
     if (identical(oldWidget, newWidget)) return;
 
     // Content equivalence check
-    if (GraftMultiChildDiffEngine.isWidgetEquivalent(oldWidget, newWidget, context)) {
+    if (GraftMultiChildDiffEngine.isWidgetEquivalent(
+        oldWidget, newWidget, context)) {
       if (dirtyMask.isNotEmpty && !dirtyMask.isAllDirty) {
         final single = dirtyMask.singleBitIndex;
         if (single != null) {
@@ -130,7 +135,8 @@ class _GraftBoundaryState extends State<GraftBoundary> {
     super.didUpdateWidget(oldWidget);
     if (!mounted) return;
     final tracker = GraftScopeTracker();
-    final newWidget = GraftScopeTracker.run(tracker, () => widget.builder(context));
+    final newWidget =
+        GraftScopeTracker.run(tracker, () => widget.builder(context));
     _syncSubscriptions(tracker.accessedGrafts);
     _ignoredMasks.clear();
     _slotNotifier.value = newWidget;

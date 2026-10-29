@@ -29,7 +29,8 @@ class NoSubscriptionContext implements BuildContext {
   }
 
   @override
-  InheritedElement? getElementForInheritedWidgetOfExactType<T extends InheritedWidget>() {
+  InheritedElement?
+      getElementForInheritedWidgetOfExactType<T extends InheritedWidget>() {
     return _inner.getElementForInheritedWidgetOfExactType<T>();
   }
 
@@ -49,5 +50,6 @@ class NoSubscriptionContext implements BuildContext {
   Size? get size => _inner.size;
 
   @override
-  dynamic noSuchMethod(Invocation invocation) => _inner.noSuchMethod(invocation);
+  dynamic noSuchMethod(Invocation invocation) =>
+      _inner.noSuchMethod(invocation);
 }

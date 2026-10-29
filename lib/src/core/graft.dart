@@ -10,7 +10,6 @@ import '../persistence/ambient_locator.dart';
 import '../persistence/dry/dry_state_hook.dart';
 import '../persistence/state_config.dart';
 
-
 /// Base class for reactive state management with fine-grained slot isolation.
 ///
 /// A [Graft] manages domain state of type [S], which must extend [GraftState].
@@ -154,8 +153,7 @@ class Graft<S extends GraftState> extends ChangeNotifier {
     Function stateFactory, {
     String? key,
   }) {
-    final dryKey =
-        key ?? (Function.apply(stateFactory, const []) as S).dryKey;
+    final dryKey = key ?? (Function.apply(stateFactory, const []) as S).dryKey;
     final (state, fromCache) =
         DryStateHook.hydrateFactoryWithStatus<S>(stateFactory, dryKey);
     _state = state;
@@ -234,9 +232,8 @@ class Graft<S extends GraftState> extends ChangeNotifier {
     _hasOnlySingle = _singleListener != null &&
         (_extraListeners == null || _extraListeners!.isEmpty) &&
         _singleMaskListener == null;
-    _hasOnlySingleListener = _hasOnlySingle &&
-        _fastDirectReceiver == null &&
-        observer == null;
+    _hasOnlySingleListener =
+        _hasOnlySingle && _fastDirectReceiver == null && observer == null;
     _hasOnlyFastDirectReceiver = _fastDirectReceiver != null &&
         (_extraMaskListeners == null || _extraMaskListeners!.isEmpty) &&
         _singleListener == null &&
@@ -718,4 +715,3 @@ abstract final class GraftEngine {
   static bool hasOnlyFastDirectReceiver(Graft graft) =>
       graft._hasOnlyFastDirectReceiver;
 }
-

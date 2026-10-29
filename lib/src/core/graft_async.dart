@@ -51,7 +51,8 @@ sealed class GraftAsync<T> {
         AsyncIdle() => (idle != null ? idle() : loading()),
         AsyncLoading() => loading(),
         AsyncData(data: final val) => data(val),
-        AsyncError(error: final err, :final stackTrace) => error(err, stackTrace),
+        AsyncError(error: final err, :final stackTrace) =>
+          error(err, stackTrace),
       };
 }
 
@@ -112,7 +113,8 @@ class AsyncError<T> extends GraftAsync<T> {
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) || (other is AsyncError<T> && other.error == error);
+      identical(this, other) ||
+      (other is AsyncError<T> && other.error == error);
 
   @override
   int get hashCode => Object.hash(T, error);

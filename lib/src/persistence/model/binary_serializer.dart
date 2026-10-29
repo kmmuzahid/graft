@@ -104,9 +104,12 @@ final class BinarySerializer {
   static (Object?, int) _readField(Uint8List bytes, ByteData bd, int offset) {
     final tag = bytes[offset++];
     switch (tag) {
-      case 0: return (null, offset);
-      case 1: return (true, offset);
-      case 2: return (false, offset);
+      case 0:
+        return (null, offset);
+      case 1:
+        return (true, offset);
+      case 2:
+        return (false, offset);
       case 3:
         final val = bd.getInt64(offset);
         return (val, offset + 8);

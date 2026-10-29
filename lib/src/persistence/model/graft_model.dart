@@ -86,4 +86,3 @@ abstract class GraftModel {
 class _Sentinel {
   const _Sentinel();
 }
-

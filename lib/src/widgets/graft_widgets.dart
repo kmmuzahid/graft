@@ -7,7 +7,6 @@ import 'child_slot_engine.dart';
 
 /// Extension on [Graft<S>] providing high-performance reactive Flutter widget builders.
 extension GraftWidgetsX<S extends GraftState> on Graft<S> {
-
   // ===========================================================================
   // 1. SINGLE SLOT (ONE WIDGET)
   // ===========================================================================
@@ -245,6 +244,7 @@ extension GraftWidgetsX<S extends GraftState> on Graft<S> {
     required List<T> Function(S state) items,
     Widget Function(T item, int index)? itemBuilder,
     Widget Function(T item)? item,
+
     /// Optional stable key extractor for list items.
     ///
     /// **You do NOT need this in most cases.**
@@ -273,7 +273,8 @@ extension GraftWidgetsX<S extends GraftState> on Graft<S> {
     /// );
     /// ```
     Key Function(T item)? itemKey,
-    Widget Function(int itemCount, NullableIndexedWidgetBuilder itemBuilder)? layout,
+    Widget Function(int itemCount, NullableIndexedWidgetBuilder itemBuilder)?
+        layout,
     Key? key,
   }) {
     assert(
@@ -369,10 +370,12 @@ class _GraftComputation<S extends GraftState, R> extends StatefulWidget
   }
 
   @override
-  State<_GraftComputation<S, R>> createState() => _GraftComputationState<S, R>();
+  State<_GraftComputation<S, R>> createState() =>
+      _GraftComputationState<S, R>();
 }
 
-class _GraftComputationState<S extends GraftState, R> extends State<_GraftComputation<S, R>> {
+class _GraftComputationState<S extends GraftState, R>
+    extends State<_GraftComputation<S, R>> {
   late R _computedValue;
 
   @override
@@ -431,8 +434,10 @@ class _GraftComputationState<S extends GraftState, R> extends State<_GraftComput
   @override
   Widget build(BuildContext context) {
     assert(() {
-      final ancestorScope = context.getInheritedWidgetOfExactType<InheritedGraftScope>();
-      if (ancestorScope != null && identical(ancestorScope.graft, widget.graft)) {
+      final ancestorScope =
+          context.getInheritedWidgetOfExactType<InheritedGraftScope>();
+      if (ancestorScope != null &&
+          identical(ancestorScope.graft, widget.graft)) {
         throw FlutterError(
           '\n════════════════════════════════════════════════════════════════════════════════\n'
           '⚠️ GRAFT ANTI-PATTERN DETECTED: NESTED ELEMENT TREE SCOPE ON ${widget.graft.runtimeType}\n'
@@ -477,6 +482,3 @@ extension ValueGraftWidgetsX<T> on ValueGraft<T> {
     );
   }
 }
-
-
-

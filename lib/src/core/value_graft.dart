@@ -62,7 +62,8 @@ class ValueGraft<T> extends Graft<GraftValue<T>> {
   ValueGraft.fromState(super.state);
 
   /// Creates a persistent [ValueGraft] initialized with [initialValue] and persisted under [key].
-  factory ValueGraft.dry(T initialValue, {required String key}) = DryValueGraft<T>;
+  factory ValueGraft.dry(T initialValue, {required String key}) =
+      DryValueGraft<T>;
 
   /// The current primitive value.
   @nonVirtual

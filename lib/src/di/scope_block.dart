@@ -60,7 +60,6 @@ void scope(
   }
 }
 
-
 /// Type-safe operational actions on developer-defined scope enums.
 extension GraftScopeEnumActions on Enum {
   /// Manually drops this entire scope and disposes all members in reverse DAG order.

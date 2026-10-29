@@ -115,7 +115,8 @@ final class DryStateHook {
   /// Saves mutated state to L1 RAM synchronously and debounces disk write.
   @pragma('vm:prefer-inline')
   static void onStateUpdated(GraftState state) {
-    if (!GraftStateEngine.isDryEnabled(state) || DryExpando.isInvalidated(state)) {
+    if (!GraftStateEngine.isDryEnabled(state) ||
+        DryExpando.isInvalidated(state)) {
       return;
     }
 

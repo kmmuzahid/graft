@@ -111,8 +111,8 @@ abstract final class GraftSimd {
 
   static void _bind(DynamicLibrary lib) {
     try {
-      _nativeDiff = lib
-          .lookupFunction<_NativeDiffProps, _DartDiffProps>('graft_simd_diff_props');
+      _nativeDiff = lib.lookupFunction<_NativeDiffProps, _DartDiffProps>(
+          'graft_simd_diff_props');
       _nativeVersion = lib
           .lookupFunction<_NativeVersion, _DartVersion>('graft_simd_version');
       _dylib = lib;
@@ -128,7 +128,9 @@ abstract final class GraftSimd {
   static void _ensureMemoryBindings() {
     if (_malloc != null) return;
     try {
-      final libc = Platform.isWindows ? DynamicLibrary.open('msvcrt.dll') : DynamicLibrary.process();
+      final libc = Platform.isWindows
+          ? DynamicLibrary.open('msvcrt.dll')
+          : DynamicLibrary.process();
       _malloc = libc.lookupFunction<_NativeMalloc, _DartMalloc>('malloc');
       _free = libc.lookupFunction<_NativeFree, _DartFree>('free');
     } catch (_) {
@@ -140,7 +142,8 @@ abstract final class GraftSimd {
   ///
   /// Returns a [GraftMask] bitset where dirty indices are set to 1.
   static GraftMask diffInt64(List<int> oldProps, List<int> newProps) {
-    final count = oldProps.length < newProps.length ? oldProps.length : newProps.length;
+    final count =
+        oldProps.length < newProps.length ? oldProps.length : newProps.length;
     if (count <= 0) return GraftMask.empty;
 
     _ensureMemoryBindings();
@@ -174,7 +177,8 @@ abstract final class GraftSimd {
   }
 
   /// Pure Dart fallback implementation for bitmask diffing
-  static GraftMask _diffPureDart(List<int> oldProps, List<int> newProps, int count) {
+  static GraftMask _diffPureDart(
+      List<int> oldProps, List<int> newProps, int count) {
     final numWords = (count + 63) >> 6;
     final words = List<int>.filled(numWords, 0);
     bool hasDiff = false;

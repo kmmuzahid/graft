@@ -21,7 +21,8 @@ abstract final class GraftSimd {
   ///
   /// Returns a [GraftMask] bitset where dirty indices are set to 1.
   static GraftMask diffInt64(List<int> oldProps, List<int> newProps) {
-    final count = oldProps.length < newProps.length ? oldProps.length : newProps.length;
+    final count =
+        oldProps.length < newProps.length ? oldProps.length : newProps.length;
     if (count <= 0) return GraftMask.empty;
 
     final numWords = (count + 31) >> 5;

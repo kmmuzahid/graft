@@ -20,9 +20,7 @@ class GraftMask {
   /// Eliminates 100% of heap allocations for single-property mutations.
   static final List<GraftMask> _singleBitCache = List<GraftMask>.generate(
     64,
-    (i) => i < 32
-        ? GraftMask._(w0: 1 << i)
-        : GraftMask._(w1: 1 << (i - 32)),
+    (i) => i < 32 ? GraftMask._(w0: 1 << i) : GraftMask._(w1: 1 << (i - 32)),
     growable: false,
   );
 
@@ -116,7 +114,9 @@ class GraftMask {
       }
     }
     // Fast-path single bit in word 1
-    if (w0 == 0 && (extraWords == null || extraWords.isEmpty) && (w1 & (w1 - 1)) == 0) {
+    if (w0 == 0 &&
+        (extraWords == null || extraWords.isEmpty) &&
+        (w1 & (w1 - 1)) == 0) {
       final idx = (w1 & 0xFFFFFFFF).bitLength - 1;
       if (idx >= 0 && idx < 32) return _singleBitCache[idx + 32];
     }
@@ -216,7 +216,8 @@ class GraftMask {
     final aExtra = _extraWords;
     final bExtra = other._extraWords;
     if (aExtra != null && bExtra != null) {
-      final minLen = aExtra.length < bExtra.length ? aExtra.length : bExtra.length;
+      final minLen =
+          aExtra.length < bExtra.length ? aExtra.length : bExtra.length;
       for (int i = 0; i < minLen; i++) {
         if ((aExtra[i] & bExtra[i]) != 0) return true;
       }
@@ -326,7 +327,8 @@ class GraftMask {
   }
 
   @override
-  int get hashCode => Object.hash(_allDirty, _w0, _w1, _extraWords?.length ?? 0);
+  int get hashCode =>
+      Object.hash(_allDirty, _w0, _w1, _extraWords?.length ?? 0);
 
   @override
   String toString() {

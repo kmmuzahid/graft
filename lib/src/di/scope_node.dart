@@ -49,7 +49,8 @@ final class ScopeNode {
     return types;
   }
 
-  void bind<T>(T Function() factory, {bool singleton = true, bool preserved = false}) {
+  void bind<T>(T Function() factory,
+      {bool singleton = true, bool preserved = false}) {
     final id = TypeId.of<T>();
     _registeredTypes[id] = T;
     _factories[id] = factory;
@@ -63,10 +64,12 @@ final class ScopeNode {
     );
   }
 
-  void bindAsync<T>(Future<T> Function() factory, {bool singleton = true, bool preserved = false, bool eager = false}) {
+  void bindAsync<T>(Future<T> Function() factory,
+      {bool singleton = true, bool preserved = false, bool eager = false}) {
     final id = TypeId.of<T>();
     _registeredTypes[id] = T;
-    final binding = AsyncBinding<Object?>(factory, singleton: singleton, preserved: preserved);
+    final binding = AsyncBinding<Object?>(factory,
+        singleton: singleton, preserved: preserved);
     _asyncBindings[id] = binding;
     if (singleton) _singletons.add(id);
     if (preserved) _preserved.add(id);
@@ -84,7 +87,9 @@ final class ScopeNode {
 
   bool isRegistered<T>() {
     final id = TypeId.of<T>();
-    if (_factories.containsKey(id) || _asyncBindings.containsKey(id)) return true;
+    if (_factories.containsKey(id) || _asyncBindings.containsKey(id)) {
+      return true;
+    }
     return parent?.isRegistered<T>() ?? false;
   }
 
@@ -118,7 +123,8 @@ final class ScopeNode {
       );
     }
     if (parent != null) return parent!.resolve<T>();
-    throw StateError('Graft DI: Type $T is not registered in active scope hierarchy.');
+    throw StateError(
+        'Graft DI: Type $T is not registered in active scope hierarchy.');
   }
 
   Future<T> resolveAsync<T>() {
@@ -140,13 +146,16 @@ final class ScopeNode {
       return parent!.resolveAsync<T>();
     }
 
-    throw StateError('Graft DI: Type $T is not registered in active scope hierarchy.');
+    throw StateError(
+        'Graft DI: Type $T is not registered in active scope hierarchy.');
   }
 
   T _instantiate<T>(int id) {
     assert(() {
       if (_activeResolutionStack.contains(id)) {
-        final cycle = [..._activeResolutionStack, id].map((i) => 'TypeId#$i').join(' ──▶ ');
+        final cycle = [..._activeResolutionStack, id]
+            .map((i) => 'TypeId#$i')
+            .join(' ──▶ ');
         throw StateError('Graft DI Circular Dependency: $cycle');
       }
       return true;
@@ -195,7 +204,9 @@ final class ScopeNode {
       );
     }
 
-    final consumerCount = {for (final e in _dependents.entries) e.key: e.value.length};
+    final consumerCount = {
+      for (final e in _dependents.entries) e.key: e.value.length
+    };
     final queue = <int>[
       for (int i = 0; i < _instances.length; i++)
         if (_instances[i] != null && (consumerCount[i] ?? 0) == 0) i,
@@ -212,7 +223,9 @@ final class ScopeNode {
         for (final dep in dependencies) {
           final count = (consumerCount[dep] ?? 1) - 1;
           consumerCount[dep] = count;
-          if (count == 0 && _instances.length > dep && _instances[dep] != null) {
+          if (count == 0 &&
+              _instances.length > dep &&
+              _instances[dep] != null) {
             queue.add(dep);
           }
         }

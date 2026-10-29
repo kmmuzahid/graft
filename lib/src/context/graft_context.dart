@@ -155,7 +155,8 @@ extension GraftContextX on BuildContext {
   ///   SettingsGraft.new,
   /// );
   /// ```
-  (A, B, C, D) use4<A extends Graft, B extends Graft, C extends Graft, D extends Graft>([
+  (A, B, C, D)
+      use4<A extends Graft, B extends Graft, C extends Graft, D extends Graft>([
     A Function()? factoryA,
     B Function()? factoryB,
     C Function()? factoryC,
