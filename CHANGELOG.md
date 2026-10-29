@@ -3,6 +3,31 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## 1.0.0-alpha.6
+
+### 🌐 100% Zero-Wrapper Architecture: Ref-Counted Ambient Engine & Complete `GraftScope` Elimination
+
+- **Total Elimination of `GraftScope`**:
+  - Removed `GraftScope` completely from the public export and codebase with zero deprecation shims or legacy wrapper tax.
+  - Developers never have to wrap widgets, navigation shells, tabs, or routes in scopes or providers.
+- **Ref-Counted Ambient Lifecycle Engine (`context.use<T>()`)**:
+  - **Borrow or Create**: Seamlessly queries the ambient pool for an existing instance on the active navigation branch; instantiates on first access.
+  - **App-Root Auto-Promotion**: Accesses above `Navigator` (`route == null`) automatically promote the controller to a permanent app-wide singleton (`isRoot: true`), staying alive across the entire app session.
+  - **Multi-Route Ref-Counting**: Tracks all borrower screens in the navigation flow; stays alive across pushes (including `pushReplacement`) and auto-disposes cleanly when all borrower screens pop (`refCount == 0`).
+  - **Set-Based Rebuild Idempotency**: Route registration is backed by `Set<Route<dynamic>>`, guaranteeing that dozens of `setState` or animation rebuilds never inflate `refCount`.
+  - **Navigator Branch Hierarchy Matching**: Scopes non-root instances to matching navigator branches, preserving automatic isolation between parallel bottom navigation tabs.
+- **Isolated Route Allocation (`context.create<T>()`)**:
+  - Universal verb for creating brand-new, isolated controllers private exclusively to the caller route, bypassing the ambient pool.
+- **Keyed Ambient Support (`context.use(..., key: id)`)**:
+  - Direct support for family keys and entity tags (`AmbientKey`), enabling parameter-isolated screens (e.g. details-to-details navigation) without scopes or providers.
+- **Tombstone-Deferred Teardown**:
+  - Pop teardowns coordinate with Flutter's 300ms transition animations, preventing unmounting widgets from reading disposed state during exit frames.
+- **Test Suite Expanded to 302 Tests**:
+  - Added dedicated Pillar 7 test suite (`test/ambient_engine_test.dart`) covering App-Root promotion, multi-route ref-counting, rebuild idempotency, non-linear pop safety, keyed family isolation, and synchronous Frame-0 dry persistence hydration, achieving 100% pass rate across all 302 tests.
+- **Documentation Restructuring & Deep Architecture Hub**:
+  - Streamlined `README.md` to be lightweight, developer-focused, and practical.
+  - Expanded `ARCHITECTURE.md` into the definitive technical reference manual detailing all 7 architectural pillars (SIMD diffing, leaf slot pipeline, monotonic TypeId, reverse DAG, dry persistence, and the Ambient Engine).
+
 ## 1.0.0-alpha.5
 
 ### 🛡️ Dynamic Branch Lifecycle Safety, Self-Healing Mask Invalidation & Conditional Reactivity

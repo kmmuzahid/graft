@@ -143,49 +143,4 @@ void main() {
       graft.dispose();
     });
   });
-
-  group('Phase 5: GraftScope Subtree Lifecycle Management', () {
-    testWidgets(
-        'GraftScope borrows within subtree and auto-disposes on unmount',
-        (tester) async {
-      final graft = ProfileTestGraft();
-      bool isScopeMounted = true;
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: StatefulBuilder(
-            builder: (context, setState) {
-              if (!isScopeMounted) {
-                return const Scaffold(body: Text('Unmounted'));
-              }
-              return Scaffold(
-                body: GraftScope.single(
-                  graft: graft,
-                  child: Builder(
-                    builder: (childContext) {
-                      final resolved = childContext.use<ProfileTestGraft>();
-                      return Text('Name: ${resolved.state.name}');
-                    },
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      );
-
-      expect(find.text('Name: Alice'), findsOneWidget);
-      expect(graft.isDisposed, isFalse);
-
-      // Unmount the GraftScope
-      isScopeMounted = false;
-      await tester.pumpWidget(
-        const MaterialApp(home: Scaffold(body: Text('Unmounted'))),
-      );
-
-      // GraftScope automatically cleans up and disposes its owned grafts
-      expect(graft.isDisposed, isTrue,
-          reason: 'GraftScope must dispose owned grafts upon unmounting');
-    });
-  });
 }

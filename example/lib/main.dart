@@ -1654,12 +1654,11 @@ class EnterpriseDIScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 🛡️ GraftScope anchors AppScope.checkout to this route:
-    return GraftScope(
-      child: Scaffold(
-        appBar: AppBar(title: const Text('Enterprise DI & Scopes 💉')),
-        body: Builder(
-          builder: (innerContext) {
+    // 🛡️ Zero-wrapper architecture: directly renders without scopes
+    return Scaffold(
+      appBar: AppBar(title: const Text('Enterprise DI & Scopes 💉')),
+      body: Builder(
+        builder: (innerContext) {
             // Automatically resolves bound CheckoutGraft with injected dependencies:
             final checkout = innerContext.use<CheckoutGraft>();
 
@@ -1755,7 +1754,6 @@ class EnterpriseDIScreen extends StatelessWidget {
             );
           },
         ),
-      ),
-    );
+      );
   }
 }

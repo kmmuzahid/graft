@@ -40,7 +40,7 @@ Graft includes a specialized, high-performance Dependency Injection engine engin
 | **Teardown Ordering** | Topological Reverse DAG | LIFO / Arbitrary Unordered |
 | **Circular Dependency Check** | Automatic cycle detection with DAG path | Stack Overflow Crash / None |
 | **Async Frame-0 Protection** | Automated non-blocking gate (`useAsync`) | Manual `await` in `main()` or custom wrappers |
-| **Route Stack Integration** | Automatic route leasing via `GraftScope` | Manual registration & manual unregister |
+| **Route Stack Integration** | Automatic route leasing via Ref-Counted Ambient Engine | Manual registration & manual unregister |
 
 ---
 
@@ -132,29 +132,22 @@ Calling `context.use<T>()` automatically binds the controller's lifecycle to the
 - **Auto-Disposal**: When the owner route pops from the `Navigator`, Graft automatically calls `dispose()` on the controller.
 - **Popup Protection**: Dialogs (`showDialog`) and modal bottom sheets (`showModalBottomSheet`) borrow safely without prematurely disposing the host screen's controller.
 
-### 2. Subtree Scoping (`GraftScope`)
-For localized subtrees like `GoRouter` shell routes, persistent bottom navigation tabs, or modal sheets:
+### 2. Zero-Wrapper Ambient Lifecycle (`context.use` vs `context.create`)
+With **Alpha 6**, you never need to wrap widgets or shell routes in scopes:
+
+- **`context.use<T>()`**: Borrows the existing ambient instance across the navigation flow, or creates one if absent. Automatically promoted to an app-wide permanent singleton when called at the App Root (`route == null`). Auto-disposes when all borrower routes pop.
+- **`context.create<T>()`**: Forces a fresh, isolated instance owned exclusively by the caller route.
 
 ```dart
-GraftScope(
-  factories: [
-    () => CheckoutGraft(
-      coordinator: use<CheckoutCoordinator>(),
-      cartDao: use<CartDao>(),
-    ),
-  ],
-  child: const CheckoutForm(),
-);
-```
+// Shared across the flow:
+final checkout = context.use(() => CheckoutGraft(
+  coordinator: use<CheckoutCoordinator>(),
+  cartDao: use<CartDao>(),
+));
 
-Or for a pre-existing single instance:
-```dart
-GraftScope.single(
-  graft: checkoutGraft,
-  child: const CheckoutForm(),
-);
+// Isolated to this screen only:
+final tempForm = context.create(TempFormGraft.new);
 ```
-When `GraftScope` unmounts from the element tree, all managed controllers are disposed automatically.
 
 ---
 
@@ -519,5 +512,5 @@ final user = context.use(UserGraft.new);
 - 🏛️ **[ARCHITECTURE.md](https://github.com/kmmuzahid/graft/blob/main/ARCHITECTURE.md):** Deep dive into the 6 Core Engineering Pillars, monotonic TypeId, in-degree reverse DAG teardowns, and non-blocking async execution gates.
 - 💾 **[GRAFT_GUIDE.md](https://github.com/kmmuzahid/graft/blob/main/GRAFT_GUIDE.md):** Major dedicated guide for State Management & Frame-0 Persistence (propsOf, surgical slots, zero-controller forms, and Frame-0 dry state).
 - 📊 **[BENCHMARK_REPORT.md](https://github.com/kmmuzahid/graft/blob/main/BENCHMARK_REPORT.md):** Empirical benchmark methodology and full logs (including **Scenario F2**: DI Engine lookups $\le 12$ ns cold, $< 0.8$ ns hot V-table access).
-- 🧪 **[TEST_REPORT.md](https://github.com/kmmuzahid/graft/blob/main/TEST_REPORT.md):** Comprehensive test verification report across 283 passing tests (including 22 Dependency Injection engine tests).
+- 🧪 **[TEST_REPORT.md](https://github.com/kmmuzahid/graft/blob/main/TEST_REPORT.md):** Comprehensive test verification report across 304 passing tests (including 22 Dependency Injection engine tests).
 

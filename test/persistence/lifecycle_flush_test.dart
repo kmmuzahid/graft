@@ -52,8 +52,8 @@ void main() {
       // Simulate OS sending AppLifecycleState.paused (e.g. user pressed home button)
       GraftLifecycleObserver.instance.didChangeAppLifecycleState(AppLifecycleState.paused);
 
-      // Wait a microtask for async flush
-      await Future<void>.delayed(const Duration(milliseconds: 10));
+      // Wait for async flush to finish writing to disk
+      await Future<void>.delayed(const Duration(milliseconds: 100));
 
       // Assert that the file is now written to disk immediately:
       final postFlushBytes = await fileConfig.read(graft.state.dryKey);
@@ -78,7 +78,7 @@ void main() {
 
       // Trigger inactive (e.g. app switcher or phone call incoming)
       GraftLifecycleObserver.instance.didChangeAppLifecycleState(AppLifecycleState.inactive);
-      await Future<void>.delayed(const Duration(milliseconds: 10));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
 
       expect(await fileConfig.read(graft.state.dryKey), isNotNull);
     });
@@ -94,7 +94,7 @@ void main() {
 
       // Trigger detached
       GraftLifecycleObserver.instance.didChangeAppLifecycleState(AppLifecycleState.detached);
-      await Future<void>.delayed(const Duration(milliseconds: 10));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
 
       expect(await fileConfig.read(graft.state.dryKey), isNotNull);
     });

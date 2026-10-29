@@ -6,6 +6,8 @@ import 'scenario_b_rebuild_isolation.dart';
 import 'scenario_c_large_list.dart';
 import 'scenario_d_composite.dart';
 import 'scenario_e_lifecycle.dart';
+import 'scenario_f_reactive_diamond.dart';
+import 'scenario_g_transactional_batching.dart';
 
 void main() {
   final collector = BenchmarkReportCollector();
@@ -79,6 +81,34 @@ void main() {
   });
 
   // ---------------------------------------------------------------------------
+  // SCENARIO F: REACTIVE DIAMOND & GLITCH-FREE EVALUATION
+  // ---------------------------------------------------------------------------
+  test('Scenario F: Reactive Diamond & Glitch-Free Evaluation (5,000 updates)', () {
+    // ignore: avoid_print
+    print('▶ Running Scenario F: Reactive Diamond & Glitch-Free Evaluation...');
+    final statsF = ScenarioFReactiveDiamondRunner.runAll();
+    for (final s in statsF) {
+      collector.add(s);
+    }
+    // ignore: avoid_print
+    print('✔ Scenario F completed (${statsF.length} benchmark targets).');
+  });
+
+  // ---------------------------------------------------------------------------
+  // SCENARIO G: TRANSACTIONAL MULTI-FIELD BATCHING BURST
+  // ---------------------------------------------------------------------------
+  test('Scenario G: Transactional Multi-Field Batching (2,000 transactions)', () {
+    // ignore: avoid_print
+    print('▶ Running Scenario G: Transactional Multi-Field Batching...');
+    final statsG = ScenarioGTransactionalBatchingRunner.runAll();
+    for (final s in statsG) {
+      collector.add(s);
+    }
+    // ignore: avoid_print
+    print('✔ Scenario G completed (${statsG.length} benchmark targets).');
+  });
+
+  // ---------------------------------------------------------------------------
   // SCENARIO A: MICRO MUTATION SPEED
   // ---------------------------------------------------------------------------
   test('Scenario A: Micro Mutation Speed', () {
@@ -131,13 +161,41 @@ void main() {
       // ignore: avoid_print
       print('\nScenario: $scenarioKey');
       // ignore: avoid_print
-      print('  ${"Framework".padRight(24)} ${"Mean (ms)".padLeft(10)} ${"Median (ms)".padLeft(12)} ${"p95 (ms)".padLeft(10)} ${"Static Builds".padLeft(14)}');
+      print('  ${"Framework".padRight(24)} ${"Mean (ms)".padLeft(10)} ${"Median (ms)".padLeft(12)} ${"p95 (ms)".padLeft(10)} ${"Static Builds".padLeft(14)} ${"Status".padLeft(10)}');
       // ignore: avoid_print
-      print('  -----------------------------------------------------------------------------');
+      print('  ------------------------------------------------------------------------------------------');
       for (final s in sorted) {
+        final status = s.isPassed ? 'Pass' : 'Degraded';
         // ignore: avoid_print
-        print('  ${s.framework.padRight(24)} ${s.meanMs.toStringAsFixed(2).padLeft(10)} ${s.medianMs.toStringAsFixed(2).padLeft(12)} ${s.p95Ms.toStringAsFixed(2).padLeft(10)} ${s.staticRebuilds.toString().padLeft(14)}');
+        print('  ${s.framework.padRight(24)} ${s.meanMs.toStringAsFixed(2).padLeft(10)} ${s.medianMs.toStringAsFixed(2).padLeft(12)} ${s.p95Ms.toStringAsFixed(2).padLeft(10)} ${s.staticRebuilds.toString().padLeft(14)} ${status.padLeft(10)}');
       }
+    }
+
+    // Print Architectural Correctness & Rebuild Fidelity Scorecard
+    final fwSet = <String>{};
+    for (final r in collector.results) fwSet.add(r.framework);
+    final sortedFw = fwSet.toList()..sort();
+
+    // ignore: avoid_print
+    print('''
+================================================================================
+  ARCHITECTURAL CORRECTNESS & REBUILD FIDELITY SCORECARD
+================================================================================
+  ${"Framework".padRight(24)} ${"Status".padLeft(10)} ${"Glitches".padLeft(10)} ${"Wasted Notifs".padLeft(15)} ${"Wasted Builds".padLeft(15)} ${"Efficiency".padLeft(12)}
+  ----------------------------------------------------------------------------------------------------''');
+
+    for (final fw in sortedFw) {
+      final fwStats = collector.results.where((r) => r.framework == fw).toList();
+      final totalGlitches = fwStats.fold<int>(0, (sum, r) => sum + r.glitchesDetected);
+      final totalWastedNotifs = fwStats.fold<int>(0, (sum, r) => sum + r.wastedNotifications);
+      final totalTarget = fwStats.fold<int>(0, (sum, r) => sum + r.targetRebuilds);
+      final totalStatic = fwStats.fold<int>(0, (sum, r) => sum + r.staticRebuilds);
+      final failedCount = fwStats.where((r) => !r.isPassed).length;
+      final eff = (totalTarget + totalStatic) == 0 ? 100.0 : (totalTarget / (totalTarget + totalStatic)) * 100.0;
+      final status = (failedCount == 0 && totalGlitches == 0) ? 'PASSED' : 'DEGRADED';
+
+      // ignore: avoid_print
+      print('  ${fw.padRight(24)} ${status.padLeft(10)} ${totalGlitches.toString().padLeft(10)} ${totalWastedNotifs.toString().padLeft(15)} ${totalStatic.toString().padLeft(15)} ${eff.toStringAsFixed(1).padLeft(11)}%');
     }
 
     // ignore: avoid_print

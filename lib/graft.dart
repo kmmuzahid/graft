@@ -20,7 +20,7 @@
 ///    ```dart
 ///    final graft = context.use(UserGraft.new);
 ///    ```
-///    Automatically inherits along the route stack and self-disposes when the owning screen unmounts!
+///    Automatically borrows ambient instances across navigation flows and self-disposes when all borrower screens pop!
 ///
 /// 3. **Surgical Slot Isolation ([GraftWidgetsX]):**
 ///    Isolate reactive subtrees down to the leaf Element without selector boilerplate:
@@ -55,7 +55,6 @@ export 'src/route/graft_route_tracker.dart';
 export 'src/widgets/child_slot_engine.dart'
     show GraftEquivalent, GraftMultiChildDiffEngine, slots;
 export 'src/widgets/graft_boundary.dart';
-export 'src/widgets/graft_scope.dart' show GraftScope;
 export 'src/widgets/graft_widgets.dart';
 
 

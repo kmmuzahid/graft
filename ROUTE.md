@@ -211,7 +211,7 @@ class DashboardPage extends StatelessWidget {
 
 ### E. Native Reverse-DAG Route Leasing (Zero Memory Leaks)
 
-Every screen pushed via `context.push(...)` is backed by an isolated `GraftScope`:
+Every screen pushed via `context.push(...)` is backed by the Zero-Wrapper Ref-Counted Ambient Engine:
 
 ```dart
 class CommunityPage extends StatelessWidget {
@@ -263,6 +263,6 @@ When the user taps Back or swipes back on iOS:
 
 ### Phase 5: Reverse-DAG Route Leasing Integration
 - [ ] Hook `GraftRouteTracker` directly into the Navigator 2.0 page stack.
-- [ ] Provision isolated `GraftScope` per pushed screen.
+- [ ] Provision ambient ref-counted lifecycle per pushed screen.
 - [ ] Trigger automatic Reverse-DAG teardowns on route pop.
 - [ ] Benchmark route push/pop performance (Target: $< 0.5\text{ µs}$ navigation dispatch).
