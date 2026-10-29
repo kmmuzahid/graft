@@ -41,7 +41,7 @@ The scorecard below aggregates empirical correctness, glitch resistance, and reb
 | **BLoC** | ✅ **PASSED** | 3 | 0 | 0 | 0 | 0 | 100.0% | 🛡️ **Flawless (Immutable Stream & Cubit)** |
 | **BLoC (Cubit)** | ✅ **PASSED** | 13 | 0 | 0 | 0 | 0 | 100.0% | 🛡️ **Flawless (Immutable Stream & Cubit)** |
 | **GetX** | ⚠️ **DEGRADED** | 10 | 2 | ❌ **5000** | ❌ **8000** | 0 | 100.0% | ❌ **Flawed (Unsorted Workers Glitch & Unbatched Churn)** |
-| **GetX (RxList)** | ✅ **PASSED** | 1 | 0 | 0 | 0 | 0 | 100.0% | ❌ **Flawed (Unsorted Workers Glitch & Unbatched Churn)** |
+| **GetX (RxList)** | ✅ **PASSED** | 1 | 0 | 0 | 0 | 0 | 100.0% | ⚡ **Fast (Specialized List Mutation)** |
 | **Graft** | ✅ **PASSED** | 15 | 0 | 0 | 0 | 0 | 100.0% | ⚡ **Flawless (Register Bitmask & Ambient Engine)** |
 | **Graft (leaf slot)** | ✅ **PASSED** | 2 | 0 | 0 | 0 | 0 | 100.0% | ⚡ **Flawless (Register Bitmask & Ambient Engine)** |
 | **Graft (slots)** | ✅ **PASSED** | 2 | 0 | 0 | 0 | 0 | 100.0% | ⚡ **Flawless (Register Bitmask & Ambient Engine)** |
@@ -125,143 +125,143 @@ Measures notification containment when 2,000 multi-field transactions modify 5 f
 
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | Rebuild Eff. | State Churn | Status |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **Graft** | 0.07 | 0.07 | 0.07 | 0.07 | 0.10 | 0.01 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥈 | **Provider** | 0.15 | 0.14 | 0.16 | 0.13 | 0.22 | 0.02 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥉 | **GetX** | 0.15 | 0.15 | 0.16 | 0.14 | 0.17 | 0.01 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 4 | **BLoC (Cubit)** | 0.22 | 0.13 | 0.15 | 0.12 | 1.43 | 0.33 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 5 | **Riverpod (Notifier)** | 0.57 | 0.56 | 0.58 | 0.55 | 0.71 | 0.04 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 6 | **Riverpod (StateNotifier)** | 0.86 | 0.85 | 0.90 | 0.81 | 0.91 | 0.03 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 7 | **Signals** | 4.07 | 3.67 | 6.77 | 2.50 | 7.52 | 1.73 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥇 | **Graft** | 0.07 | 0.07 | 0.07 | 0.06 | 0.09 | 0.01 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥈 | **BLoC (Cubit)** | 0.13 | 0.14 | 0.15 | 0.12 | 0.15 | 0.01 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥉 | **Provider** | 0.14 | 0.13 | 0.15 | 0.13 | 0.18 | 0.02 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 4 | **GetX** | 0.16 | 0.16 | 0.18 | 0.15 | 0.18 | 0.01 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 5 | **Riverpod (Notifier)** | 0.54 | 0.53 | 0.57 | 0.50 | 0.62 | 0.03 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 6 | **Riverpod (StateNotifier)** | 0.78 | 0.78 | 0.84 | 0.73 | 0.85 | 0.04 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 7 | **Signals** | 2.41 | 2.40 | 2.49 | 2.29 | 2.55 | 0.06 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
 
 ### 🔹 Scenario: A2_100k_increments
 
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | Rebuild Eff. | State Churn | Status |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **Graft** | 0.92 | 0.92 | 0.97 | 0.84 | 0.97 | 0.03 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥈 | **Provider** | 1.35 | 1.34 | 1.40 | 1.29 | 1.41 | 0.04 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥉 | **GetX** | 1.39 | 1.36 | 1.45 | 1.33 | 1.66 | 0.08 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 4 | **BLoC (Cubit)** | 3.99 | 3.64 | 9.09 | 1.26 | 9.23 | 2.92 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 5 | **Riverpod (Notifier)** | 5.21 | 5.19 | 5.29 | 5.13 | 5.38 | 0.06 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 6 | **Riverpod (StateNotifier)** | 8.47 | 8.45 | 8.88 | 8.00 | 8.96 | 0.29 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 7 | **Signals** | 24.04 | 24.01 | 24.63 | 23.64 | 24.67 | 0.32 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥇 | **Graft** | 0.80 | 0.80 | 0.83 | 0.75 | 0.83 | 0.02 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥈 | **Provider** | 1.29 | 1.29 | 1.34 | 1.21 | 1.36 | 0.04 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥉 | **GetX** | 1.47 | 1.46 | 1.49 | 1.44 | 1.51 | 0.02 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 4 | **BLoC (Cubit)** | 4.05 | 3.73 | 7.53 | 1.23 | 7.84 | 2.42 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 5 | **Riverpod (Notifier)** | 4.88 | 4.88 | 4.94 | 4.80 | 4.95 | 0.05 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 6 | **Riverpod (StateNotifier)** | 7.60 | 7.57 | 7.79 | 7.46 | 7.92 | 0.12 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 7 | **Signals** | 22.89 | 22.87 | 23.15 | 22.76 | 23.18 | 0.13 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
 
 ### 🔹 Scenario: A3_multi_field_5
 
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | Rebuild Eff. | State Churn | Status |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **Graft** | 0.12 | 0.12 | 0.13 | 0.12 | 0.14 | 0.01 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥈 | **Provider** | 0.16 | 0.15 | 0.18 | 0.14 | 0.24 | 0.02 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥉 | **GetX** | 0.39 | 0.38 | 0.41 | 0.37 | 0.43 | 0.02 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 4 | **Riverpod (Notifier)** | 0.63 | 0.59 | 0.73 | 0.56 | 0.81 | 0.08 | 0 | 0 | 100.0% | 10000 | ✅ Pass |
-| 5 | **BLoC (Cubit)** | 0.68 | 0.22 | 2.13 | 0.21 | 4.87 | 1.26 | 0 | 0 | 100.0% | 10000 | ✅ Pass |
-| 6 | **Riverpod (StateNotifier)** | 0.95 | 0.94 | 1.04 | 0.90 | 1.04 | 0.04 | 0 | 0 | 100.0% | 10000 | ✅ Pass |
-| 7 | **Signals** | 9.12 | 9.10 | 9.31 | 8.98 | 9.35 | 0.11 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥇 | **Provider** | 0.16 | 0.14 | 0.17 | 0.14 | 0.28 | 0.04 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥈 | **BLoC (Cubit)** | 0.38 | 0.22 | 0.25 | 0.21 | 2.65 | 0.63 | 0 | 0 | 100.0% | 10000 | ✅ Pass |
+| 🥉 | **GetX** | 0.41 | 0.41 | 0.43 | 0.39 | 0.43 | 0.01 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 4 | **Graft** | 0.55 | 0.49 | 0.51 | 0.30 | 1.74 | 0.34 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 5 | **Riverpod (Notifier)** | 0.59 | 0.58 | 0.63 | 0.54 | 0.74 | 0.05 | 0 | 0 | 100.0% | 10000 | ✅ Pass |
+| 6 | **Riverpod (StateNotifier)** | 0.90 | 0.90 | 0.96 | 0.85 | 0.97 | 0.03 | 0 | 0 | 100.0% | 10000 | ✅ Pass |
+| 7 | **Signals** | 8.84 | 8.84 | 8.99 | 8.68 | 9.21 | 0.14 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
 
 ### 🔹 Scenario: A4_depth8_nested
 
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | Rebuild Eff. | State Churn | Status |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **Graft** | 0.01 | 0.01 | 0.01 | 0.01 | 0.01 | 0.00 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥈 | **GetX** | 0.09 | 0.08 | 0.10 | 0.08 | 0.11 | 0.01 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥉 | **Provider** | 0.16 | 0.15 | 0.16 | 0.14 | 0.18 | 0.01 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 4 | **BLoC (Cubit)** | 0.43 | 0.42 | 0.47 | 0.41 | 0.53 | 0.03 | 0 | 0 | 100.0% | 8000 | ✅ Pass |
-| 5 | **Riverpod (Notifier)** | 0.63 | 0.60 | 0.63 | 0.52 | 1.22 | 0.17 | 0 | 0 | 100.0% | 8000 | ✅ Pass |
-| 6 | **Riverpod (StateNotifier)** | 0.81 | 0.75 | 0.81 | 0.68 | 1.81 | 0.28 | 0 | 0 | 100.0% | 8000 | ✅ Pass |
-| 7 | **Signals** | 0.83 | 0.67 | 0.75 | 0.65 | 2.99 | 0.60 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥇 | **Graft** | 0.01 | 0.01 | 0.01 | 0.01 | 0.02 | 0.00 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥈 | **GetX** | 0.09 | 0.09 | 0.09 | 0.08 | 0.11 | 0.01 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥉 | **BLoC (Cubit)** | 0.41 | 0.41 | 0.43 | 0.38 | 0.44 | 0.02 | 0 | 0 | 100.0% | 8000 | ✅ Pass |
+| 4 | **Provider** | 0.42 | 0.16 | 1.18 | 0.14 | 3.08 | 0.78 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 5 | **Riverpod (Notifier)** | 0.54 | 0.54 | 0.59 | 0.50 | 0.60 | 0.03 | 0 | 0 | 100.0% | 8000 | ✅ Pass |
+| 6 | **Riverpod (StateNotifier)** | 0.72 | 0.66 | 0.75 | 0.63 | 1.42 | 0.19 | 0 | 0 | 100.0% | 8000 | ✅ Pass |
+| 7 | **Signals** | 0.82 | 0.67 | 1.35 | 0.65 | 1.59 | 0.31 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
 
 ### 🔹 Scenario: B1_10_slot_column_120_frames
 
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | Rebuild Eff. | State Churn | Status |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **Provider** | 14.67 | 14.69 | 15.25 | 13.55 | 16.40 | 0.69 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥈 | **BLoC (Cubit)** | 15.84 | 16.00 | 17.74 | 13.51 | 18.17 | 1.47 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥉 | **Signals** | 17.67 | 14.78 | 28.29 | 13.38 | 33.08 | 6.05 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 4 | **Riverpod (StateNotifier)** | 18.52 | 16.98 | 23.45 | 13.70 | 25.55 | 3.74 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 5 | **GetX** | 19.69 | 18.79 | 24.21 | 17.11 | 26.92 | 2.92 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 6 | **Graft (leaf slot)** | 20.69 | 19.78 | 24.57 | 17.20 | 24.62 | 2.35 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 7 | **Riverpod (Notifier)** | 22.23 | 20.20 | 27.32 | 17.29 | 42.20 | 6.31 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 8 | **Graft (slots)** | 23.34 | 23.19 | 29.24 | 17.65 | 30.31 | 4.09 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥇 | **GetX** | 13.36 | 13.34 | 14.03 | 12.27 | 14.08 | 0.50 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥈 | **Graft (leaf slot)** | 13.59 | 13.20 | 14.10 | 12.41 | 18.78 | 1.50 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥉 | **Graft (slots)** | 13.60 | 13.39 | 14.39 | 12.93 | 14.70 | 0.59 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 4 | **Riverpod (Notifier)** | 14.32 | 13.67 | 14.05 | 13.10 | 23.79 | 2.63 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 5 | **BLoC (Cubit)** | 14.34 | 14.05 | 15.72 | 13.31 | 17.47 | 1.05 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 6 | **Signals** | 14.57 | 13.91 | 14.76 | 12.98 | 23.72 | 2.57 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 7 | **Riverpod (StateNotifier)** | 14.57 | 12.80 | 21.87 | 12.47 | 28.38 | 4.48 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 8 | **Provider** | 14.75 | 14.68 | 15.22 | 14.37 | 15.94 | 0.39 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
 
 ### 🔹 Scenario: B2_50_slot_column_120_frames
 
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | Rebuild Eff. | State Churn | Status |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **GetX** | 26.12 | 25.51 | 28.05 | 24.48 | 30.93 | 1.65 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥈 | **Graft (leaf slot)** | 26.19 | 25.55 | 29.02 | 24.36 | 30.38 | 1.78 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥉 | **Riverpod (StateNotifier)** | 26.40 | 26.18 | 27.46 | 24.93 | 30.21 | 1.37 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 4 | **BLoC (Cubit)** | 26.69 | 26.91 | 27.74 | 24.18 | 30.17 | 1.45 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 5 | **Signals** | 27.18 | 27.04 | 28.61 | 25.64 | 29.11 | 1.10 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 6 | **Graft (slots)** | 33.74 | 30.21 | 39.79 | 26.70 | 66.84 | 10.16 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 7 | **Riverpod (Notifier)** | 34.61 | 28.40 | 59.01 | 24.05 | 66.45 | 13.86 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 8 | **Provider** | 40.07 | 40.37 | 43.83 | 33.28 | 46.02 | 3.49 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥇 | **Graft (leaf slot)** | 23.18 | 22.93 | 25.37 | 21.87 | 25.42 | 1.26 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥈 | **Riverpod (Notifier)** | 23.70 | 23.27 | 24.72 | 22.80 | 25.47 | 0.80 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥉 | **Riverpod (StateNotifier)** | 24.20 | 24.00 | 25.95 | 23.10 | 26.14 | 1.01 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 4 | **GetX** | 24.87 | 24.18 | 26.14 | 23.90 | 26.14 | 0.95 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 5 | **Signals** | 25.53 | 25.31 | 26.72 | 24.12 | 26.87 | 1.04 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 6 | **BLoC (Cubit)** | 25.86 | 24.16 | 26.19 | 23.71 | 43.83 | 5.05 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 7 | **Graft (slots)** | 26.04 | 24.87 | 27.76 | 23.63 | 41.36 | 4.41 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 8 | **Provider** | 27.14 | 26.73 | 31.31 | 24.68 | 32.46 | 2.46 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
 
 ### 🔹 Scenario: C1_5k_items_300_rapid_updates
 
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | Rebuild Eff. | State Churn | Status |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **Graft** | 28.83 | 27.91 | 29.04 | 27.12 | 40.37 | 3.22 | 300 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥈 | **Riverpod (Notifier)** | 33.50 | 32.55 | 36.25 | 30.38 | 44.71 | 3.55 | 300 | 0 | 100.0% | 300 | ✅ Pass |
-| 🥉 | **Signals** | 34.07 | 31.60 | 49.19 | 29.68 | 55.81 | 7.65 | 300 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 4 | **GetX** | 65.18 | 64.16 | 66.94 | 62.50 | 74.58 | 2.80 | 300 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 5 | **BLoC (Cubit)** | 67.09 | 66.14 | 89.93 | 50.28 | 106.22 | 14.76 | 300 | 0 | 100.0% | 300 | ✅ Pass |
-| 6 | **Provider** | 70.50 | 57.66 | 124.38 | 55.42 | 159.40 | 30.32 | 300 | 0 | 100.0% | 300 | ✅ Pass |
+| 🥇 | **Graft** | 29.14 | 28.20 | 29.40 | 27.52 | 42.65 | 3.77 | 300 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥈 | **Riverpod (Notifier)** | 31.15 | 29.60 | 33.46 | 28.92 | 43.69 | 3.81 | 300 | 0 | 100.0% | 300 | ✅ Pass |
+| 🥉 | **Signals** | 36.38 | 33.38 | 47.48 | 31.81 | 61.16 | 7.93 | 300 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 4 | **BLoC (Cubit)** | 48.98 | 47.92 | 49.61 | 46.71 | 62.09 | 3.73 | 300 | 0 | 100.0% | 300 | ✅ Pass |
+| 5 | **Provider** | 55.09 | 55.39 | 57.04 | 53.38 | 57.27 | 1.29 | 300 | 0 | 100.0% | 300 | ✅ Pass |
+| 6 | **GetX** | 62.07 | 62.08 | 63.54 | 59.98 | 65.47 | 1.40 | 300 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
 
 ### 🔹 Scenario: C2_20k_items_300_rapid_updates
 
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | Rebuild Eff. | State Churn | Status |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **Signals** | 44.02 | 38.76 | 67.04 | 33.84 | 74.68 | 12.81 | 300 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥈 | **Graft** | 55.68 | 49.17 | 65.53 | 41.53 | 105.01 | 16.02 | 300 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥉 | **Riverpod (Notifier)** | 57.25 | 56.65 | 67.88 | 45.21 | 82.89 | 9.47 | 300 | 0 | 100.0% | 300 | ✅ Pass |
-| 4 | **BLoC (Cubit)** | 63.81 | 61.67 | 71.58 | 59.01 | 80.25 | 5.60 | 300 | 0 | 100.0% | 300 | ✅ Pass |
-| 5 | **GetX** | 78.74 | 74.53 | 89.44 | 72.31 | 111.60 | 10.30 | 300 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 6 | **Provider** | 79.37 | 77.74 | 78.86 | 74.22 | 108.84 | 8.25 | 300 | 0 | 100.0% | 300 | ✅ Pass |
+| 🥇 | **Graft** | 29.78 | 29.28 | 31.63 | 28.85 | 32.16 | 1.07 | 300 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥈 | **Signals** | 39.50 | 36.54 | 59.73 | 32.91 | 61.51 | 9.59 | 300 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥉 | **Riverpod (Notifier)** | 45.46 | 44.34 | 46.10 | 41.99 | 65.83 | 5.79 | 300 | 0 | 100.0% | 300 | ✅ Pass |
+| 4 | **BLoC (Cubit)** | 60.09 | 59.94 | 60.90 | 58.79 | 63.12 | 1.05 | 300 | 0 | 100.0% | 300 | ✅ Pass |
+| 5 | **GetX** | 71.44 | 69.82 | 71.19 | 66.63 | 97.35 | 7.29 | 300 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 6 | **Provider** | 74.28 | 72.07 | 77.57 | 68.26 | 101.39 | 7.90 | 300 | 0 | 100.0% | 300 | ✅ Pass |
 
 ### 🔹 Scenario: C3_random_insert_remove_100x
 
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | Rebuild Eff. | State Churn | Status |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **Graft** | 0.33 | 0.33 | 0.35 | 0.31 | 0.36 | 0.01 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥈 | **Riverpod (Notifier)** | 0.67 | 0.45 | 0.51 | 0.41 | 3.70 | 0.84 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥉 | **GetX (RxList)** | 0.85 | 0.86 | 0.87 | 0.82 | 0.87 | 0.02 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 4 | **Provider** | 0.86 | 0.46 | 3.44 | 0.43 | 3.57 | 1.07 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 5 | **BLoC (Cubit)** | 1.61 | 0.55 | 5.36 | 0.49 | 6.75 | 2.12 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥇 | **Graft** | 0.33 | 0.33 | 0.34 | 0.31 | 0.35 | 0.01 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥈 | **GetX (RxList)** | 0.83 | 0.83 | 0.86 | 0.79 | 0.87 | 0.02 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥉 | **BLoC (Cubit)** | 0.97 | 0.49 | 3.89 | 0.43 | 3.89 | 1.19 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 4 | **Provider** | 0.99 | 0.43 | 3.24 | 0.40 | 3.38 | 1.18 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 5 | **Riverpod (Notifier)** | 1.01 | 0.43 | 3.35 | 0.40 | 3.46 | 1.20 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
 
 ### 🔹 Scenario: D1_product_catalog_and_cart
 
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | Rebuild Eff. | State Churn | Status |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | 🥇 | **Graft** | 0.02 | 0.02 | 0.02 | 0.02 | 0.02 | 0.00 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥈 | **Signals** | 0.02 | 0.02 | 0.02 | 0.02 | 0.04 | 0.01 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥉 | **BLoC (Cubit)** | 0.03 | 0.03 | 0.03 | 0.03 | 0.03 | 0.00 | 0 | 0 | 100.0% | 40 | ✅ Pass |
+| 🥈 | **Signals** | 0.02 | 0.02 | 0.02 | 0.02 | 0.03 | 0.00 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥉 | **BLoC (Cubit)** | 0.04 | 0.03 | 0.07 | 0.03 | 0.09 | 0.02 | 0 | 0 | 100.0% | 40 | ✅ Pass |
 
 ### 🔹 Scenario: D2_form_12_interdependent_fields
 
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | Rebuild Eff. | State Churn | Status |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **BLoC (Cubit)** | 0.06 | 0.06 | 0.07 | 0.06 | 0.08 | 0.01 | 0 | 0 | 100.0% | 100 | ✅ Pass |
-| 🥈 | **Graft** | 0.06 | 0.06 | 0.06 | 0.06 | 0.10 | 0.01 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥉 | **Signals** | 0.09 | 0.06 | 0.09 | 0.05 | 0.51 | 0.12 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥇 | **BLoC (Cubit)** | 0.06 | 0.06 | 0.06 | 0.05 | 0.08 | 0.01 | 0 | 0 | 100.0% | 100 | ✅ Pass |
+| 🥈 | **Graft** | 0.07 | 0.07 | 0.07 | 0.06 | 0.09 | 0.01 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥉 | **Signals** | 0.07 | 0.06 | 0.12 | 0.06 | 0.15 | 0.03 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
 
 ### 🔹 Scenario: D3_navigation_and_dialog_sharing
 
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | Rebuild Eff. | State Churn | Status |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **Graft** | 3.06 | 2.85 | 4.02 | 2.55 | 4.49 | 0.57 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥈 | **BLoC** | 4.33 | 3.80 | 6.33 | 3.23 | 8.01 | 1.35 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥇 | **Graft** | 2.64 | 2.45 | 3.36 | 2.17 | 4.13 | 0.51 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥈 | **BLoC** | 3.70 | 3.08 | 6.55 | 2.70 | 7.34 | 1.43 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
 
 ### 🔹 Scenario: E1_route_push_pop_and_dialog_lifecycle
 
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | Rebuild Eff. | State Churn | Status |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **Graft** | 5.77 | 5.68 | 6.23 | 4.95 | 7.57 | 0.63 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥇 | **Graft** | 5.02 | 4.89 | 5.69 | 4.53 | 5.90 | 0.41 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
 
 ### 🔹 Scenario: E2_hot_reload_reassemble_simulation
 
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | Rebuild Eff. | State Churn | Status |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **Graft** | 0.87 | 0.85 | 0.91 | 0.80 | 1.12 | 0.08 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥈 | **BLoC** | 0.99 | 0.94 | 1.14 | 0.81 | 1.48 | 0.16 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥇 | **Graft** | 0.81 | 0.81 | 0.85 | 0.77 | 0.86 | 0.03 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥈 | **BLoC** | 0.89 | 0.85 | 0.97 | 0.77 | 1.37 | 0.14 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
 
 ### 🔹 Scenario: E3_disposed_controller_access_safety
 
@@ -269,27 +269,27 @@ Measures notification containment when 2,000 multi-field transactions modify 5 f
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | 🥇 | **Graft** | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
 | 🥈 | **BLoC** | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥉 | **Provider** | 0.01 | 0.01 | 0.01 | 0.01 | 0.01 | 0.00 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥉 | **Provider** | 0.01 | 0.01 | 0.02 | 0.01 | 0.03 | 0.01 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
 
 ### 🔹 Scenario: F1_reactive_diamond_glitch_test
 
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | Rebuild Eff. | State Churn | Status |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **BLoC (Cubit)** | 0.10 | 0.10 | 0.11 | 0.10 | 0.11 | 0.01 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥈 | **GetX** | 0.44 | 0.44 | 0.45 | 0.42 | 0.46 | 0.01 | 0 | 0 | 100.0% | 0 (Zero-GC) | ❌ Fail |
-| 🥉 | **Graft** | 0.45 | 0.08 | 1.27 | 0.03 | 1.28 | 0.58 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 4 | **Signals** | 4.04 | 3.98 | 4.24 | 3.90 | 4.32 | 0.14 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 5 | **Riverpod (Notifier)** | 12.60 | 12.56 | 12.85 | 12.33 | 12.96 | 0.16 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥇 | **Graft** | 0.04 | 0.04 | 0.04 | 0.04 | 0.07 | 0.01 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥈 | **BLoC (Cubit)** | 0.09 | 0.09 | 0.10 | 0.09 | 0.12 | 0.01 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥉 | **Signals** | 3.74 | 3.74 | 3.82 | 3.66 | 3.89 | 0.06 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 4 | **Riverpod (Notifier)** | 12.01 | 11.92 | 12.48 | 11.73 | 12.75 | 0.28 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| ❌ DISQ | **GetX** | 0.43 | 0.43 | 0.45 | 0.40 | 0.45 | 0.02 | 0 | 0 | 100.0% | 0 (Zero-GC) | ❌ Fail |
 
 ### 🔹 Scenario: G1_transactional_multi_field_batching
 
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | Rebuild Eff. | State Churn | Status |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **GetX** | 0.19 | 0.17 | 0.30 | 0.16 | 0.33 | 0.05 | 0 | 0 | 100.0% | 0 (Zero-GC) | ❌ Fail |
-| 🥈 | **BLoC (Cubit)** | 0.33 | 0.28 | 0.54 | 0.08 | 1.42 | 0.34 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥉 | **Graft** | 0.82 | 0.82 | 0.87 | 0.78 | 0.87 | 0.03 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 4 | **Riverpod (Notifier)** | 1.20 | 1.02 | 1.80 | 0.98 | 2.14 | 0.35 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 5 | **Signals** | 2.20 | 1.87 | 3.19 | 1.76 | 4.02 | 0.68 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥇 | **BLoC (Cubit)** | 0.04 | 0.04 | 0.06 | 0.03 | 0.07 | 0.01 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥈 | **Graft** | 0.76 | 0.75 | 0.80 | 0.71 | 0.87 | 0.04 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥉 | **Riverpod (Notifier)** | 1.15 | 0.96 | 2.01 | 0.89 | 2.10 | 0.42 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 4 | **Signals** | 1.78 | 1.77 | 1.83 | 1.72 | 1.84 | 0.04 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| ❌ DISQ | **GetX** | 0.19 | 0.18 | 0.20 | 0.18 | 0.24 | 0.01 | 0 | 0 | 100.0% | 0 (Zero-GC) | ❌ Fail |
 
 ---
 

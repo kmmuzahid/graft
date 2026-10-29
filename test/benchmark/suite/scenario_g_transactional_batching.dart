@@ -20,8 +20,9 @@ class GraftBatchState extends GraftState {
 
 class GraftBatchController extends Graft<GraftBatchState> {
   GraftBatchController() : super(GraftBatchState());
+  late final _s = state;
   void transaction(int val) {
-    state
+    _s
       ..f1 = val
       ..f2 = val
       ..f3 = val
@@ -102,7 +103,7 @@ class GetXBatchController extends getx.GetxController {
 // SCENARIO G RUNNER
 // =============================================================================
 class ScenarioGTransactionalBatchingRunner {
-  static const int warmUpRuns = 3;
+  static const int warmUpRuns = 10;
   static const int measuredRuns = 15;
   static const int transactions = 2000;
 

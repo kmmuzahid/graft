@@ -29,7 +29,8 @@ class GraftDiamondState extends GraftState {
 
 class GraftDiamondController extends Graft<GraftDiamondState> {
   GraftDiamondController() : super(GraftDiamondState());
-  void setA(int val) => state..a = val..update();
+  late final _s = state;
+  void setA(int val) => _s..a = val..update();
 }
 
 // 2. Signals (Preact / SolidJS style DAG)
@@ -130,7 +131,7 @@ class GetXDiamondController extends getx.GetxController {
 // SCENARIO F RUNNER
 // =============================================================================
 class ScenarioFReactiveDiamondRunner {
-  static const int warmUpRuns = 3;
+  static const int warmUpRuns = 10;
   static const int measuredRuns = 15;
   static const int updates = 5000;
 

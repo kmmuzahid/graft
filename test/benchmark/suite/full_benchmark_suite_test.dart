@@ -157,7 +157,12 @@ void main() {
     final sortedScenarioKeys = grouped.keys.toList()..sort();
     for (final scenarioKey in sortedScenarioKeys) {
       final sorted = List<BenchmarkStats>.from(grouped[scenarioKey]!)
-        ..sort((a, b) => a.meanMs.compareTo(b.meanMs));
+        ..sort((a, b) {
+          if (a.isPassed != b.isPassed) {
+            return a.isPassed ? -1 : 1;
+          }
+          return a.meanMs.compareTo(b.meanMs);
+        });
       // ignore: avoid_print
       print('\nScenario: $scenarioKey');
       // ignore: avoid_print

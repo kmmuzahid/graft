@@ -211,8 +211,12 @@ class BenchmarkReportCollector {
         verdict = '🛡️ **Flawless (Reactive Preact DAG)**';
       } else if (fw.contains('Provider')) {
         verdict = '⚠️ **Pass (Requires Manual Selector Boilerplate)**';
+      } else if (fw == 'GetX (RxList)') {
+        verdict = '⚡ **Fast (Specialized List Mutation)**';
       } else if (fw.contains('GetX')) {
-        verdict = '❌ **Flawed (Unsorted Workers Glitch & Unbatched Churn)**';
+        verdict = isAllPassed
+            ? '⚡ **Pass**'
+            : '❌ **Flawed (Unsorted Workers Glitch & Unbatched Churn)**';
       } else {
         verdict = isAllPassed ? '✅ Verified' : '❌ Issues Found';
       }
@@ -326,16 +330,30 @@ class BenchmarkReportCollector {
     final sortedScenarioKeys = grouped.keys.toList()..sort();
     for (final scenarioName in sortedScenarioKeys) {
       final scenarioResults = List<BenchmarkStats>.from(grouped[scenarioName]!)
-        ..sort((a, b) => a.meanMs.compareTo(b.meanMs));
+        ..sort((a, b) {
+          if (a.isPassed != b.isPassed) {
+            return a.isPassed ? -1 : 1;
+          }
+          return a.meanMs.compareTo(b.meanMs);
+        });
 
       sb.writeln('### 🔹 Scenario: $scenarioName');
       sb.writeln();
       sb.writeln('| Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | Rebuild Eff. | State Churn | Status |');
       sb.writeln('| :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |');
 
+      int passingRank = 1;
       for (int i = 0; i < scenarioResults.length; i++) {
         final r = scenarioResults[i];
-        final rankIcon = i == 0 ? '🥇' : (i == 1 ? '🥈' : (i == 2 ? '🥉' : '${i + 1}'));
+        final String rankIcon;
+        if (!r.isPassed) {
+          rankIcon = '❌ DISQ';
+        } else {
+          rankIcon = passingRank == 1
+              ? '🥇'
+              : (passingRank == 2 ? '🥈' : (passingRank == 3 ? '🥉' : '$passingRank'));
+          passingRank++;
+        }
         final effStr = '${r.rebuildEfficiency.toStringAsFixed(1)}%';
         final statusBadge = r.isPassed ? '✅ Pass' : '❌ Fail';
         sb.writeln(
