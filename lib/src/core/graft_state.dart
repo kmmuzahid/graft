@@ -329,7 +329,7 @@ abstract class GraftState {
         count = 3;
       }
       buf = _propsBuffer = List<Object?>.filled(count, null);
-      view = _propsView = _GraftPropsBuffer(buf, count);
+      view = _propsView = _GraftPropsBuffer(this, buf, count);
     }
 
     final len = view._length;
@@ -1918,6 +1918,10 @@ abstract class GraftState {
       if (_isDryEnabled) DryStateHook.onStateUpdated(this);
       final g = _graft;
       if (g != null) {
+        if (GraftEngine.hasOnlySingleListener(g)) {
+          GraftEngine.singleListener(g)!();
+          return;
+        }
         final mask =
             w == 31 ? GraftMask.allBitsUpTo(5) : GraftMask.fromWords(w, 0);
         _notifyGraft(g, mask);
@@ -1956,6 +1960,10 @@ abstract class GraftState {
       if (_isDryEnabled) DryStateHook.onStateUpdated(this);
       final g = _graft;
       if (g != null) {
+        if (GraftEngine.hasOnlySingleListener(g)) {
+          GraftEngine.singleListener(g)!();
+          return;
+        }
         final mask = w == ((1 << sc) - 1)
             ? GraftMask.allBitsUpTo(sc)
             : GraftMask.fromWords(w, 0);
@@ -2275,15 +2283,23 @@ final class _EmptyGraftProps extends GraftProps {
 }
 
 final class _GraftPropsBuffer extends GraftProps {
+  final GraftState _state;
   final List<Object?> _buffer;
   final int _length;
 
-  const _GraftPropsBuffer(this._buffer, this._length);
+  const _GraftPropsBuffer(this._state, this._buffer, this._length);
 
   @override
   Object? operator [](int index) {
     if (index < 0 || index >= _length) {
       throw RangeError.index(index, this);
+    }
+    if (_state._scalarCount >= 2 && _state._scalarCount <= 5) {
+      if (index == 0) return _state._s0;
+      if (index == 1) return _state._s1;
+      if (index == 2) return _state._s2;
+      if (index == 3) return _state._s3;
+      if (index == 4) return _state._s4;
     }
     return _buffer[index];
   }
@@ -2292,7 +2308,16 @@ final class _GraftPropsBuffer extends GraftProps {
   int get length => _length;
 
   @override
-  Iterator<Object?> get iterator => _GraftPropsIterator(_buffer, _length);
+  Iterator<Object?> get iterator {
+    if (_state._scalarCount >= 2 && _state._scalarCount <= 5) {
+      _buffer[0] = _state._s0;
+      _buffer[1] = _state._s1;
+      if (_state._scalarCount > 2) _buffer[2] = _state._s2;
+      if (_state._scalarCount > 3) _buffer[3] = _state._s3;
+      if (_state._scalarCount > 4) _buffer[4] = _state._s4;
+    }
+    return _GraftPropsIterator(_buffer, _length);
+  }
 }
 
 final class _GraftPropsIterator implements Iterator<Object?> {

@@ -10,7 +10,7 @@
 [![Flutter 3.10+](https://img.shields.io/badge/Flutter-3.10+-02569B.svg?logo=flutter)](https://flutter.dev)
 
 > [!NOTE]
-> ### 🚀 Graft v1.0.0-alpha.6 — Public Alpha Release
+> ### 🚀 Graft v1.0.0-alpha.7 — Public Alpha Release
 > Graft is currently in active public alpha across iOS, Android, Web (JS & WASM), macOS, Windows, Linux, and Embedded targets.
 > We invite developers to take it for a spin, test its slot diffing, DI engine, and Frame-0 persistence across diverse architectures, and help us discover edge cases, ideas, and feedback on [GitHub Issues](https://github.com/kmmuzahid/graft/issues) as we march toward 1.0!
 

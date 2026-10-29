@@ -134,9 +134,10 @@ class Form12GraftState extends GraftState {
 
 class Form12GraftController extends Graft<Form12GraftState> {
   Form12GraftController() : super(Form12GraftState());
+  late final _s = state;
 
   void updateField(int index, double val) {
-    final s = state;
+    final s = _s;
     final old = s.values[index];
     s.values[index] = val;
     final newSum = s.totalSum + (val - old);
@@ -146,9 +147,9 @@ class Form12GraftController extends Graft<Form12GraftState> {
   }
 
   void updateEmail(String email) {
-    state.email = email;
-    state.isValid = state.totalSum <= 5000.0 && state.email.contains('@') && state.termsAccepted;
-    state.update();
+    _s.email = email;
+    _s.isValid = _s.totalSum <= 5000.0 && _s.email.contains('@') && _s.termsAccepted;
+    _s.update();
   }
 }
 

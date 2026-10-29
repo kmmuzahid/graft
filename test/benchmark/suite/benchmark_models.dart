@@ -141,7 +141,7 @@ class BenchmarkReportCollector {
     sb.writeln('## 📋 Executive Summary');
     sb.writeln();
     sb.writeln('This benchmark suite evaluates **Graft** against the primary Flutter state management paradigms:');
-    sb.writeln('1. **Graft** (`1.0.0-alpha.6`) — Self-optimizing bitmask diff engine with zero-wrapper ambient lifecycle');
+    sb.writeln('1. **Graft** (`1.0.0-alpha.7`) — Self-optimizing bitmask diff engine with zero-wrapper ambient lifecycle');
     sb.writeln('2. **Riverpod (Notifier / Codegen-style)** — Class-based `Notifier` with immutable transitions');
     sb.writeln('3. **Riverpod (StateNotifier / Legacy)** — `StateNotifier` without code generation');
     sb.writeln('4. **flutter_bloc + Cubit** (`8.1.6`) — Stream/Equatable domain state with `BlocSelector`');

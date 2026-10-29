@@ -373,7 +373,7 @@ class ProviderDepth8Model extends ChangeNotifier {
 // SCENARIO A RUNNER
 // =============================================================================
 class ScenarioAMicroMutationRunner {
-  static const int warmUpRuns = 5;
+  static const int warmUpRuns = 10;
   static const int measuredRuns = 15;
 
   static List<BenchmarkStats> runAll() {
