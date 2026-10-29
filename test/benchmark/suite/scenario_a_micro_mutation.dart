@@ -440,6 +440,11 @@ class ScenarioAMicroMutationRunner {
       final dummyCtrl = ChangeNotifier()..addListener(() => dummy++);
       for (int i = 0; i < iterations; i++) dummyCtrl.notifyListeners();
       dummyCtrl.dispose();
+      final preGraft = GraftSingleController()..addListener(() => dummy++);
+      for (int r = 0; r < 2; r++) {
+        for (int i = 0; i < iterations; i++) preGraft.increment();
+      }
+      preGraft.dispose();
     }
 
     // 1. Graft
@@ -640,7 +645,7 @@ class ScenarioAMicroMutationRunner {
       for (int i = 0; i < iterations; i++) dummyCtrl.notifyListeners();
       dummyCtrl.dispose();
       final preGraft = Graft5FieldController()..addListener(() => dummy++);
-      for (int r = 0; r < 20; r++) {
+      for (int r = 0; r < 2; r++) {
         for (int i = 0; i < iterations; i++) preGraft.updateAll(i);
       }
       preGraft.dispose();
@@ -846,7 +851,7 @@ class ScenarioAMicroMutationRunner {
       for (int i = 0; i < iterations; i++) dummyCtrl.notifyListeners();
       dummyCtrl.dispose();
       final preGraft = GraftNestedDepth8Controller()..addListener(() => dummy++);
-      for (int r = 0; r < 20; r++) {
+      for (int r = 0; r < 2; r++) {
         for (int i = 0; i < iterations; i++) preGraft.updateLeaf(i);
       }
       preGraft.dispose();

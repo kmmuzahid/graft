@@ -5,19 +5,24 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 
 ## 1.0.0-alpha.7
 
-### ⚡ Register-Level Scalar Fast Path & Benchmark Engine Hardening
+### ⚡ Register-Level Scalar Fast Path, Clean Ergonomics & Benchmark Engine Hardening
 
 - **Direct Scalar Register Diffing (`propsOf`)**:
-  - Eliminated redundant array buffer heap stores (`_propsBuffer[i] = ...`) on every scalar mutation.
+  - Eliminated redundant array buffer heap stores on every scalar mutation.
   - Scalar properties (2..5 parameters) now write directly to CPU register fields (`_s0.._s4`), eliminating 50,000 bounds-checked heap array writes per 10k mutations.
   - On-demand lazy buffer synchronization for indexed reads (`operator []`) and iterators.
 - **Single-Listener Direct Fast Dispatch**:
   - `diffChanges()` now detects `hasOnlySingleListener(g)` directly before mask evaluation, dispatching synchronous listeners with 0 mask object allocations.
+- **Async Property Flag Bypass (`_hasAsyncProps`)**:
+  - State engine caches a boolean `_hasAsyncProps` flag during baseline initialization.
+  - Single-child and leaf slot elements bypass all property inspections in synchronous states, eliminating redundant getter dispatches on every frame.
+- **Zero-Workaround Idiomatic Developer Ergonomics**:
+  - Fully removed internal benchmark workarounds; all scenarios evaluate pure, natural `state..update()` fluent mutations.
 - **Benchmark Suite Correctness & Disqualification Engine**:
   - Report generator and suite runners now strictly prioritize passing frameworks (`isPassed: true`).
   - Degraded runs (such as unbatched churn or reactive glitches) are automatically labeled `❌ DISQ` (Disqualified) and barred from podium awards.
-- **Warmup & Micro-Jitter Stabilization**:
-  - Increased benchmark warmup runs to 10 across micro-mutation and batching scenarios, preventing JIT compilation pauses from skewing measured arithmetic means.
+- **Widget Tree & GC Boundary Insulation**:
+  - Pumping clean teardowns between widget scenarios isolates memory pressure and prevents cross-scenario GC pauses from distorting measurement loops.
 
 ## 1.0.0-alpha.6
 

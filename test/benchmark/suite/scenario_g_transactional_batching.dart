@@ -20,9 +20,8 @@ class GraftBatchState extends GraftState {
 
 class GraftBatchController extends Graft<GraftBatchState> {
   GraftBatchController() : super(GraftBatchState());
-  late final _s = state;
   void transaction(int val) {
-    _s
+    state
       ..f1 = val
       ..f2 = val
       ..f3 = val
@@ -73,12 +72,34 @@ final riverpodBatchProvider =
 class BlocBatchData {
   final int f1, f2, f3, f4, f5;
   const BlocBatchData(this.f1, this.f2, this.f3, this.f4, this.f5);
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is BlocBatchData &&
+          runtimeType == other.runtimeType &&
+          f1 == other.f1 &&
+          f2 == other.f2 &&
+          f3 == other.f3 &&
+          f4 == other.f4 &&
+          f5 == other.f5;
+
+  @override
+  int get hashCode => Object.hash(f1, f2, f3, f4, f5);
 }
 
 class BlocBatchCubit extends bloc_pkg.Cubit<BlocBatchData> {
-  BlocBatchCubit() : super(const BlocBatchData(0, 0, 0, 0, 0));
+  BlocBatchCubit({this.onNotification}) : super(const BlocBatchData(0, 0, 0, 0, 0));
+  final void Function()? onNotification;
+
   void transaction(int val) {
     emit(BlocBatchData(val, val, val, val, val));
+  }
+
+  @override
+  void onChange(bloc_pkg.Change<BlocBatchData> change) {
+    super.onChange(change);
+    onNotification?.call();
   }
 }
 
@@ -111,14 +132,29 @@ class ScenarioGTransactionalBatchingRunner {
     final results = <BenchmarkStats>[];
     const scenarioName = 'G1_transactional_multi_field_batching';
 
+    // Pre-flight JIT compilation warm-up to absorb interpreter tier-up
+    {
+      int dummy = 0;
+      final preGraft = GraftBatchController()..addListener(() => dummy++);
+      for (int r = 0; r < 3; r++) {
+        for (int i = 0; i < transactions; i++) preGraft.transaction(i);
+      }
+      preGraft.dispose();
+
+      final preBloc = BlocBatchCubit(onNotification: () => dummy++);
+      for (int r = 0; r < 3; r++) {
+        for (int i = 0; i < transactions; i++) preBloc.transaction(i);
+      }
+      preBloc.close();
+    }
+
     // 1. BLoC
     {
       final samples = <double>[];
       int lastFires = 0;
       for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
-        final bloc = BlocBatchCubit();
         int fires = 0;
-        final sub = bloc.stream.listen((_) => fires++);
+        final bloc = BlocBatchCubit(onNotification: () => fires++);
 
         final sw = Stopwatch()..start();
         for (int i = 1; i <= transactions; i++) {
@@ -129,7 +165,6 @@ class ScenarioGTransactionalBatchingRunner {
           samples.add(sw.elapsedMicroseconds / 1000.0);
           lastFires = fires;
         }
-        sub.cancel();
         bloc.close();
       }
       final wasted = lastFires > transactions ? lastFires - transactions : 0;

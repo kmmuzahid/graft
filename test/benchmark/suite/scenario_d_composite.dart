@@ -134,10 +134,9 @@ class Form12GraftState extends GraftState {
 
 class Form12GraftController extends Graft<Form12GraftState> {
   Form12GraftController() : super(Form12GraftState());
-  late final _s = state;
 
   void updateField(int index, double val) {
-    final s = _s;
+    final s = state;
     final old = s.values[index];
     s.values[index] = val;
     final newSum = s.totalSum + (val - old);
@@ -147,9 +146,9 @@ class Form12GraftController extends Graft<Form12GraftState> {
   }
 
   void updateEmail(String email) {
-    _s.email = email;
-    _s.isValid = _s.totalSum <= 5000.0 && _s.email.contains('@') && _s.termsAccepted;
-    _s.update();
+    state.email = email;
+    state.isValid = state.totalSum <= 5000.0 && state.email.contains('@') && state.termsAccepted;
+    state.update();
   }
 }
 
@@ -500,6 +499,7 @@ class ScenarioDCompositeRunner {
         await tester.pumpAndSettle();
       }
       warmCtrl.dispose();
+      await tester.pumpWidget(const SizedBox());
     }
 
     // 1. Graft (context.use + PopupRoute Protection)
@@ -556,6 +556,7 @@ class ScenarioDCompositeRunner {
         samplesMs: samples,
         notes: 'PopupRoute dialog protected, 0 premature disposal',
       ));
+      await tester.pumpWidget(const SizedBox());
     }
 
     // 2. BLoC (BlocProvider value across Navigator)

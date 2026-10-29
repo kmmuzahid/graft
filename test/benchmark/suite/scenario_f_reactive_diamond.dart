@@ -29,8 +29,7 @@ class GraftDiamondState extends GraftState {
 
 class GraftDiamondController extends Graft<GraftDiamondState> {
   GraftDiamondController() : super(GraftDiamondState());
-  late final _s = state;
-  void setA(int val) => _s..a = val..update();
+  void setA(int val) => state..a = val..update();
 }
 
 // 2. Signals (Preact / SolidJS style DAG)
@@ -89,11 +88,28 @@ class BlocDiamondState {
   int get b => a * 2;
   int get c => a * 3;
   int get d => b + c;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is BlocDiamondState &&
+          runtimeType == other.runtimeType &&
+          a == other.a;
+
+  @override
+  int get hashCode => a.hashCode;
 }
 
 class BlocDiamondCubit extends bloc_pkg.Cubit<BlocDiamondState> {
-  BlocDiamondCubit() : super(const BlocDiamondState(0));
+  BlocDiamondCubit({this.onNotification}) : super(const BlocDiamondState(0));
+  final void Function(BlocDiamondState state)? onNotification;
   void setA(int val) => emit(BlocDiamondState(val));
+
+  @override
+  void onChange(bloc_pkg.Change<BlocDiamondState> change) {
+    super.onChange(change);
+    onNotification?.call(change.nextState);
+  }
 }
 
 // 5. GetX (Observer-based graph with workers)
@@ -138,6 +154,22 @@ class ScenarioFReactiveDiamondRunner {
   static List<BenchmarkStats> runAll() {
     final results = <BenchmarkStats>[];
     const scenarioName = 'F1_reactive_diamond_glitch_test';
+
+    // Pre-flight JIT compilation warm-up
+    {
+      int dummy = 0;
+      final preGraft = GraftDiamondController()..addListener(() => dummy++);
+      for (int r = 0; r < 2; r++) {
+        for (int i = 0; i < updates; i++) preGraft.setA(i);
+      }
+      preGraft.dispose();
+
+      final preBloc = BlocDiamondCubit(onNotification: (_) => dummy++);
+      for (int r = 0; r < 2; r++) {
+        for (int i = 0; i < updates; i++) preBloc.setA(i);
+      }
+      preBloc.close();
+    }
 
     // 1. Graft
     {
@@ -253,18 +285,18 @@ class ScenarioFReactiveDiamondRunner {
       final samples = <double>[];
       int lastGlitches = 0;
       for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
-        final bloc = BlocDiamondCubit();
         int blocGlitchCount = 0;
         int blocLastVal = 0;
-
-        final sw = Stopwatch()..start();
-        for (int i = 1; i <= updates; i++) {
-          bloc.setA(i);
-          final st = bloc.state;
+        final bloc = BlocDiamondCubit(onNotification: (st) {
           if (st.b * 3 != st.c * 2) {
             blocGlitchCount++;
           }
           blocLastVal = st.d;
+        });
+
+        final sw = Stopwatch()..start();
+        for (int i = 1; i <= updates; i++) {
+          bloc.setA(i);
         }
         sw.stop();
         if (r >= warmUpRuns) {

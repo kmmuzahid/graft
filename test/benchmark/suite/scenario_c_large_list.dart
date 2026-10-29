@@ -229,7 +229,7 @@ class ProviderListModel extends ChangeNotifier {
 // =============================================================================
 class ScenarioCLargeListRunner {
   static const int rapidUpdates = 300;
-  static const int warmUpRuns = 12;
+  static const int warmUpRuns = 3;
   static const int measuredRuns = 15;
 
   static Future<List<BenchmarkStats>> runAll(WidgetTester tester) async {
@@ -365,6 +365,7 @@ class ScenarioCLargeListRunner {
         allocatedObjects: 0,
         notes: 'Surgical leaf slot inside ListView.builder',
       ));
+      await tester.pumpWidget(const SizedBox());
     }
 
     // 2. Riverpod (Notifier)
@@ -436,6 +437,7 @@ class ScenarioCLargeListRunner {
         allocatedObjects: rapidUpdates,
         notes: 'Provider.select() item subscription',
       ));
+      await tester.pumpWidget(const SizedBox());
     }
 
     // 3. BLoC (BlocSelector)
@@ -501,6 +503,7 @@ class ScenarioCLargeListRunner {
         allocatedObjects: rapidUpdates,
         notes: 'BlocSelector item filtering',
       ));
+      await tester.pumpWidget(const SizedBox());
     }
 
     // 4. Signals
@@ -564,6 +567,7 @@ class ScenarioCLargeListRunner {
         allocatedObjects: 0,
         notes: 'Item-level Signal subscription',
       ));
+      await tester.pumpWidget(const SizedBox());
     }
 
     // 5. GetX
@@ -625,6 +629,7 @@ class ScenarioCLargeListRunner {
         allocatedObjects: 0,
         notes: 'RxList item index reactive update',
       ));
+      await tester.pumpWidget(const SizedBox());
     }
 
     // 6. Provider
@@ -692,6 +697,7 @@ class ScenarioCLargeListRunner {
         allocatedObjects: rapidUpdates,
         notes: 'Selector item diffing',
       ));
+      await tester.pumpWidget(const SizedBox());
     }
 
     return results;

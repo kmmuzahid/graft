@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'graft.dart';
+import 'graft_async.dart';
 import 'graft_change.dart';
 import 'graft_mask.dart';
 import '../persistence/dry/dry_state_hook.dart';
@@ -83,6 +84,7 @@ abstract class GraftState {
       _singleBaseline = _snapshotValue(c);
       _prevListLength = c is List ? c.length : -1;
       _allScalarProps = c is num || c is String || c is bool || c is Enum;
+      _hasAsyncProps = c is GraftAsync;
       // Capture version for O(1) nested GraftState detection.
       _singleNestedVersion = c is GraftState ? c._version : -1;
       if (c is GraftState) {
@@ -158,14 +160,16 @@ abstract class GraftState {
       }
       _nestedVersions = nestedVers;
       bool allScalar = true;
+      bool hasAsync = false;
       for (int i = 0; i < len; i++) {
         final v = current[i];
+        if (v is GraftAsync) hasAsync = true;
         if (v is! num && v is! String && v is! bool && v is! Enum) {
           allScalar = false;
-          break;
         }
       }
       _allScalarProps = allScalar;
+      _hasAsyncProps = hasAsync;
       if (allScalar && len >= 2 && len <= 5) {
         _scalarCount = len;
         _s0 = _b0 = current[0];
@@ -230,6 +234,7 @@ abstract class GraftState {
   /// Whether all properties are scalar primitives (num, String, bool, Enum).
   /// Enables zero-branch pure scalar diff fast-paths.
   bool _allScalarProps = false;
+  bool _hasAsyncProps = false;
   int _scalarCount = 0;
   Object? _s0, _s1, _s2, _s3, _s4;
   Object? _b0, _b1, _b2, _b3, _b4;
@@ -1883,6 +1888,10 @@ abstract class GraftState {
       _singleBaseline = c;
       final g = _graft;
       if (g != null) {
+        if (GraftEngine.hasOnlySingleListener(g)) {
+          GraftEngine.singleListener(g)!();
+          return;
+        }
         _notifyGraft(g, GraftMask.bit0);
       }
       return;
@@ -1892,6 +1901,19 @@ abstract class GraftState {
       props;
       final c0 = _s0, c1 = _s1, c2 = _s2, c3 = _s3, c4 = _s4;
       final p0 = _b0, p1 = _b1, p2 = _b2, p3 = _b3, p4 = _b4;
+      final g = _graft;
+      if (g != null && GraftEngine.hasOnlySingleListener(g)) {
+        if (p0 == c0 && p1 == c1 && p2 == c2 && p3 == c3 && p4 == c4) return;
+        _b0 = c0;
+        _b1 = c1;
+        _b2 = c2;
+        _b3 = c3;
+        _b4 = c4;
+        _version++;
+        if (_isDryEnabled) DryStateHook.onStateUpdated(this);
+        GraftEngine.singleListener(g)!();
+        return;
+      }
       int w = 0;
       if (p0 != c0) {
         _b0 = c0;
@@ -1916,12 +1938,7 @@ abstract class GraftState {
       if (w == 0) return;
       _version++;
       if (_isDryEnabled) DryStateHook.onStateUpdated(this);
-      final g = _graft;
       if (g != null) {
-        if (GraftEngine.hasOnlySingleListener(g)) {
-          GraftEngine.singleListener(g)!();
-          return;
-        }
         final mask =
             w == 31 ? GraftMask.allBitsUpTo(5) : GraftMask.fromWords(w, 0);
         _notifyGraft(g, mask);
@@ -1932,6 +1949,25 @@ abstract class GraftState {
       props;
       final c0 = _s0, c1 = _s1;
       final p0 = _b0, p1 = _b1;
+      final g = _graft;
+      if (g != null && GraftEngine.hasOnlySingleListener(g)) {
+        bool changed = p0 != c0 || p1 != c1;
+        if (sc > 2 && !changed) {
+          changed = _b2 != _s2;
+          if (sc > 3 && !changed) {
+            changed = _b3 != _s3;
+          }
+        }
+        if (!changed) return;
+        _b0 = c0;
+        _b1 = c1;
+        if (sc > 2) _b2 = _s2;
+        if (sc > 3) _b3 = _s3;
+        _version++;
+        if (_isDryEnabled) DryStateHook.onStateUpdated(this);
+        GraftEngine.singleListener(g)!();
+        return;
+      }
       int w = 0;
       if (p0 != c0) {
         _b0 = c0;
@@ -1958,7 +1994,6 @@ abstract class GraftState {
       if (w == 0) return;
       _version++;
       if (_isDryEnabled) DryStateHook.onStateUpdated(this);
-      final g = _graft;
       if (g != null) {
         if (GraftEngine.hasOnlySingleListener(g)) {
           GraftEngine.singleListener(g)!();
@@ -2226,6 +2261,9 @@ abstract final class GraftStateEngine {
 
   /// Executes property diffing pass on [state] and returns the dirty bitmask.
   static GraftMask diff(GraftState state) => state._diffChanges();
+
+  /// Whether [state] contains any [GraftAsync] properties.
+  static bool hasAsyncProps(GraftState state) => state._hasAsyncProps;
 }
 
 class _Sentinel {

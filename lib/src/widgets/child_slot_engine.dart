@@ -1313,7 +1313,8 @@ class _GraftSingleSlotElement<S extends GraftState> extends ComponentElement
 
     if (widget.caller != 'graft.async' &&
         !dirtyMask.isAllDirty &&
-        dirtyMask.isNotEmpty) {
+        dirtyMask.isNotEmpty &&
+        GraftStateEngine.hasAsyncProps(_graft.state)) {
       final props = _graft.state.props;
       bool allAsync = true;
       for (int i = 0; i < props.length; i++) {

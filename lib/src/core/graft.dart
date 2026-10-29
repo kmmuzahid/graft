@@ -68,7 +68,7 @@ class Graft<S extends GraftState> extends ChangeNotifier {
     setup?.call();
   }
 
-  late S _state;
+  final S _state;
   void Function(GraftMask dirtyMask)? _singleMaskListener;
   List<void Function(GraftMask dirtyMask)>? _extraMaskListeners;
   bool _isDisposed = false;
@@ -131,8 +131,7 @@ class Graft<S extends GraftState> extends ChangeNotifier {
   ///
   /// Automatically binds [initialState] to this controller, restores Frame-0
   /// dry state if enabled, invokes [onInit], and notifies [observer].
-  Graft(S initialState) {
-    _state = initialState;
+  Graft(S initialState) : _state = initialState {
     GraftStateEngine.bind(initialState, this);
     onInit();
     observer?.onCreate(this);
@@ -152,12 +151,21 @@ class Graft<S extends GraftState> extends ChangeNotifier {
   Graft.dry(
     Function stateFactory, {
     String? key,
-  }) {
+  }) : this._fromDryRecord(_initDryState<S>(stateFactory, key), key);
+
+  static (S, String, bool) _initDryState<S extends GraftState>(
+      Function stateFactory, String? key) {
     final dryKey = key ?? (Function.apply(stateFactory, const []) as S).dryKey;
     final (state, fromCache) =
         DryStateHook.hydrateFactoryWithStatus<S>(stateFactory, dryKey);
-    _state = state;
-    GraftStateEngine.setCustomDryKey(_state, key);
+    return (state, dryKey, fromCache);
+  }
+
+  Graft._fromDryRecord((S, String, bool) record, String? customKey)
+      : _state = record.$1 {
+    final dryKey = record.$2;
+    final fromCache = record.$3;
+    GraftStateEngine.setCustomDryKey(_state, customKey);
     GraftStateEngine.bind(_state, this);
     DryStateHook.enableDryForState(_state, dryKey);
     observer?.onDryHydrated(_state, key: dryKey, fromCache: fromCache);

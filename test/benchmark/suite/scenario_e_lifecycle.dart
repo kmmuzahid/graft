@@ -140,6 +140,7 @@ class ScenarioELifecycleRunner {
         samplesMs: samples,
         notes: '0 leaks: borrowed by dialog & sub-route, auto-disposed on root pop',
       ));
+      await tester.pumpWidget(const SizedBox.shrink());
     }
 
     return results;

@@ -20,8 +20,7 @@ class GraftBState extends GraftState {
 
 class GraftBController extends Graft<GraftBState> {
   GraftBController() : super(GraftBState());
-  late final _s = state;
-  void increment() => _s..count += 1..update();
+  void increment() => state..count += 1..update();
 }
 
 class BlocBCubit extends bloc_pkg.Cubit<int> {
@@ -68,7 +67,7 @@ class ProviderBModel extends ChangeNotifier {
 // =============================================================================
 class ScenarioBRebuildIsolationRunner {
   static const int totalFrames = 120;
-  static const int warmUpRuns = 25;
+  static const int warmUpRuns = 5;
   static const int measuredRuns = 15;
 
   static Future<List<BenchmarkStats>> runAll(WidgetTester tester) async {
@@ -206,6 +205,7 @@ class ScenarioBRebuildIsolationRunner {
         allocatedObjects: 0,
         notes: 'Depth-N parent rebuild insulation',
       ));
+      await tester.pumpWidget(const SizedBox());
     }
 
     // -------------------------------------------------------------------------
@@ -266,6 +266,7 @@ class ScenarioBRebuildIsolationRunner {
         allocatedObjects: 0,
         notes: '0 static rebuilds via hardware bitmask diff',
       ));
+      await tester.pumpWidget(const SizedBox());
     }
 
     // -------------------------------------------------------------------------
@@ -333,6 +334,7 @@ class ScenarioBRebuildIsolationRunner {
         allocatedObjects: 0,
         notes: 'Consumer scoped rebuild',
       ));
+      await tester.pumpWidget(const SizedBox());
     }
 
     // -------------------------------------------------------------------------
@@ -400,6 +402,7 @@ class ScenarioBRebuildIsolationRunner {
         allocatedObjects: 0,
         notes: 'Consumer scoped rebuild',
       ));
+      await tester.pumpWidget(const SizedBox());
     }
 
     // -------------------------------------------------------------------------
@@ -465,6 +468,7 @@ class ScenarioBRebuildIsolationRunner {
         allocatedObjects: 0,
         notes: 'BlocSelector fine-grained boundary',
       ));
+      await tester.pumpWidget(const SizedBox());
     }
 
     // -------------------------------------------------------------------------
@@ -528,6 +532,7 @@ class ScenarioBRebuildIsolationRunner {
         allocatedObjects: 0,
         notes: 'Watch reactive element rebuild',
       ));
+      await tester.pumpWidget(const SizedBox());
     }
 
     // -------------------------------------------------------------------------
@@ -588,6 +593,7 @@ class ScenarioBRebuildIsolationRunner {
         allocatedObjects: 0,
         notes: 'Obx reactive widget rebuild',
       ));
+      await tester.pumpWidget(const SizedBox());
     }
 
     // -------------------------------------------------------------------------
@@ -655,6 +661,7 @@ class ScenarioBRebuildIsolationRunner {
         allocatedObjects: 0,
         notes: 'Selector fine-grained filter',
       ));
+      await tester.pumpWidget(const SizedBox());
     }
 
     tester.view.resetPhysicalSize();
