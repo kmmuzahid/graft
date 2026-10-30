@@ -235,6 +235,7 @@ class Graft<S extends GraftState> extends ChangeNotifier {
   bool _hasOnlySingle = false;
   bool _hasOnlySingleListener = false;
   bool _hasOnlyFastDirectReceiver = false;
+  bool _hasAnyListeners = false;
 
   void _recomputeSingleListenerFlag() {
     _hasOnlySingle = _singleListener != null &&
@@ -246,6 +247,11 @@ class Graft<S extends GraftState> extends ChangeNotifier {
         (_extraMaskListeners == null || _extraMaskListeners!.isEmpty) &&
         _singleListener == null &&
         observer == null;
+    _hasAnyListeners = _singleListener != null ||
+        _singleMaskListener != null ||
+        _fastDirectReceiver != null ||
+        (_extraListeners != null && _extraListeners!.isNotEmpty) ||
+        (_extraMaskListeners != null && _extraMaskListeners!.isNotEmpty);
   }
 
   @override
@@ -262,13 +268,6 @@ class Graft<S extends GraftState> extends ChangeNotifier {
   bool get hasListeners =>
       _singleListener != null ||
       (_extraListeners != null && _extraListeners!.isNotEmpty) ||
-      super.hasListeners;
-
-  bool get _hasAnyListeners =>
-      _singleListener != null ||
-      _singleMaskListener != null ||
-      (_extraListeners != null && _extraListeners!.isNotEmpty) ||
-      (_extraMaskListeners != null && _extraMaskListeners!.isNotEmpty) ||
       super.hasListeners;
 
   /// Whether this [Graft] has been disposed.

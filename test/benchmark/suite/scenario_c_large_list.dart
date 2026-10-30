@@ -300,6 +300,36 @@ class ScenarioCLargeListRunner {
         stateSetter?.call(() => dummy++);
         await tester.pump();
       }
+
+      final warmGraft = GraftListController(itemCount);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ListView.builder(
+              controller: warmCtrl,
+              itemCount: itemCount,
+              itemExtent: 50.0,
+              itemBuilder: (context, index) {
+                return warmGraft.select(
+                  (s) => s.items[index],
+                  index: index,
+                  builder: (item) => SizedBox(
+                    height: 50.0,
+                    child: Text('${item.title}: ${item.value}'),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+      warmCtrl.jumpTo(targetIndex * 50.0);
+      await tester.pump();
+      for (int f = 0; f < 20; f++) {
+        warmGraft.updateItemAt(targetIndex, f);
+        await tester.pump();
+      }
+      warmGraft.dispose();
       await tester.pumpWidget(const SizedBox.shrink());
     }
     // 1. Graft

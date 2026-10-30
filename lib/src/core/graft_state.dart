@@ -1832,6 +1832,9 @@ abstract class GraftState {
 
   @pragma('vm:prefer-inline')
   void _notifyGraft(Graft g, GraftMask mask) {
+    if (!GraftEngine.hasAnyListeners(g) && Graft.observer == null) {
+      return;
+    }
     if (GraftEngine.hasOnlyFastDirectReceiver(g)) {
       final fast = GraftEngine.getFastDirectReceiver(g)!;
       if (fast.mounted) {
@@ -1888,6 +1891,7 @@ abstract class GraftState {
       _singleBaseline = c;
       final g = _graft;
       if (g != null) {
+        if (!GraftEngine.hasAnyListeners(g)) return;
         if (GraftEngine.hasOnlySingleListener(g)) {
           GraftEngine.singleListener(g)!();
           return;
@@ -1902,7 +1906,7 @@ abstract class GraftState {
       final c0 = _s0, c1 = _s1, c2 = _s2, c3 = _s3, c4 = _s4;
       final p0 = _b0, p1 = _b1, p2 = _b2, p3 = _b3, p4 = _b4;
       final g = _graft;
-      if (g != null && GraftEngine.hasOnlySingleListener(g)) {
+      if (g != null && (GraftEngine.hasOnlySingleListener(g) || !GraftEngine.hasAnyListeners(g))) {
         if (p0 == c0 && p1 == c1 && p2 == c2 && p3 == c3 && p4 == c4) return;
         _b0 = c0;
         _b1 = c1;
@@ -1911,7 +1915,9 @@ abstract class GraftState {
         _b4 = c4;
         _version++;
         if (_isDryEnabled) DryStateHook.onStateUpdated(this);
-        GraftEngine.singleListener(g)!();
+        if (GraftEngine.hasOnlySingleListener(g)) {
+          GraftEngine.singleListener(g)!();
+        }
         return;
       }
       int w = 0;
@@ -1939,6 +1945,7 @@ abstract class GraftState {
       _version++;
       if (_isDryEnabled) DryStateHook.onStateUpdated(this);
       if (g != null) {
+        if (!GraftEngine.hasAnyListeners(g)) return;
         final mask =
             w == 31 ? GraftMask.allBitsUpTo(5) : GraftMask.fromWords(w, 0);
         _notifyGraft(g, mask);
@@ -1950,7 +1957,7 @@ abstract class GraftState {
       final c0 = _s0, c1 = _s1;
       final p0 = _b0, p1 = _b1;
       final g = _graft;
-      if (g != null && GraftEngine.hasOnlySingleListener(g)) {
+      if (g != null && (GraftEngine.hasOnlySingleListener(g) || !GraftEngine.hasAnyListeners(g))) {
         bool changed = p0 != c0 || p1 != c1;
         if (sc > 2 && !changed) {
           changed = _b2 != _s2;
@@ -1965,7 +1972,9 @@ abstract class GraftState {
         if (sc > 3) _b3 = _s3;
         _version++;
         if (_isDryEnabled) DryStateHook.onStateUpdated(this);
-        GraftEngine.singleListener(g)!();
+        if (GraftEngine.hasOnlySingleListener(g)) {
+          GraftEngine.singleListener(g)!();
+        }
         return;
       }
       int w = 0;
@@ -1995,6 +2004,7 @@ abstract class GraftState {
       _version++;
       if (_isDryEnabled) DryStateHook.onStateUpdated(this);
       if (g != null) {
+        if (!GraftEngine.hasAnyListeners(g)) return;
         if (GraftEngine.hasOnlySingleListener(g)) {
           GraftEngine.singleListener(g)!();
           return;

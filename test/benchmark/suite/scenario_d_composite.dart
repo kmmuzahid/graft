@@ -336,7 +336,7 @@ class ScenarioDCompositeRunner {
     // Pre-flight JIT warmup of form field recalculations
     {
       final warmCtrl = Form12GraftController();
-      for (int i = 0; i < typingEvents; i++) {
+      for (int i = 0; i < 5000; i++) {
         warmCtrl.updateField(i % 10, (i * 10.0) % 200.0);
       }
       warmCtrl.dispose();

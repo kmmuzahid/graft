@@ -79,10 +79,9 @@ class Graft5FieldState extends GraftState {
 
 class Graft5FieldController extends Graft<Graft5FieldState> {
   Graft5FieldController() : super(Graft5FieldState());
-  late final _s = state;
 
   void updateAll(int v) {
-    _s
+    state
       ..f1 = v
       ..f2 = v
       ..f3 = v
@@ -238,8 +237,15 @@ class GraftNode1 extends GraftState {
 }
 
 class GraftNestedDepth8Controller extends Graft<GraftNode1> {
-  GraftNestedDepth8Controller() : super(GraftNode1());
-  late final leaf = state.child.child.child.child.child.child.child;
+  final GraftNode8 leaf;
+  GraftNestedDepth8Controller._(super.root, this.leaf);
+  factory GraftNestedDepth8Controller() {
+    final root = GraftNode1();
+    return GraftNestedDepth8Controller._(
+      root,
+      root.child.child.child.child.child.child.child,
+    );
+  }
 
   void updateLeaf(int v) {
     leaf.value = v;
@@ -848,12 +854,10 @@ class ScenarioAMicroMutationRunner {
     {
       int dummy = 0;
       final dummyCtrl = ChangeNotifier()..addListener(() => dummy++);
-      for (int i = 0; i < iterations; i++) dummyCtrl.notifyListeners();
+      for (int i = 0; i < 5000; i++) dummyCtrl.notifyListeners();
       dummyCtrl.dispose();
       final preGraft = GraftNestedDepth8Controller()..addListener(() => dummy++);
-      for (int r = 0; r < 2; r++) {
-        for (int i = 0; i < iterations; i++) preGraft.updateLeaf(i);
-      }
+      for (int i = 0; i < 20000; i++) preGraft.updateLeaf(i);
       preGraft.dispose();
     }
 
