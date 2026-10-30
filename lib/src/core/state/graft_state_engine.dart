@@ -39,4 +39,9 @@ abstract final class GraftStateEngine {
 
   /// Returns the number of scalar properties cached on [state].
   static int scalarCount(GraftState state) => state._scalarCount;
+
+  /// Sets the cached fast direct receiver for [state].
+  @pragma('vm:prefer-inline')
+  static void setFastReceiver(GraftState state, GraftFastReceiver? receiver) =>
+      state._fastReceiver = receiver;
 }

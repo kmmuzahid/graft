@@ -67,7 +67,7 @@ class ProviderBModel extends ChangeNotifier {
 // =============================================================================
 class ScenarioBRebuildIsolationRunner {
   static const int totalFrames = 120;
-  static const int warmUpRuns = 15;
+  static const int warmUpRuns = 25;
   static const int measuredRuns = 15;
 
   static Future<List<BenchmarkStats>> runAll(WidgetTester tester) async {
@@ -121,7 +121,7 @@ class ScenarioBRebuildIsolationRunner {
         ),
       );
       await tester.pump();
-      for (int f = 0; f < 3000; f++) {
+      for (int f = 0; f < 1500; f++) {
         stateSetter?.call(() => dummy++);
         await tester.pump();
       }
@@ -141,7 +141,27 @@ class ScenarioBRebuildIsolationRunner {
         ),
       );
       await tester.pump();
-      for (int f = 0; f < 1000; f++) {
+      for (int f = 0; f < 1500; f++) {
+        warmCtrl.increment();
+        await tester.pump();
+      }
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: warmCtrl.slots(
+              layout: Column(children: slots),
+              slots: (s) => [
+                TrackingWidget(label: 'W: ${s.count}', onBuild: () {}),
+                for (int i = 0; i < staticCount; i++)
+                  TrackingWidget(label: 'Static $i', onBuild: () {}),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      for (int f = 0; f < 1500; f++) {
         warmCtrl.increment();
         await tester.pump();
       }

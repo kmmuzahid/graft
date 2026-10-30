@@ -82,8 +82,23 @@ abstract final class GraftEngine {
   static GraftFastReceiver? getFastDirectReceiver(Graft graft) =>
       graft._fastDirectReceiver;
 
+  @pragma('vm:prefer-inline')
+  static bool canActivateFastReceiver(Graft graft) =>
+      graft._singleListener == null &&
+      (graft._extraListeners == null || graft._extraListeners!.isEmpty) &&
+      (graft._extraMaskListeners == null || graft._extraMaskListeners!.isEmpty) &&
+      graft._fastDirectReceiver == null &&
+      Graft.observer == null;
+
   static void setFastDirectReceiver(Graft graft, GraftFastReceiver? r) {
+    if (r != null && !canActivateFastReceiver(graft)) {
+      graft._fastDirectReceiver = null;
+      GraftStateEngine.setFastReceiver(graft._state, null);
+      graft._recomputeSingleListenerFlag();
+      return;
+    }
     graft._fastDirectReceiver = r;
+    GraftStateEngine.setFastReceiver(graft._state, r);
     graft._recomputeSingleListenerFlag();
   }
 

@@ -10,13 +10,13 @@ bool _tryFastSingleScalar(GraftState state) {
   state._singleBaseline = c;
   state._version++;
   if (state._isDryEnabled) DryStateHook.onStateUpdated(state);
+  final fast = state._fastReceiver;
+  if (fast != null) {
+    fast.markFastDirty();
+    return true;
+  }
   final g = state._graft;
   if (g != null) {
-    final fast = GraftEngine.getFastDirectReceiver(g);
-    if (fast != null && GraftEngine.hasOnlyFastDirectReceiver(g)) {
-      fast.markFastDirty();
-      return true;
-    }
     if (GraftEngine.hasOnlySingleListener(g)) {
       GraftEngine.singleListener(g)!();
       return true;

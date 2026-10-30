@@ -41,16 +41,8 @@ class _GraftSingleSlotElement<S extends GraftState> extends ComponentElement
   @override
   @pragma('vm:prefer-inline')
   void markFastDirty([GraftMask? mask]) {
-    if (_isSingleScalar) {
-      markNeedsBuild();
-      return;
-    }
-    final m = mask;
-    if (m != null && _ignoredMask.isNotEmpty && m.isSubsetOf(_ignoredMask)) {
-      return;
-    }
-    _pendingMask = m;
     _isDirty = true;
+    _pendingMask = mask;
     markNeedsBuild();
   }
 
@@ -74,7 +66,7 @@ class _GraftSingleSlotElement<S extends GraftState> extends ComponentElement
       return true;
     }());
     _graft.addMaskListener(_onMaskDirty);
-    if (!_fastPathActive && GraftEngine.getFastDirectReceiver(_graft) == null) {
+    if (!_fastPathActive && GraftEngine.canActivateFastReceiver(_graft)) {
       GraftEngine.setFastDirectReceiver(_graft, this);
       GraftEngine.setFastDirectMask(_graft, GraftMask.allDirty);
       _fastPathActive = true;
@@ -104,7 +96,7 @@ class _GraftSingleSlotElement<S extends GraftState> extends ComponentElement
         () => _builder(_graft.state),
       );
       _graft.addMaskListener(_onMaskDirty);
-      if (GraftEngine.getFastDirectReceiver(_graft) == null) {
+      if (GraftEngine.canActivateFastReceiver(_graft)) {
         GraftEngine.setFastDirectReceiver(_graft, this);
         GraftEngine.setFastDirectMask(_graft, GraftMask.allDirty);
         _fastPathActive = true;
@@ -145,7 +137,9 @@ class _GraftSingleSlotElement<S extends GraftState> extends ComponentElement
   Widget build() {
     if (_isSingleScalar) {
       final w = _builder(_state);
-      Graft.observer?.onSlotRebuild(_graft, 0, w);
+      if (Graft.observer != null) {
+        Graft.observer!.onSlotRebuild(_graft, 0, w);
+      }
       return w;
     }
     return _singleSlotBuild(this);

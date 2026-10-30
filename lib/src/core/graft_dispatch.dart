@@ -45,6 +45,7 @@ void _graftNotifyMask(Graft graft, GraftMask dirtyMask, {GraftChange<dynamic>? c
       return;
     }
     graft._fastDirectReceiver = null;
+    GraftStateEngine.setFastReceiver(graft._state, null);
     graft._fastDirectMask = GraftMask.empty;
   }
 

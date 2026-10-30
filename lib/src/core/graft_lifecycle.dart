@@ -2,6 +2,9 @@ part of 'graft.dart';
 
 void _graftAddListener(Graft graft, VoidCallback listener) {
   if (!graft._isDisposed) {
+    graft._fastDirectReceiver = null;
+    GraftStateEngine.setFastReceiver(graft._state, null);
+    graft._fastDirectMask = GraftMask.empty;
     if (graft._singleListener == null) {
       graft._singleListener = listener;
       graft._recomputeSingleListenerFlag();
@@ -37,6 +40,7 @@ void _graftAddMaskListener(Graft graft, void Function(GraftMask dirtyMask) liste
     }
     (graft._extraMaskListeners ??= []).add(listener);
     graft._fastDirectReceiver = null;
+    GraftStateEngine.setFastReceiver(graft._state, null);
     graft._fastDirectMask = GraftMask.empty;
     graft._recomputeSingleListenerFlag();
   }
@@ -44,6 +48,9 @@ void _graftAddMaskListener(Graft graft, void Function(GraftMask dirtyMask) liste
 
 void _graftRemoveMaskListener(Graft graft, void Function(GraftMask dirtyMask) listener) {
   if (!graft._isDisposed) {
+    graft._fastDirectReceiver = null;
+    GraftStateEngine.setFastReceiver(graft._state, null);
+    graft._fastDirectMask = GraftMask.empty;
     if (identical(graft._singleMaskListener, listener)) {
       graft._singleMaskListener = null;
       if (graft._extraMaskListeners != null && graft._extraMaskListeners!.isNotEmpty) {
@@ -138,6 +145,7 @@ void _graftDispose(Graft graft) {
   graft._singleMaskListener = null;
   graft._extraMaskListeners?.clear();
   graft._fastDirectReceiver = null;
+  GraftStateEngine.setFastReceiver(graft._state, null);
   graft._fastDirectMask = GraftMask.empty;
   graft._receiverDirectory = null;
   Graft.observer?.onDispose(graft);

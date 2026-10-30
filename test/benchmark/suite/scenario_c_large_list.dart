@@ -229,7 +229,7 @@ class ProviderListModel extends ChangeNotifier {
 // =============================================================================
 class ScenarioCLargeListRunner {
   static const int rapidUpdates = 300;
-  static const int warmUpRuns = 8;
+  static const int warmUpRuns = 15;
   static const int measuredRuns = 15;
 
   static Future<List<BenchmarkStats>> runAll(WidgetTester tester) async {
@@ -296,7 +296,7 @@ class ScenarioCLargeListRunner {
       );
       warmCtrl.jumpTo(targetIndex * 50.0);
       await tester.pump();
-      for (int f = 0; f < 50; f++) {
+      for (int f = 0; f < 300; f++) {
         stateSetter?.call(() => dummy++);
         await tester.pump();
       }

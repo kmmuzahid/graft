@@ -26,4 +26,5 @@ abstract class GraftStateStorage {
   _GraftPropsBuffer? _propsView;
   _GraftPropsSingle? _singleView;
   Object? _pendingSingle = _undefined;
+  GraftFastReceiver? _fastReceiver;
 }

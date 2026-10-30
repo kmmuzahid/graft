@@ -13,8 +13,17 @@ void _onMultiChildStateDirty<S extends GraftState>(
         dirtyMask.isSubsetOf(state._commonIgnoredMask)) {
       return;
     }
-    if (state._slotTable.every((s) =>
-        s.ignoredMask.isNotEmpty && dirtyMask.isSubsetOf(s.ignoredMask))) {
+    final table = state._slotTable;
+    final tLen = table.length;
+    bool allIgnored = true;
+    for (int i = 0; i < tLen; i++) {
+      final im = table[i].ignoredMask;
+      if (im.isEmpty || !dirtyMask.isSubsetOf(im)) {
+        allIgnored = false;
+        break;
+      }
+    }
+    if (allIgnored) {
       state._commonIgnoredMask = state._commonIgnoredMask.union(dirtyMask);
       return;
     }
@@ -53,10 +62,10 @@ void _onMultiChildStateDirty<S extends GraftState>(
       state._commonIgnoredMask = GraftMask.empty;
       if (Graft.observer != null) {
         slot.contentFingerprint = SlotMetadata.computeFingerprint(newWidget);
+        Graft.observer!.onSlotRebuild(state.widget.graft, slot.slotIndex, newWidget);
       }
       slot.rebuildCount++;
       slot.updateWidget(newWidget);
-      Graft.observer?.onSlotRebuild(state.widget.graft, slot.slotIndex, newWidget);
 
       if (dirtyMask.isNotEmpty && !dirtyMask.isAllDirty) {
         final singleField = dirtyMask.singleBitIndex;

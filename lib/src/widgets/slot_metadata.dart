@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import '../core/graft.dart';
 import '../core/graft_mask.dart';
 
 part 'slot_fingerprint.dart';
@@ -86,7 +87,12 @@ class SlotMetadata {
     if (notifier.hasExternalListeners) {
       notifier.value = newWidget;
     }
-    element?.markNeedsBuild();
+    final el = element;
+    if (el is GraftFastReceiver) {
+      (el as GraftFastReceiver).markFastDirty();
+    } else {
+      el?.markNeedsBuild();
+    }
   }
 
   /// Fast evaluation of whether this slot needs to rebuild given [dirtyMask].

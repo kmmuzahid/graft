@@ -25,10 +25,8 @@ class _ChildSlotElement extends ComponentElement implements GraftFastReceiver {
   @pragma('vm:prefer-inline')
   void updateSlotWidget(Widget newWidget) {
     _slot.currentWidget = newWidget;
-    _slot.notifier.value = newWidget;
-    final dynamic g = _slot.graft;
-    if (g is Graft) {
-      Graft.observer?.onSlotRebuild(g, _slot.slotIndex, newWidget);
+    if (_slot.notifier.hasExternalListeners) {
+      _slot.notifier.value = newWidget;
     }
     markNeedsBuild();
   }
@@ -94,10 +92,6 @@ class _ChildSlotElement extends ComponentElement implements GraftFastReceiver {
               ? _slot.evaluator!((_slot.graft as Graft).state)
               : _slot.currentWidget);
       _slot.currentWidget = w;
-      final g = _slot.graft;
-      if (g is Graft) {
-        Graft.observer?.onSlotRebuild(g, _slot.slotIndex, w);
-      }
       return w;
     }
     return _slot.currentWidget;

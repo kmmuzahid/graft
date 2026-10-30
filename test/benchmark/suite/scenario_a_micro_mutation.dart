@@ -379,7 +379,7 @@ class ProviderDepth8Model extends ChangeNotifier {
 // SCENARIO A RUNNER
 // =============================================================================
 class ScenarioAMicroMutationRunner {
-  static const int warmUpRuns = 10;
+  static const int warmUpRuns = 20;
   static const int measuredRuns = 15;
 
   static List<BenchmarkStats> runAll() {
@@ -850,14 +850,14 @@ class ScenarioAMicroMutationRunner {
   }) {
     final results = <BenchmarkStats>[];
 
-    // Pre-flight unmeasured loop to absorb any cross-scenario GC pauses and JIT compilation
+    // Pre-flight JIT warm-up
     {
       int dummy = 0;
       final dummyCtrl = ChangeNotifier()..addListener(() => dummy++);
-      for (int i = 0; i < 5000; i++) dummyCtrl.notifyListeners();
+      for (int i = 0; i < 500; i++) dummyCtrl.notifyListeners();
       dummyCtrl.dispose();
       final preGraft = GraftNestedDepth8Controller()..addListener(() => dummy++);
-      for (int i = 0; i < 20000; i++) preGraft.updateLeaf(i);
+      for (int i = 0; i < 15000; i++) preGraft.updateLeaf(i);
       preGraft.dispose();
     }
 
