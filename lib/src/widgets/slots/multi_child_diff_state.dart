@@ -5,6 +5,7 @@ class _GraftMultiChildDiffEngineState<S extends GraftState>
   late List<SlotMetadata> _slotTable;
   late List<Widget> _wrappedChildren;
   bool _contractVerified = false;
+  GraftMask _commonIgnoredMask = GraftMask.empty;
 
   void _setStateTrigger() => setState(() {});
 
@@ -66,6 +67,7 @@ class _GraftMultiChildDiffEngineState<S extends GraftState>
   @override
   void reassemble() {
     super.reassemble();
+    _commonIgnoredMask = GraftMask.empty;
     for (final slot in _slotTable) {
       slot.ignoredMask = GraftMask.empty;
     }

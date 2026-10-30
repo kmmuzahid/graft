@@ -3,6 +3,27 @@ part of '../graft_state.dart';
 @pragma('vm:prefer-inline')
 bool _diffListAndUpdate(List p, List c) {
   final len = p.length;
+  if (len > 0 && (p[0] is GraftState || c[0] is GraftState)) {
+    bool dirty = false;
+    for (int i = 0; i < len; i++) {
+      final pi = p[i];
+      final ci = c[i];
+      if (!identical(pi, ci)) {
+        p[i] = ci;
+        dirty = true;
+        if (ci is GraftState) {
+          if (ci._baseline == null &&
+              identical(ci._singleBaseline, _undefined)) {
+            ci._initBaseline();
+          }
+          ci._diffChanges();
+        }
+      } else if (ci is GraftState && ci._diffChanges().isNotEmpty) {
+        dirty = true;
+      }
+    }
+    return dirty;
+  }
   int i = 0;
   while (i + 15 < len) {
     if ((identical(p[i], c[i]) || p[i] == c[i]) &&

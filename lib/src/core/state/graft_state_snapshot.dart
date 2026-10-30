@@ -18,6 +18,18 @@ Object? _snapshotValue(Object? value) {
     return value;
   }
   if (value is List) {
+    if (value.isNotEmpty && value[0] is GraftState) {
+      for (int i = 0; i < value.length; i++) {
+        final item = value[i];
+        if (item is GraftState) {
+          if (item._baseline == null &&
+              identical(item._singleBaseline, _undefined)) {
+            item._initBaseline();
+          }
+          item._diffChanges();
+        }
+      }
+    }
     return List<Object?>.of(value, growable: false);
   }
   if (value is Set) {
