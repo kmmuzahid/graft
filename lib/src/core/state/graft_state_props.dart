@@ -1,6 +1,7 @@
 part of '../graft_state.dart';
 
 mixin GraftStateProps on GraftStateStorage {
+  @pragma('vm:prefer-inline')
   GraftProps propsOf([
     Object? p0 = _undefined,
     Object? p1 = _undefined,
@@ -20,7 +21,16 @@ mixin GraftStateProps on GraftStateStorage {
     Object? p15 = _undefined,
   ]) {
     if (identical(p1, _undefined)) {
-      if (p0 is num || p0 is String || p0 is bool || p0 is Enum) {
+      if (p0 is num) {
+        _pendingSingle = p0;
+        final view = _singleView;
+        if (view != null) {
+          view.value = p0;
+          return view;
+        }
+        return _singleView = _GraftPropsSingle(p0);
+      }
+      if (p0 is String || p0 is bool || p0 is Enum) {
         _pendingSingle = p0;
         final view = _singleView;
         if (view != null) {

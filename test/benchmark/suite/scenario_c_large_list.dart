@@ -229,7 +229,7 @@ class ProviderListModel extends ChangeNotifier {
 // =============================================================================
 class ScenarioCLargeListRunner {
   static const int rapidUpdates = 300;
-  static const int warmUpRuns = 3;
+  static const int warmUpRuns = 8;
   static const int measuredRuns = 15;
 
   static Future<List<BenchmarkStats>> runAll(WidgetTester tester) async {
@@ -313,9 +313,10 @@ class ScenarioCLargeListRunner {
                 return warmGraft.select(
                   (s) => s.items[index],
                   index: index,
-                  builder: (item) => SizedBox(
-                    height: 50.0,
-                    child: Text('${item.title}: ${item.value}'),
+                  builder: (item) => TrackedListTile(
+                    key: ValueKey(item.id),
+                    item: item,
+                    onBuild: () {},
                   ),
                 );
               },
@@ -325,7 +326,7 @@ class ScenarioCLargeListRunner {
       );
       warmCtrl.jumpTo(targetIndex * 50.0);
       await tester.pump();
-      for (int f = 0; f < 20; f++) {
+      for (int f = 0; f < rapidUpdates; f++) {
         warmGraft.updateItemAt(targetIndex, f);
         await tester.pump();
       }

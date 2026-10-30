@@ -25,6 +25,10 @@ void main() {
 ''');
   });
 
+  tearDown(() async {
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+  });
+
 
   // ---------------------------------------------------------------------------
   // SCENARIO A: MICRO MUTATION SPEED

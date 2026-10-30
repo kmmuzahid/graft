@@ -40,7 +40,7 @@ class _ChildSlotElement extends ComponentElement implements GraftFastReceiver {
   }
 
   @override
-  void markFastDirty() => markSlotDirty();
+  void markFastDirty([GraftMask? mask]) => markSlotDirty();
 
   @override
   void mount(Element? parent, Object? newSlot) {

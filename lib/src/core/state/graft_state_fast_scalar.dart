@@ -12,24 +12,24 @@ bool _tryFastSingleScalar(GraftState state) {
   state.props;
   final c = state._pendingSingle;
   if (p == c) return true;
+  state._singleBaseline = c;
   state._version++;
   if (state._isDryEnabled) DryStateHook.onStateUpdated(state);
-  state._singleBaseline = c;
   final g = state._graft;
   if (g != null) {
-    if (!GraftEngine.hasAnyListeners(g)) return true;
-    if (GraftEngine.hasOnlySingleListener(g)) {
-      GraftEngine.singleListener(g)!();
-      return true;
-    }
     if (GraftEngine.hasOnlyFastDirectReceiver(g)) {
       final fast = GraftEngine.getFastDirectReceiver(g)!;
       if (fast.mounted) {
-        fast.markFastDirty();
+        fast.markFastDirty(GraftMask.bit0);
         return true;
       }
       GraftEngine.setFastDirectReceiver(g, null);
     }
+    if (GraftEngine.hasOnlySingleListener(g)) {
+      GraftEngine.singleListener(g)!();
+      return true;
+    }
+    if (!GraftEngine.hasAnyListeners(g)) return true;
     _stateNotifyGraft(state, g, GraftMask.bit0);
   }
   return true;

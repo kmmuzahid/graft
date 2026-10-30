@@ -34,9 +34,7 @@ class Graft<S extends GraftState> extends ChangeNotifier {
 
   GraftFastReceiver? _fastDirectReceiver;
   GraftMask _fastDirectMask = GraftMask.empty;
-  int _denseWindowStart = 0;
-  final List<GraftItemReceiver?> _denseReceivers = List.filled(64, null);
-  Map<int, GraftItemReceiver>? _sparseReceivers;
+  List<List<GraftItemReceiver?>?>? _receiverDirectory;
 
   VoidCallback? _singleListener;
   List<VoidCallback>? _extraListeners;

@@ -158,14 +158,22 @@ class ScenarioFReactiveDiamondRunner {
     // Pre-flight JIT compilation warm-up
     {
       int dummy = 0;
-      final preGraft = GraftDiamondController()..addListener(() => dummy++);
-      for (int r = 0; r < 2; r++) {
+      final preGraft = GraftDiamondController();
+      preGraft.addListener(() {
+        final s = preGraft.state;
+        if (s.b * 3 != s.c * 2) dummy++;
+        dummy = s.d;
+      });
+      for (int r = 0; r < 10; r++) {
         for (int i = 0; i < updates; i++) preGraft.setA(i);
       }
       preGraft.dispose();
 
-      final preBloc = BlocDiamondCubit(onNotification: (_) => dummy++);
-      for (int r = 0; r < 2; r++) {
+      final preBloc = BlocDiamondCubit(onNotification: (st) {
+        if (st.b * 3 != st.c * 2) dummy++;
+        dummy = st.d;
+      });
+      for (int r = 0; r < 10; r++) {
         for (int i = 0; i < updates; i++) preBloc.setA(i);
       }
       preBloc.close();

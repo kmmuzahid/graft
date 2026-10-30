@@ -139,5 +139,6 @@ void _graftDispose(Graft graft) {
   graft._extraMaskListeners?.clear();
   graft._fastDirectReceiver = null;
   graft._fastDirectMask = GraftMask.empty;
+  graft._receiverDirectory = null;
   Graft.observer?.onDispose(graft);
 }

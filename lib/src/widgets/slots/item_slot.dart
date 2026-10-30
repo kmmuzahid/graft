@@ -1,7 +1,7 @@
 part of '../child_slot_engine.dart';
 
 /// A reactive item slot for lazy virtualized collections ([ListView.builder], [GridView.builder], etc.).
-class GraftItemSlot<S extends GraftState, T> extends StatefulWidget
+class GraftItemSlot<S extends GraftState, T> extends Widget
     implements GraftEquivalent {
   final Graft<S> graft;
   final int? index;
@@ -16,8 +16,7 @@ class GraftItemSlot<S extends GraftState, T> extends StatefulWidget
     this.builder,
     this.valueBuilder,
     this.index,
-  }) : assert(builder != null || valueBuilder != null,
-            'Either builder or valueBuilder must be provided');
+  }) : assert(builder != null || valueBuilder != null);
 
   @override
   bool isEquivalentTo(Widget other) {
@@ -26,12 +25,16 @@ class GraftItemSlot<S extends GraftState, T> extends StatefulWidget
   }
 
   @override
-  State<GraftItemSlot<S, T>> createState() => _GraftItemSlotState<S, T>();
+  Element createElement() => _GraftItemSlotElement<S, T>(this);
 }
 
-class _GraftItemSlotState<S extends GraftState, T>
-    extends State<GraftItemSlot<S, T>> implements GraftItemReceiver {
-  Element? _element;
+class _GraftItemSlotElement<S extends GraftState, T> extends ComponentElement
+    implements GraftItemReceiver {
+  _GraftItemSlotElement(GraftItemSlot<S, T> super.widget);
+
+  @override
+  GraftItemSlot<S, T> get widget => super.widget as GraftItemSlot<S, T>;
+
   T? _item;
   Widget? _cachedWidget;
   bool _hasInitialItem = false;
@@ -39,99 +42,90 @@ class _GraftItemSlotState<S extends GraftState, T>
   late T Function(S state) _selector;
   Widget Function(BuildContext context, T item)? _builder;
   Widget Function(T item)? _valueBuilder;
+  int? _index;
 
   @override
-  void initState() {
-    super.initState();
-    _graft = widget.graft;
-    _selector = widget.selector;
-    _builder = widget.builder;
-    _valueBuilder = widget.valueBuilder;
-    _element = context as Element;
+  void mount(Element? parent, Object? newSlot) {
+    final w = widget;
+    _graft = w.graft;
+    _selector = w.selector;
+    _builder = w.builder;
+    _valueBuilder = w.valueBuilder;
+    _index = w.index;
     _resolveInitialItem();
+    super.mount(parent, newSlot);
     _graft.addMaskListener(_onMaskChange);
-    if (widget.index != null) {
-      GraftEngine.registerItemReceiver(_graft, widget.index!, this);
-    }
+    if (_index != null) GraftEngine.registerItemReceiver(_graft, _index!, this);
   }
 
   void _resolveInitialItem() {
     try {
-      _item = _selector(_graft.state);
+      _item = _selector(GraftEngine.getState(_graft));
       _hasInitialItem = true;
     } catch (_) {
       _hasInitialItem = false;
     }
   }
 
-  void _updateItemIfChanged() {
+  @override
+  @pragma('vm:prefer-inline')
+  void markItemDirty() {
     if (!mounted) return;
-    final T nextItem;
+    final T next;
     try {
-      nextItem = _selector(_graft.state);
+      next = _selector(GraftEngine.getState(_graft));
     } catch (_) {
       return;
     }
-    if (identical(_item, nextItem)) return;
-    if (_hasInitialItem && _item == nextItem) return;
-
-    _item = nextItem;
+    if (identical(_item, next) || (_hasInitialItem && _item == next)) return;
+    _item = next;
     _hasInitialItem = true;
     _cachedWidget = null;
-    (_element ?? (context as Element)).markNeedsBuild();
+    markNeedsBuild();
   }
 
-  @override
-  @pragma('vm:prefer-inline')
-  void markItemDirty() => _updateItemIfChanged();
-
-  void _onMaskChange(GraftMask mask) => _updateItemIfChanged();
+  void _onMaskChange(GraftMask mask) => markItemDirty();
 
   @override
   void reassemble() {
     super.reassemble();
     _resolveInitialItem();
     _cachedWidget = null;
-    if (mounted) setState(() {});
+    if (mounted) markNeedsBuild();
   }
 
   @override
-  void didUpdateWidget(covariant GraftItemSlot<S, T> oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    _selector = widget.selector;
-    _builder = widget.builder;
-    _valueBuilder = widget.valueBuilder;
-    if (oldWidget.index != widget.index || oldWidget.graft != widget.graft) {
-      if (oldWidget.index != null) {
-        GraftEngine.unregisterItemReceiver(
-            oldWidget.graft, oldWidget.index!, this);
-      }
-      if (widget.index != null) {
-        GraftEngine.registerItemReceiver(widget.graft, widget.index!, this);
-      }
+  void update(covariant GraftItemSlot<S, T> newWidget) {
+    final oldGraft = _graft;
+    final oldIndex = _index;
+    super.update(newWidget);
+    _selector = newWidget.selector;
+    _builder = newWidget.builder;
+    _valueBuilder = newWidget.valueBuilder;
+    _index = newWidget.index;
+    if (oldIndex != _index || oldGraft != newWidget.graft) {
+      if (oldIndex != null) GraftEngine.unregisterItemReceiver(oldGraft, oldIndex, this);
+      if (_index != null) GraftEngine.registerItemReceiver(newWidget.graft, _index!, this);
     }
-    if (oldWidget.graft != widget.graft) {
-      oldWidget.graft.removeMaskListener(_onMaskChange);
-      _graft = widget.graft;
+    if (oldGraft != newWidget.graft) {
+      oldGraft.removeMaskListener(_onMaskChange);
+      _graft = newWidget.graft;
       _resolveInitialItem();
       _graft.addMaskListener(_onMaskChange);
-      _cachedWidget = null;
-    } else {
-      _cachedWidget = null;
     }
+    _cachedWidget = null;
+    rebuild(force: true);
   }
 
   @override
-  void dispose() {
+  void unmount() {
     _graft.removeMaskListener(_onMaskChange);
-    if (widget.index != null) {
-      GraftEngine.unregisterItemReceiver(_graft, widget.index!, this);
-    }
-    super.dispose();
+    if (_index != null) GraftEngine.unregisterItemReceiver(_graft, _index!, this);
+    super.unmount();
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build() {
     final cached = _cachedWidget;
     if (cached != null) return cached;
     if (!_hasInitialItem) {
@@ -139,13 +133,9 @@ class _GraftItemSlotState<S extends GraftState, T>
       if (!_hasInitialItem) return const SizedBox.shrink();
     }
     final itm = _item as T;
-    final child =
-        _valueBuilder != null ? _valueBuilder!(itm) : _builder!(context, itm);
+    final child = _valueBuilder != null ? _valueBuilder!(itm) : _builder!(this, itm);
     _cachedWidget = child;
-    if (Graft.observer != null) {
-      Graft.observer!.onSlotRebuild(_graft, -1, child);
-    }
+    Graft.observer?.onSlotRebuild(_graft, -1, child);
     return child;
   }
 }
-

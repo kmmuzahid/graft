@@ -8,7 +8,7 @@ void _stateNotifyGraft(GraftState state, Graft g, GraftMask mask) {
   if (GraftEngine.hasOnlyFastDirectReceiver(g)) {
     final fast = GraftEngine.getFastDirectReceiver(g)!;
     if (fast.mounted) {
-      fast.markFastDirty();
+      fast.markFastDirty(mask);
       return;
     }
     GraftEngine.setFastDirectReceiver(g, null);

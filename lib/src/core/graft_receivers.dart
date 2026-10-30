@@ -4,7 +4,7 @@ part of 'graft.dart';
 @internal
 abstract interface class GraftFastReceiver {
   bool get mounted;
-  void markFastDirty();
+  void markFastDirty([GraftMask? mask]);
 }
 
 /// Internal interface for zero-overhead index-addressed item slot notification.
@@ -15,64 +15,63 @@ abstract interface class GraftItemReceiver {
 }
 
 void _graftRegisterItemReceiver(Graft graft, int index, GraftItemReceiver receiver) {
-  if (graft._sparseReceivers == null && graft._denseReceivers.every((r) => r == null)) {
-    graft._denseWindowStart = (index ~/ 64) * 64;
+  final chunkIdx = index >> 6;
+  final offset = index & 63;
+  final dir = graft._receiverDirectory ??= <List<GraftItemReceiver?>?>[];
+  while (dir.length <= chunkIdx) {
+    dir.add(null);
   }
-  final offset = index - graft._denseWindowStart;
-  if (offset >= 0 && offset < 64) {
-    graft._denseReceivers[offset] = receiver;
-  } else {
-    (graft._sparseReceivers ??= <int, GraftItemReceiver>{})[index] = receiver;
-  }
+  final chunk = dir[chunkIdx] ??= List<GraftItemReceiver?>.filled(64, null);
+  chunk[offset] = receiver;
 }
 
 void _graftUnregisterItemReceiver(Graft graft, int index, GraftItemReceiver receiver) {
-  final offset = index - graft._denseWindowStart;
-  if (offset >= 0 && offset < 64) {
-    if (identical(graft._denseReceivers[offset], receiver)) {
-      graft._denseReceivers[offset] = null;
-    }
-  } else {
-    final map = graft._sparseReceivers;
-    if (map != null && identical(map[index], receiver)) {
-      map.remove(index);
+  final chunkIdx = index >> 6;
+  final dir = graft._receiverDirectory;
+  if (dir != null && chunkIdx < dir.length) {
+    final chunk = dir[chunkIdx];
+    if (chunk != null && identical(chunk[index & 63], receiver)) {
+      chunk[index & 63] = null;
     }
   }
 }
 
 @pragma('vm:prefer-inline')
 bool _graftHasItemReceiver(Graft graft, int index) {
-  final offset = index - graft._denseWindowStart;
-  if (offset >= 0 && offset < 64) {
-    return graft._denseReceivers[offset] != null;
+  final chunkIdx = index >> 6;
+  final dir = graft._receiverDirectory;
+  if (dir != null && chunkIdx < dir.length) {
+    final chunk = dir[chunkIdx];
+    if (chunk != null) return chunk[index & 63] != null;
   }
-  return graft._sparseReceivers?.containsKey(index) ?? false;
+  return false;
 }
 
 @pragma('vm:prefer-inline')
 void _graftNotifyItem(Graft graft, int index) {
   if (graft._isDisposed) return;
-  GraftItemReceiver? r;
-  final offset = index - graft._denseWindowStart;
-  if (offset >= 0 && offset < 64) {
-    r = graft._denseReceivers[offset];
-  } else {
-    r = graft._sparseReceivers?[index];
-  }
-  if (r != null && r.mounted) {
-    r.markItemDirty();
-    final single = graft._singleListener;
-    if (single != null) {
-      single();
-      final extra = graft._extraListeners;
-      if (extra != null && extra.isNotEmpty) {
-        final eLen = extra.length;
-        for (int i = 0; i < eLen; i++) {
-          extra[i]();
+  final chunkIdx = index >> 6;
+  final dir = graft._receiverDirectory;
+  if (dir != null && chunkIdx < dir.length) {
+    final chunk = dir[chunkIdx];
+    if (chunk != null) {
+      final r = chunk[index & 63];
+      if (r != null && r.mounted) {
+        r.markItemDirty();
+        final single = graft._singleListener;
+        if (single != null) {
+          single();
+          final extra = graft._extraListeners;
+          if (extra != null && extra.isNotEmpty) {
+            final eLen = extra.length;
+            for (int i = 0; i < eLen; i++) {
+              extra[i]();
+            }
+          }
         }
+        return;
       }
     }
-    return;
   }
   graft._notifyMask(GraftMask.bit0);
 }
@@ -83,8 +82,10 @@ abstract final class GraftEngine {
   static GraftFastReceiver? getFastDirectReceiver(Graft graft) =>
       graft._fastDirectReceiver;
 
-  static void setFastDirectReceiver(Graft graft, GraftFastReceiver? r) =>
-      graft._fastDirectReceiver = r;
+  static void setFastDirectReceiver(Graft graft, GraftFastReceiver? r) {
+    graft._fastDirectReceiver = r;
+    graft._recomputeSingleListenerFlag();
+  }
 
   static GraftMask getFastDirectMask(Graft graft) => graft._fastDirectMask;
 
@@ -109,14 +110,21 @@ abstract final class GraftEngine {
           {GraftChange<dynamic>? change}) =>
       graft._notifyMask(mask, change: change);
 
+  @pragma('vm:prefer-inline')
   static bool hasAnyListeners(Graft graft) => graft._hasAnyListeners;
 
+  @pragma('vm:prefer-inline')
   static VoidCallback? singleListener(Graft graft) => graft._singleListener;
 
+  @pragma('vm:prefer-inline')
   static bool hasOnlySingleListener(Graft graft) =>
       graft._hasOnlySingleListener;
 
+  @pragma('vm:prefer-inline')
   static bool hasOnlyFastDirectReceiver(Graft graft) =>
       graft._hasOnlyFastDirectReceiver;
+
+  @pragma('vm:prefer-inline')
+  static S getState<S extends GraftState>(Graft<S> graft) => graft._state;
 }
 

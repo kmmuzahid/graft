@@ -40,9 +40,8 @@ class _GraftSingleSlotElement<S extends GraftState> extends ComponentElement
 
   @override
   @pragma('vm:prefer-inline')
-  void markFastDirty() {
-    _isDirty = true;
-    markNeedsBuild();
+  void markFastDirty([GraftMask? mask]) {
+    _singleSlotOnMaskDirty(this, mask ?? GraftMask.bit0);
   }
 
   @override
@@ -118,8 +117,8 @@ class _GraftSingleSlotElement<S extends GraftState> extends ComponentElement
   void reassemble() {
     super.reassemble();
     _ignoredMask = GraftMask.empty;
-    _isDirty = false;
-    _onMaskDirty(GraftMask.allDirty);
+    _isDirty = true;
+    markNeedsBuild();
   }
 
   void _onMaskDirty(GraftMask dirtyMask) =>
@@ -130,8 +129,11 @@ class _GraftSingleSlotElement<S extends GraftState> extends ComponentElement
   Widget build() {
     if (_isDirty) {
       _isDirty = false;
-      _currentWidget = _builder(_graft.state);
-      Graft.observer?.onSlotRebuild(_graft, 0, _currentWidget);
+      final child = _builder(GraftEngine.getState(_graft));
+      _currentWidget = child;
+      if (Graft.observer != null) {
+        Graft.observer!.onSlotRebuild(_graft, 0, child);
+      }
     }
     return _currentWidget;
   }
