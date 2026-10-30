@@ -21,35 +21,14 @@ mixin GraftStateProps on GraftStateStorage {
     Object? p15 = _undefined,
   ]) {
     if (identical(p1, _undefined)) {
-      if (p0 is num) {
-        _pendingSingle = p0;
-        final view = _singleView;
-        if (view != null) {
-          view.value = p0;
-          return view;
-        }
-        return _singleView = _GraftPropsSingle(p0);
-      }
-      if (p0 is String || p0 is bool || p0 is Enum) {
-        _pendingSingle = p0;
-        final view = _singleView;
-        if (view != null) {
-          view.value = p0;
-          return view;
-        }
-        return _singleView = _GraftPropsSingle(p0);
-      }
+      _pendingSingle = p0;
+      final sv = _singleView;
+      if (sv != null) return sv;
       if (p0 is List && p0.isNotEmpty && p0[0] is GraftState) {
         return _GraftPropsListView(p0);
       }
-      _pendingSingle = p0;
-      final view = _singleView;
-      if (view != null) {
-        view.value = p0;
-        return view;
-      }
       if (identical(p0, _undefined)) return const _EmptyGraftProps();
-      return _singleView = _GraftPropsSingle(p0);
+      return _singleView = _GraftPropsSingle(this);
     }
 
     var view = _propsView;

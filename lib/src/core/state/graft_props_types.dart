@@ -113,19 +113,21 @@ final class _GraftPropsListView extends GraftProps {
 }
 
 final class _GraftPropsSingle extends GraftProps {
-  Object? value;
-  _GraftPropsSingle(this.value);
+  final GraftStateStorage _state;
+  _GraftPropsSingle(this._state);
+
+  Object? get value => _state._pendingSingle;
 
   @override
   Object? operator [](int index) {
     if (index != 0) throw RangeError.index(index, this);
-    return value;
+    return _state._pendingSingle;
   }
 
   @override
   int get length => 1;
   @override
-  Iterator<Object?> get iterator => _SingleIterator(value);
+  Iterator<Object?> get iterator => _SingleIterator(_state._pendingSingle);
 }
 
 final class _SingleIterator implements Iterator<Object?> {

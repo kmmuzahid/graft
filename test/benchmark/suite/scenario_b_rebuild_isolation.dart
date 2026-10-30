@@ -67,7 +67,7 @@ class ProviderBModel extends ChangeNotifier {
 // =============================================================================
 class ScenarioBRebuildIsolationRunner {
   static const int totalFrames = 120;
-  static const int warmUpRuns = 5;
+  static const int warmUpRuns = 15;
   static const int measuredRuns = 15;
 
   static Future<List<BenchmarkStats>> runAll(WidgetTester tester) async {
@@ -141,11 +141,12 @@ class ScenarioBRebuildIsolationRunner {
         ),
       );
       await tester.pump();
-      for (int f = 0; f < 500; f++) {
+      for (int f = 0; f < 1000; f++) {
         warmCtrl.increment();
         await tester.pump();
       }
       warmCtrl.dispose();
+      await tester.pumpWidget(const SizedBox());
     }
 
     // -------------------------------------------------------------------------

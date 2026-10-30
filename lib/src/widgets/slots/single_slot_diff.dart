@@ -34,11 +34,18 @@ void _singleSlotVerifyAncestors(Element element, Graft graft, String caller) {
   });
 }
 
-void _singleSlotOnMaskDirty<S extends GraftState>(_GraftSingleSlotElement<S> element, GraftMask dirtyMask) {
+void _singleSlotOnMaskDirty<S extends GraftState>(
+    _GraftSingleSlotElement<S> element, GraftMask dirtyMask) {
   if (!element.mounted) return;
 
+  if (element._isSingleScalar) {
+    element.markNeedsBuild();
+    return;
+  }
+
   if (!dirtyMask.isAllDirty) {
-    if (element._ignoredMask.isNotEmpty && dirtyMask.isSubsetOf(element._ignoredMask)) {
+    if (element._ignoredMask.isNotEmpty &&
+        dirtyMask.isSubsetOf(element._ignoredMask)) {
       return;
     }
   }
@@ -46,8 +53,8 @@ void _singleSlotOnMaskDirty<S extends GraftState>(_GraftSingleSlotElement<S> ele
   if (element.widget.caller != 'graft.async' &&
       !dirtyMask.isAllDirty &&
       dirtyMask.isNotEmpty &&
-      GraftStateEngine.hasAsyncProps(element._graft.state)) {
-    final props = GraftStateEngine.props(element._graft.state);
+      GraftStateEngine.hasAsyncProps(element._state)) {
+    final props = GraftStateEngine.props(element._state);
     bool allAsync = true;
     for (int i = 0; i < props.length; i++) {
       if (dirtyMask.isBitSet(i)) {
@@ -60,26 +67,32 @@ void _singleSlotOnMaskDirty<S extends GraftState>(_GraftSingleSlotElement<S> ele
     if (allAsync) return;
   }
 
-  final oldWidget = element._currentWidget;
-  final newWidget = element._builder(element._graft.state);
-
-  if (identical(oldWidget, newWidget)) return;
-
-  if (GraftMultiChildDiffEngine.isWidgetEquivalent(oldWidget, newWidget, element)) {
-    if (dirtyMask.isNotEmpty && !dirtyMask.isAllDirty) {
-      final single = dirtyMask.singleBitIndex;
-      if (single != null) {
-        element._ignoredMask = element._ignoredMask.withBit(single);
-      } else {
-        element._ignoredMask = element._ignoredMask.union(dirtyMask);
-      }
-    }
-    return;
-  }
-
-  element._ignoredMask = GraftMask.empty;
-  element._isDirty = false;
-  element._currentWidget = newWidget;
+  element._pendingMask = dirtyMask;
+  element._isDirty = true;
   element.markNeedsBuild();
-  Graft.observer?.onSlotRebuild(element._graft, 0, newWidget);
+}
+
+Widget _singleSlotBuild<S extends GraftState>(
+    _GraftSingleSlotElement<S> element) {
+  if (element._isDirty) {
+    element._isDirty = false;
+    final newWidget = element._builder(element._state);
+    if (GraftMultiChildDiffEngine.isWidgetEquivalent(
+        element._currentWidget, newWidget, element)) {
+      final m = element._pendingMask;
+      if (m != null && !m.isAllDirty && m.isNotEmpty) {
+        final single = m.singleBitIndex;
+        if (single != null) {
+          element._ignoredMask = element._ignoredMask.withBit(single);
+        } else {
+          element._ignoredMask = element._ignoredMask.union(m);
+        }
+      }
+      return element._currentWidget;
+    }
+    element._ignoredMask = GraftMask.empty;
+    element._currentWidget = newWidget;
+    Graft.observer?.onSlotRebuild(element._graft, 0, newWidget);
+  }
+  return element._currentWidget;
 }

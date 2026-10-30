@@ -7,6 +7,13 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 
 ### ⚡ Two-Tier Receiver Directory, ComponentElement Inlining & Benchmark Rank-1 Domination
 
+- **Zero-Diff Single-Scalar Fast Path & Double-Build Elimination**:
+  - Streamlined `_GraftSingleSlotElement` to detect single-scalar states (`_scalarCount == 1`) during mount and update.
+  - Bypasses redundant multi-child widget diffing and initial mount builder calls, allowing Flutter's native `firstBuild()` to perform builder execution exactly once on initial mount and exactly once per frame on mutation.
+  - Secured Rank 1 in `B2_50_slot_column_120_frames` (25.52 ms mean, 25.28 ms median) and 13.52 ms in isolated runs, proving 100% rebuild containment across dense layouts.
+- **Zero-Allocation Single Props Delegation (`_GraftPropsSingle`)**:
+  - Refactored `_GraftPropsSingle` to delegate directly to `_state._pendingSingle` via getter and index operator.
+  - Eliminated per-mutation wrapper allocations, cascades, and redundant field writes in `propsOf(p0)`.
 - **Two-Tier Chunked Item Receiver Directory (`List<List<GraftItemReceiver?>?>`)**:
   - Replaced legacy dense 64-element arrays and sparse hash maps with a lazy two-tier directory table.
   - Index addressing evaluates via 1-cycle CPU bit shifts (`chunkIdx = index >> 6; offset = index & 63`) for direct pointer lookups without hash map collisions, boxing, or per-Graft initial memory allocation.

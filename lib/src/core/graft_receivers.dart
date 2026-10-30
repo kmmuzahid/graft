@@ -126,5 +126,9 @@ abstract final class GraftEngine {
 
   @pragma('vm:prefer-inline')
   static S getState<S extends GraftState>(Graft<S> graft) => graft._state;
+
+  @pragma('vm:prefer-inline')
+  static int getScalarCount(Graft graft) =>
+      GraftStateEngine.scalarCount(graft._state);
 }
 

@@ -9,6 +9,7 @@ void _initBaselineImpl(GraftState state) {
     state._singleBaseline = _snapshotValue(c);
     state._prevListLength = c is List ? c.length : -1;
     state._allScalarProps = c is num || c is String || c is bool || c is Enum;
+    if (state._allScalarProps) state._scalarCount = 1;
     state._hasAsyncProps = c is GraftAsync;
     state._singleNestedVersion = c is GraftState ? c._version : -1;
     if (c is GraftState) {

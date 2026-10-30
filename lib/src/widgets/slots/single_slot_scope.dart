@@ -8,10 +8,7 @@ class GraftSingleSlotScope<S extends GraftState> extends Widget
   final String caller;
 
   const GraftSingleSlotScope({
-    super.key,
-    required this.graft,
-    required this.builder,
-    this.caller = 'graft.slot',
+    super.key, required this.graft, required this.builder, this.caller = 'graft.slot',
   });
 
   @override
@@ -33,15 +30,28 @@ class _GraftSingleSlotElement<S extends GraftState> extends ComponentElement
 
   late Widget Function(S state) _builder;
   late Graft<S> _graft;
+  late S _state;
   late Widget _currentWidget;
   GraftMask _ignoredMask = GraftMask.empty;
+  GraftMask? _pendingMask;
   bool _isDirty = false;
   bool _fastPathActive = false;
+  bool _isSingleScalar = false;
 
   @override
   @pragma('vm:prefer-inline')
   void markFastDirty([GraftMask? mask]) {
-    _singleSlotOnMaskDirty(this, mask ?? GraftMask.bit0);
+    if (_isSingleScalar) {
+      markNeedsBuild();
+      return;
+    }
+    final m = mask;
+    if (m != null && _ignoredMask.isNotEmpty && m.isSubsetOf(_ignoredMask)) {
+      return;
+    }
+    _pendingMask = m;
+    _isDirty = true;
+    markNeedsBuild();
   }
 
   @override
@@ -49,11 +59,15 @@ class _GraftSingleSlotElement<S extends GraftState> extends ComponentElement
     final w = widget;
     _builder = w.builder;
     _graft = w.graft;
-    _currentWidget = GraftScopeGuard.run(
-      _graft,
-      w.caller,
-      () => _builder(_graft.state),
-    );
+    _state = GraftEngine.getState(_graft);
+    _isSingleScalar = GraftEngine.getScalarCount(_graft) == 1;
+    if (!_isSingleScalar) {
+      _currentWidget = GraftScopeGuard.run(
+        _graft,
+        w.caller,
+        () => _builder(_state),
+      );
+    }
     super.mount(parent, newSlot);
     assert(() {
       _singleSlotVerifyAncestors(this, _graft, widget.caller);
@@ -73,6 +87,8 @@ class _GraftSingleSlotElement<S extends GraftState> extends ComponentElement
     super.update(newWidget);
     _builder = newWidget.builder;
     _graft = newWidget.graft;
+    _state = GraftEngine.getState(_graft);
+    _isSingleScalar = GraftEngine.getScalarCount(_graft) == 1;
     if (oldGraft != _graft) {
       oldGraft.removeMaskListener(_onMaskDirty);
       if (_fastPathActive &&
@@ -127,15 +143,12 @@ class _GraftSingleSlotElement<S extends GraftState> extends ComponentElement
   @override
   @pragma('vm:prefer-inline')
   Widget build() {
-    if (_isDirty) {
-      _isDirty = false;
-      final child = _builder(GraftEngine.getState(_graft));
-      _currentWidget = child;
-      if (Graft.observer != null) {
-        Graft.observer!.onSlotRebuild(_graft, 0, child);
-      }
+    if (_isSingleScalar) {
+      final w = _builder(_state);
+      Graft.observer?.onSlotRebuild(_graft, 0, w);
+      return w;
     }
-    return _currentWidget;
+    return _singleSlotBuild(this);
   }
 }
 

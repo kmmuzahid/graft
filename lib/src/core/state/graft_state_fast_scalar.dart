@@ -2,28 +2,20 @@ part of '../graft_state.dart';
 
 @pragma('vm:prefer-inline')
 bool _tryFastSingleScalar(GraftState state) {
-  final p = state._singleBaseline;
-  if (!state._allScalarProps ||
-      state._baseline != null ||
-      identical(p, _undefined) ||
-      Graft.observer != null) {
-    return false;
-  }
+  if (state._scalarCount != 1 || Graft.observer != null) return false;
   state.props;
   final c = state._pendingSingle;
+  final p = state._singleBaseline;
   if (p == c) return true;
   state._singleBaseline = c;
   state._version++;
   if (state._isDryEnabled) DryStateHook.onStateUpdated(state);
   final g = state._graft;
   if (g != null) {
-    if (GraftEngine.hasOnlyFastDirectReceiver(g)) {
-      final fast = GraftEngine.getFastDirectReceiver(g)!;
-      if (fast.mounted) {
-        fast.markFastDirty(GraftMask.bit0);
-        return true;
-      }
-      GraftEngine.setFastDirectReceiver(g, null);
+    final fast = GraftEngine.getFastDirectReceiver(g);
+    if (fast != null && GraftEngine.hasOnlyFastDirectReceiver(g)) {
+      fast.markFastDirty();
+      return true;
     }
     if (GraftEngine.hasOnlySingleListener(g)) {
       GraftEngine.singleListener(g)!();
