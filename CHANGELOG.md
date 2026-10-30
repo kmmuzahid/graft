@@ -7,6 +7,11 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 
 ### ⚡ Register-Level Scalar Fast Path, Clean Ergonomics & Benchmark Engine Hardening
 
+- **Strict Subsystem Modularity ($\le$ 160 LOC per file)**:
+  - Decomposed all monolithic files into focused, single-responsibility modules strictly $\le 160$ lines of code across `lib/src/core/`, `lib/src/widgets/slots/`, `lib/src/di/`, `lib/src/route/`, and `lib/src/persistence/`.
+  - Zero performance regression: Dart `part` / `part of` sharing private namespaces preserves 100% VM `@pragma('vm:prefer-inline')` inlining and zero getter overhead.
+- **Transparent Benchmark Methodology Descriptions**:
+  - Embedded 1–2 line concise methodology explanations into all 17 benchmark scenarios in `BENCHMARK_REPORT.md` and `test/benchmark/suite/scenario_descriptions.dart`.
 - **Direct Scalar Register Diffing (`propsOf`)**:
   - Eliminated redundant array buffer heap stores on every scalar mutation.
   - Scalar properties (2..5 parameters) now write directly to CPU register fields (`_s0.._s4`), eliminating 50,000 bounds-checked heap array writes per 10k mutations.

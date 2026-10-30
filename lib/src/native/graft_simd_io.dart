@@ -2,33 +2,16 @@ import 'dart:ffi';
 import 'dart:io';
 import '../core/graft_mask.dart';
 
-typedef _NativeDiffProps = Int32 Function(
-  Pointer<Int64> oldProps,
-  Pointer<Int64> newProps,
-  Int64 count,
-  Pointer<Uint64> outDirtyWords,
-);
-
-typedef _DartDiffProps = int Function(
-  Pointer<Int64> oldProps,
-  Pointer<Int64> newProps,
-  int count,
-  Pointer<Uint64> outDirtyWords,
-);
-
-typedef _NativeVersion = Int32 Function();
-typedef _DartVersion = int Function();
+part 'graft_simd_bindings.dart';
 
 /// Optional native SIMD hardware accelerator for massive states (1,000+ fields).
-///
-/// Seamlessly utilizes ARM Neon (`vceqq_u64`) and x86 AVX2/SSE4 vector instructions
-/// via `dart:ffi`. When the native dynamic library is absent, transparently
-/// falls back to Graft's pure Dart 64-bit register bitmask engine with 0 behavioral divergence.
 abstract final class GraftSimd {
   static DynamicLibrary? _dylib;
   static _DartDiffProps? _nativeDiff;
   static _DartVersion? _nativeVersion;
   static bool _initialized = false;
+  static _DartMalloc? _malloc;
+  static _DartFree? _free;
 
   /// Returns the underlying native dynamic library, or null if running pure Dart fallback.
   static DynamicLibrary? get dylib => _dylib;
@@ -39,7 +22,7 @@ abstract final class GraftSimd {
     return _nativeDiff != null;
   }
 
-  /// Returns the native SIMD engine version code (e.g. 100 for 1.0.0), or -1 if pure Dart fallback.
+  /// Returns the native SIMD engine version code, or -1 if pure Dart fallback.
   static int get version {
     _ensureInitialized();
     return _nativeVersion?.call() ?? -1;
@@ -59,54 +42,13 @@ abstract final class GraftSimd {
   static void _ensureInitialized() {
     if (_initialized) return;
     _initialized = true;
-
-    try {
-      DynamicLibrary? lib;
-      if (Platform.isMacOS) {
-        final candidatePaths = [
-          'native/bin/libgraft_simd.dylib',
-          'libgraft_simd.dylib',
-        ];
-        for (final p in candidatePaths) {
-          if (File(p).existsSync()) {
-            lib = DynamicLibrary.open(p);
-            break;
-          }
-        }
-        lib ??= DynamicLibrary.process();
-      } else if (Platform.isLinux || Platform.isAndroid) {
-        final candidatePaths = [
-          'native/bin/libgraft_simd.so',
-          'libgraft_simd.so',
-        ];
-        for (final p in candidatePaths) {
-          if (File(p).existsSync()) {
-            lib = DynamicLibrary.open(p);
-            break;
-          }
-        }
-        lib ??= DynamicLibrary.process();
-      } else if (Platform.isWindows) {
-        final candidatePaths = [
-          'native/bin/graft_simd.dll',
-          'graft_simd.dll',
-        ];
-        for (final p in candidatePaths) {
-          if (File(p).existsSync()) {
-            lib = DynamicLibrary.open(p);
-            break;
-          }
-        }
-      }
-
-      if (lib != null) {
-        _bind(lib);
-      }
-    } catch (_) {
-      // Graceful fallback to pure Dart register engine
-      _dylib = null;
-      _nativeDiff = null;
-    }
+    _initSimdPlatform(
+      _bind,
+      () {
+        _dylib = null;
+        _nativeDiff = null;
+      },
+    );
   }
 
   static void _bind(DynamicLibrary lib) {
@@ -122,9 +64,6 @@ abstract final class GraftSimd {
     }
   }
 
-  static _DartMalloc? _malloc;
-  static _DartFree? _free;
-
   static void _ensureMemoryBindings() {
     if (_malloc != null) return;
     try {
@@ -139,8 +78,6 @@ abstract final class GraftSimd {
   }
 
   /// Compares two integer property buffers using SIMD acceleration or 64-bit Dart VM fast path.
-  ///
-  /// Returns a [GraftMask] bitset where dirty indices are set to 1.
   static GraftMask diffInt64(List<int> oldProps, List<int> newProps) {
     final count =
         oldProps.length < newProps.length ? oldProps.length : newProps.length;
@@ -148,7 +85,6 @@ abstract final class GraftSimd {
 
     _ensureMemoryBindings();
 
-    // Use pure Dart fast path if count is small (< 64 elements) or native lib is unavailable
     if (count <= 64 || !isAvailable || _malloc == null || _free == null) {
       return _diffPureDart(oldProps, newProps, count);
     }
@@ -209,9 +145,3 @@ abstract final class GraftSimd {
     return GraftMask.fromWords(w0, w1, extra);
   }
 }
-
-typedef _NativeMalloc = Pointer<Void> Function(IntPtr size);
-typedef _DartMalloc = Pointer<Void> Function(int size);
-
-typedef _NativeFree = Void Function(Pointer<Void> ptr);
-typedef _DartFree = void Function(Pointer<Void> ptr);

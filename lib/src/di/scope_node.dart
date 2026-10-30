@@ -8,6 +8,9 @@ import 'disposable.dart';
 import 'scope_tier.dart';
 import 'type_id.dart';
 
+part 'scope_resolution.dart';
+part 'scope_teardown.dart';
+
 /// Container node in the hierarchical dependency injection DAG.
 final class ScopeNode {
   static final List<int> _activeResolutionStack = [];
@@ -127,61 +130,6 @@ final class ScopeNode {
         'Graft DI: Type $T is not registered in active scope hierarchy.');
   }
 
-  Future<T> resolveAsync<T>() {
-    final id = TypeId.of<T>();
-
-    if (id < _instances.length && _instances[id] != null) {
-      return Future<T>.value(_instances[id] as T);
-    }
-
-    if (_asyncBindings.containsKey(id)) {
-      return _asyncBindings[id]!.resolve().then((v) => v as T);
-    }
-
-    if (_factories.containsKey(id)) {
-      return Future<T>.value(resolve<T>());
-    }
-
-    if (parent != null) {
-      return parent!.resolveAsync<T>();
-    }
-
-    throw StateError(
-        'Graft DI: Type $T is not registered in active scope hierarchy.');
-  }
-
-  T _instantiate<T>(int id) {
-    assert(() {
-      if (_activeResolutionStack.contains(id)) {
-        final cycle = [..._activeResolutionStack, id]
-            .map((i) => 'TypeId#$i')
-            .join(' ──▶ ');
-        throw StateError('Graft DI Circular Dependency: $cycle');
-      }
-      return true;
-    }());
-
-    _activeResolutionStack.add(id);
-    final Object? instance;
-    try {
-      instance = _factories[id]!();
-      if (isSingleton(id)) {
-        while (_instances.length <= id) {
-          _instances.add(null);
-        }
-        _instances[id] = instance;
-      }
-    } finally {
-      _activeResolutionStack.removeLast();
-    }
-
-    if (instance is GraftInitializable) {
-      instance.onInit();
-    }
-
-    return instance as T;
-  }
-
   void acquireLease(RouteLeaseToken token) => _activeLeases.add(token);
 
   bool releaseLease(RouteLeaseToken token) {
@@ -191,63 +139,5 @@ final class ScopeNode {
       return true;
     }
     return false;
-  }
-
-  void drop() {
-    final activeMembers = activeMemberTypes;
-    final allRegistered = _registeredTypes.values.toList();
-    if (scopeId != null && scopeId != 'root') {
-      Graft.observer?.onScopeDropped(
-        scopeId!,
-        members: activeMembers,
-        registeredTypes: allRegistered,
-      );
-    }
-
-    final consumerCount = {
-      for (final e in _dependents.entries) e.key: e.value.length
-    };
-    final queue = <int>[
-      for (int i = 0; i < _instances.length; i++)
-        if (_instances[i] != null && (consumerCount[i] ?? 0) == 0) i,
-    ];
-
-    while (queue.isNotEmpty) {
-      final current = queue.removeAt(0);
-      final instance = _instances[current];
-      if (instance is Disposable) instance.dispose();
-      _instances[current] = null;
-
-      final dependencies = _dependenciesOf[current];
-      if (dependencies != null) {
-        for (final dep in dependencies) {
-          final count = (consumerCount[dep] ?? 1) - 1;
-          consumerCount[dep] = count;
-          if (count == 0 &&
-              _instances.length > dep &&
-              _instances[dep] != null) {
-            queue.add(dep);
-          }
-        }
-      }
-    }
-
-    for (int i = 0; i < _instances.length; i++) {
-      final instance = _instances[i];
-      if (instance is Disposable) instance.dispose();
-      _instances[i] = null;
-    }
-
-    for (final binding in _asyncBindings.values) {
-      final inst = binding.resolvedInstance;
-      if (inst is Disposable) inst.dispose();
-      binding.reset();
-    }
-
-    _instances.clear();
-    _dependents.clear();
-    _dependenciesOf.clear();
-    _activeLeases.clear();
-    parent?.children.remove(this);
   }
 }

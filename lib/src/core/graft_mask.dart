@@ -1,14 +1,9 @@
 import 'package:flutter/foundation.dart';
 
+part 'mask_ops.dart';
+part 'mask_inspection.dart';
+
 /// An unconstrained, high-performance bitset for fine-grained slot and state diffing.
-///
-/// ### Architecture:
-/// - **Zero-Allocation Fast Path:** Inlines words 0 and 1 (`_w0` and `_w1`) to handle
-///   states with up to 64 fields directly in CPU registers without allocating heap lists.
-/// - **Unbounded Dynamic Words:** Dynamically allocates `_extraWords` for large state models
-///   with 100, 500, or 1000+ fields.
-/// - **Cross-Platform Safe:** Uses 32-bit chunking (`index >> 5` and `1 << (index & 31)`)
-///   so bitwise operations are 100% mathematically identical on 64-bit Dart VM and 32-bit Dart Web (JS).
 @immutable
 class GraftMask {
   final bool _allDirty;
@@ -16,16 +11,12 @@ class GraftMask {
   final int _w1;
   final List<int>? _extraWords;
 
-  /// Pre-allocated flyweight cache for all 64 single-bit masks across word 0 and word 1.
-  /// Eliminates 100% of heap allocations for single-property mutations.
   static final List<GraftMask> _singleBitCache = List<GraftMask>.generate(
     64,
     (i) => i < 32 ? GraftMask._(w0: 1 << i) : GraftMask._(w1: 1 << (i - 32)),
     growable: false,
   );
 
-  /// Pre-allocated cache for all-fields-dirty masks up to 32 fields (e.g. 1, 3, 7, 15, 31, 63...).
-  /// Eliminates 100% of heap allocations for multi-field updates.
   static final List<GraftMask> _allBitsUpToCache = List<GraftMask>.generate(
     33,
     (n) => n == 0
@@ -36,21 +27,15 @@ class GraftMask {
     growable: false,
   );
 
-  /// Returns a pre-allocated mask with the first [count] bits set.
   @pragma('vm:prefer-inline')
   static GraftMask allBitsUpTo(int count) {
     if (count >= 0 && count <= 32) return _allBitsUpToCache[count];
     return allDirty;
   }
 
-  /// Hardware bit 0 pre-allocated singleton for 0-cycle single-property access.
   static final GraftMask bit0 = _singleBitCache[0];
   static final GraftMask bit1 = _singleBitCache[1];
-
-  /// Sentinel constant representing an all-dirty state mask (e.g. initial build, full reset).
   static const GraftMask allDirty = GraftMask._(allDirty: true);
-
-  /// Empty bitmask representing zero modified fields.
   static const GraftMask empty = GraftMask._();
 
   const GraftMask._({
@@ -63,14 +48,12 @@ class GraftMask {
         _w1 = w1,
         _extraWords = extraWords;
 
-  /// Returns a pre-allocated single-bit mask for [index], bypassing all allocations.
   @pragma('vm:prefer-inline')
   static GraftMask bit(int index) {
     if (index >= 0 && index < 64) return _singleBitCache[index];
     return GraftMask.fromIndex(index);
   }
 
-  /// Whether this mask matches the given raw word bit patterns.
   @pragma('vm:prefer-inline')
   bool matchesWords(int w0, int w1, [List<int>? extra]) {
     if (_allDirty) return false;
@@ -84,25 +67,21 @@ class GraftMask {
     return true;
   }
 
-  /// Creates a mask with a single bit set at [index].
   factory GraftMask.fromIndex(int index) {
     if (index < 0) return empty;
     if (index < 64) return _singleBitCache[index];
     final word = index >> 5;
     final bit = 1 << (index & 31);
-
     final extra = List<int>.filled(word - 1, 0);
     extra[word - 2] = bit;
     return GraftMask._(extraWords: extra);
   }
 
-  /// Creates a [GraftMask] directly from raw CPU word registers with zero intermediate allocations.
   @internal
   factory GraftMask.fromWords(int w0, int w1, [List<int>? extraWords]) {
     if (w0 == 0 && w1 == 0 && (extraWords == null || _isAllZero(extraWords))) {
       return empty;
     }
-    // Fast-path single bit or all-low-bits in word 0
     if (w1 == 0 && (extraWords == null || extraWords.isEmpty)) {
       if ((w0 & (w0 - 1)) == 0) {
         final idx = (w0 & 0xFFFFFFFF).bitLength - 1;
@@ -113,7 +92,6 @@ class GraftMask {
         if (count >= 0 && count <= 32) return _allBitsUpToCache[count];
       }
     }
-    // Fast-path single bit in word 1
     if (w0 == 0 &&
         (extraWords == null || extraWords.isEmpty) &&
         (w1 & (w1 - 1)) == 0) {
@@ -123,17 +101,8 @@ class GraftMask {
     return GraftMask._(w0: w0, w1: w1, extraWords: extraWords);
   }
 
-  static bool _isAllZero(List<int> words) {
-    for (int i = 0; i < words.length; i++) {
-      if (words[i] != 0) return false;
-    }
-    return true;
-  }
-
-  /// Whether this mask represents an all-dirty state.
   bool get isAllDirty => _allDirty;
 
-  /// Whether no bits are set in this mask.
   bool get isEmpty {
     if (_allDirty) return false;
     if (_w0 != 0 || _w1 != 0) return false;
@@ -146,206 +115,32 @@ class GraftMask {
     return true;
   }
 
-  /// Whether at least one bit is set in this mask.
   bool get isNotEmpty => !isEmpty;
 
-  /// Checks if the bit at [index] is set.
-  bool isBitSet(int index) {
-    if (_allDirty) return true;
-    if (index < 0) return false;
-    final word = index >> 5;
-    final bit = 1 << (index & 31);
-
-    if (word == 0) return (_w0 & bit) != 0;
-    if (word == 1) return (_w1 & bit) != 0;
-
-    final extraIdx = word - 2;
-    final extra = _extraWords;
-    if (extra == null || extraIdx >= extra.length) return false;
-    return (extra[extraIdx] & bit) != 0;
-  }
-
-  /// Returns a new [GraftMask] with the bit at [index] set to 1.
-  GraftMask withBit(int index) {
-    if (_allDirty || index < 0) return this;
-    if (isEmpty && index < 64) return _singleBitCache[index];
-    final word = index >> 5;
-    final bit = 1 << (index & 31);
-
-    if (word == 0) {
-      return GraftMask._(
-        w0: _w0 | bit,
-        w1: _w1,
-        extraWords: _extraWords,
-      );
-    }
-    if (word == 1) {
-      return GraftMask._(
-        w0: _w0,
-        w1: _w1 | bit,
-        extraWords: _extraWords,
-      );
-    }
-
-    final extraIdx = word - 2;
-    final currentExtra = _extraWords;
-    final currentLen = currentExtra?.length ?? 0;
-    final newLen = extraIdx >= currentLen ? extraIdx + 1 : currentLen;
-    final nextExtra = List<int>.filled(newLen, 0);
-    if (currentExtra != null) {
-      for (int i = 0; i < currentExtra.length; i++) {
-        nextExtra[i] = currentExtra[i];
-      }
-    }
-    nextExtra[extraIdx] |= bit;
-    return GraftMask._(w0: _w0, w1: _w1, extraWords: nextExtra);
-  }
-
-  /// Fast evaluation of whether this mask and [other] have any overlapping dirty bits.
   @pragma('vm:prefer-inline')
-  bool intersects(GraftMask other) {
-    if (_allDirty || other._allDirty) return true;
+  bool isBitSet(int index) => _maskIsBitSet(this, index);
 
-    // Word 0 check (1 CPU instruction)
-    if ((_w0 & other._w0) != 0) return true;
-
-    // Word 1 check
-    if ((_w1 & other._w1) != 0) return true;
-
-    // Extra words check if either mask has fields beyond bit 63
-    final aExtra = _extraWords;
-    final bExtra = other._extraWords;
-    if (aExtra != null && bExtra != null) {
-      final minLen =
-          aExtra.length < bExtra.length ? aExtra.length : bExtra.length;
-      for (int i = 0; i < minLen; i++) {
-        if ((aExtra[i] & bExtra[i]) != 0) return true;
-      }
-    }
-    return false;
-  }
-
-  /// Whether this mask is a subset of [other] (all bits in this mask are also set in [other]).
   @pragma('vm:prefer-inline')
-  bool isSubsetOf(GraftMask other) {
-    if (other._allDirty) return true;
-    if (_allDirty) return false;
-    if ((_w0 & ~other._w0) != 0) return false;
-    if ((_w1 & ~other._w1) != 0) return false;
-    final aExtra = _extraWords;
-    final bExtra = other._extraWords;
-    if (aExtra != null) {
-      final bLen = bExtra?.length ?? 0;
-      for (int i = 0; i < aExtra.length; i++) {
-        final bVal = (i < bLen) ? bExtra![i] : 0;
-        if ((aExtra[i] & ~bVal) != 0) return false;
-      }
-    }
-    return true;
-  }
+  GraftMask withBit(int index) => _maskWithBit(this, index);
 
-  /// Computes the bitwise union (`this | other`).
-  GraftMask union(GraftMask other) {
-    if (_allDirty || other._allDirty) return allDirty;
-    if (isEmpty) return other;
-    if (other.isEmpty) return this;
-
-    final nextW0 = _w0 | other._w0;
-    final nextW1 = _w1 | other._w1;
-
-    final aExtra = _extraWords;
-    final bExtra = other._extraWords;
-    if (aExtra == null && bExtra == null) {
-      return GraftMask._(w0: nextW0, w1: nextW1);
-    }
-
-    final aLen = aExtra?.length ?? 0;
-    final bLen = bExtra?.length ?? 0;
-    final maxLen = aLen > bLen ? aLen : bLen;
-    final nextExtra = List<int>.filled(maxLen, 0);
-
-    for (int i = 0; i < maxLen; i++) {
-      final aVal = (aExtra != null && i < aLen) ? aExtra[i] : 0;
-      final bVal = (bExtra != null && i < bLen) ? bExtra[i] : 0;
-      nextExtra[i] = aVal | bVal;
-    }
-
-    return GraftMask._(w0: nextW0, w1: nextW1, extraWords: nextExtra);
-  }
-
-  /// Returns the field index if exactly one bit is set in this mask, or `null` otherwise.
-  /// Useful for adaptive single-field dependency learning.
   @pragma('vm:prefer-inline')
-  int? get singleBitIndex {
-    if (_allDirty) return null;
-    if (_w1 == 0 && (_extraWords == null || _isAllZero(_extraWords!))) {
-      if (_w0 != 0 && (_w0 & (_w0 - 1)) == 0) {
-        return (_w0 & 0xFFFFFFFF).bitLength - 1;
-      }
-      return null;
-    }
-    if (_w0 == 0 && (_extraWords == null || _isAllZero(_extraWords!))) {
-      if (_w1 != 0 && (_w1 & (_w1 - 1)) == 0) {
-        return ((_w1 & 0xFFFFFFFF).bitLength - 1) + 32;
-      }
-      return null;
-    }
-    final extra = _extraWords;
-    if (extra != null && _w0 == 0 && _w1 == 0) {
-      int? found;
-      for (int i = 0; i < extra.length; i++) {
-        final w = extra[i];
-        if (w == 0) continue;
-        if ((w & (w - 1)) != 0 || found != null) return null;
-        found = ((w & 0xFFFFFFFF).bitLength - 1) + ((i + 2) << 5);
-      }
-      return found;
-    }
-    return null;
-  }
+  bool intersects(GraftMask other) => _maskIntersects(this, other);
+
+  @pragma('vm:prefer-inline')
+  bool isSubsetOf(GraftMask other) => _maskIsSubsetOf(this, other);
+
+  @pragma('vm:prefer-inline')
+  GraftMask union(GraftMask other) => _maskUnion(this, other);
+
+  @pragma('vm:prefer-inline')
+  int? get singleBitIndex => _maskSingleBitIndex(this);
 
   @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-    if (other is! GraftMask) return false;
-    if (_allDirty != other._allDirty) return false;
-    if (_allDirty) return true;
-    if (_w0 != other._w0 || _w1 != other._w1) return false;
-
-    final aExtra = _extraWords;
-    final bExtra = other._extraWords;
-    final aLen = aExtra?.length ?? 0;
-    final bLen = bExtra?.length ?? 0;
-    final maxLen = aLen > bLen ? aLen : bLen;
-
-    for (int i = 0; i < maxLen; i++) {
-      final aVal = (aExtra != null && i < aLen) ? aExtra[i] : 0;
-      final bVal = (bExtra != null && i < bLen) ? bExtra[i] : 0;
-      if (aVal != bVal) return false;
-    }
-    return true;
-  }
+  bool operator ==(Object other) => _maskEquals(this, other);
 
   @override
-  int get hashCode =>
-      Object.hash(_allDirty, _w0, _w1, _extraWords?.length ?? 0);
+  int get hashCode => _maskHashCode(this);
 
   @override
-  String toString() {
-    if (_allDirty) return 'GraftMask(allDirty)';
-    if (isEmpty) return 'GraftMask(empty)';
-    final buffer = StringBuffer('GraftMask(');
-    buffer.write('0x${_w0.toRadixString(16)}');
-    final extra = _extraWords;
-    if (_w1 != 0 || (extra != null && extra.any((w) => w != 0))) {
-      buffer.write(', 0x${_w1.toRadixString(16)}');
-    }
-    if (extra != null) {
-      for (final w in extra) {
-        if (w != 0) buffer.write(', 0x${w.toRadixString(16)}');
-      }
-    }
-    buffer.write(')');
-    return buffer.toString();
-  }
+  String toString() => _maskToString(this);
 }

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graft/graft.dart';
@@ -52,11 +53,15 @@ void main() {
       // Simulate OS sending AppLifecycleState.paused (e.g. user pressed home button)
       GraftLifecycleObserver.instance.didChangeAppLifecycleState(AppLifecycleState.paused);
 
-      // Wait for async flush to finish writing to disk
-      await Future<void>.delayed(const Duration(milliseconds: 100));
+      // Poll briefly for async disk write to finish without waiting full 300ms debounce
+      Uint8List? postFlushBytes;
+      for (var i = 0; i < 20; i++) {
+        postFlushBytes = await fileConfig.read(graft.state.dryKey);
+        if (postFlushBytes != null) break;
+        await Future<void>.delayed(const Duration(milliseconds: 25));
+      }
 
       // Assert that the file is now written to disk immediately:
-      final postFlushBytes = await fileConfig.read(graft.state.dryKey);
       expect(postFlushBytes, isNotNull);
 
       // Cold restart simulation verifies data was flushed
@@ -78,9 +83,14 @@ void main() {
 
       // Trigger inactive (e.g. app switcher or phone call incoming)
       GraftLifecycleObserver.instance.didChangeAppLifecycleState(AppLifecycleState.inactive);
-      await Future<void>.delayed(const Duration(milliseconds: 100));
+      Uint8List? postFlushBytes;
+      for (var i = 0; i < 20; i++) {
+        postFlushBytes = await fileConfig.read(graft.state.dryKey);
+        if (postFlushBytes != null) break;
+        await Future<void>.delayed(const Duration(milliseconds: 25));
+      }
 
-      expect(await fileConfig.read(graft.state.dryKey), isNotNull);
+      expect(postFlushBytes, isNotNull);
     });
 
     test('flushes debounced writes upon AppLifecycleState.detached', () async {
@@ -94,7 +104,14 @@ void main() {
 
       // Trigger detached
       GraftLifecycleObserver.instance.didChangeAppLifecycleState(AppLifecycleState.detached);
-      await Future<void>.delayed(const Duration(milliseconds: 100));
+      Uint8List? postDetachedBytes;
+      for (var i = 0; i < 20; i++) {
+        postDetachedBytes = await fileConfig.read(graft.state.dryKey);
+        if (postDetachedBytes != null) break;
+        await Future<void>.delayed(const Duration(milliseconds: 25));
+      }
+
+      expect(postDetachedBytes, isNotNull);
 
       expect(await fileConfig.read(graft.state.dryKey), isNotNull);
     });

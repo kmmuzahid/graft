@@ -121,175 +121,211 @@ Measures notification containment when 2,000 multi-field transactions modify 5 f
 
 ## 📊 Section E: Scenario-by-Scenario Benchmark Latencies
 
+Presents detailed execution timing distributions (mean, median, p95, min, max, standard deviation) and GC object churn across at least 15 measured runs per framework.
+
 ### 🔹 Scenario: A1_10k_increments
+
+> Measures pure in-place state mutation throughput across 10,000 synchronous scalar increments without UI listeners, verifying zero-allocation GC footprint and bitmask diff speed.
 
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | Rebuild Eff. | State Churn | Status |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **Graft** | 0.06 | 0.06 | 0.06 | 0.05 | 0.06 | 0.00 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥈 | **GetX** | 0.14 | 0.14 | 0.15 | 0.13 | 0.16 | 0.01 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥉 | **Provider** | 0.15 | 0.14 | 0.16 | 0.14 | 0.24 | 0.03 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 4 | **BLoC (Cubit)** | 0.27 | 0.14 | 0.20 | 0.12 | 1.97 | 0.47 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 5 | **Riverpod (Notifier)** | 0.57 | 0.58 | 0.62 | 0.51 | 0.63 | 0.03 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 6 | **Riverpod (StateNotifier)** | 0.86 | 0.87 | 0.91 | 0.80 | 0.91 | 0.03 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 7 | **Signals** | 2.51 | 2.52 | 2.55 | 2.45 | 2.63 | 0.04 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥇 | **Graft** | 0.07 | 0.06 | 0.07 | 0.06 | 0.08 | 0.00 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥈 | **GetX** | 0.19 | 0.14 | 0.36 | 0.13 | 0.45 | 0.10 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥉 | **Provider** | 0.21 | 0.15 | 0.42 | 0.14 | 0.42 | 0.11 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 4 | **BLoC (Cubit)** | 0.43 | 0.17 | 1.79 | 0.13 | 2.36 | 0.68 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 5 | **Riverpod (Notifier)** | 0.93 | 0.76 | 1.51 | 0.51 | 1.76 | 0.39 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 6 | **Riverpod (StateNotifier)** | 1.54 | 1.33 | 2.63 | 0.85 | 3.08 | 0.67 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 7 | **Signals** | 3.22 | 3.12 | 4.19 | 2.54 | 4.82 | 0.57 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
 
 ### 🔹 Scenario: A2_100k_increments
 
+> Stresses engine register fast-paths under a sustained burst of 100,000 synchronous increments, verifying JIT optimization stability and zero memory bloat under continuous CPU load.
+
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | Rebuild Eff. | State Churn | Status |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **Graft** | 0.69 | 0.68 | 0.69 | 0.67 | 0.80 | 0.03 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥈 | **Provider** | 1.28 | 1.27 | 1.34 | 1.21 | 1.40 | 0.05 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥉 | **GetX** | 1.51 | 1.50 | 1.54 | 1.48 | 1.61 | 0.03 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 4 | **BLoC (Cubit)** | 3.13 | 3.71 | 4.44 | 1.17 | 7.14 | 1.75 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 5 | **Riverpod (Notifier)** | 5.90 | 5.90 | 6.03 | 5.73 | 6.03 | 0.09 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 6 | **Riverpod (StateNotifier)** | 7.82 | 7.82 | 7.92 | 7.67 | 7.99 | 0.08 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 7 | **Signals** | 23.63 | 23.52 | 24.12 | 23.18 | 24.14 | 0.35 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥇 | **Graft** | 0.94 | 0.85 | 1.22 | 0.66 | 1.87 | 0.33 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥈 | **Provider** | 1.59 | 1.53 | 1.89 | 1.31 | 2.57 | 0.32 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥉 | **GetX** | 1.86 | 1.60 | 2.66 | 1.42 | 2.84 | 0.50 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 4 | **BLoC (Cubit)** | 5.58 | 5.95 | 8.04 | 1.27 | 14.11 | 3.47 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 5 | **Riverpod (Notifier)** | 7.73 | 7.70 | 8.71 | 6.95 | 9.23 | 0.60 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 6 | **Riverpod (StateNotifier)** | 10.52 | 10.51 | 11.52 | 8.89 | 12.55 | 1.06 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 7 | **Signals** | 25.82 | 25.90 | 27.88 | 23.17 | 28.27 | 1.40 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
 
 ### 🔹 Scenario: A3_multi_field_5
 
+> Executes 2,000 multi-property transactions modifying 5 distinct fields simultaneously (10,000 total mutations), measuring SIMD register diffing and single-notification batching efficiency.
+
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | Rebuild Eff. | State Churn | Status |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **Graft** | 0.12 | 0.13 | 0.14 | 0.11 | 0.14 | 0.01 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥈 | **Provider** | 0.16 | 0.15 | 0.18 | 0.14 | 0.25 | 0.03 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥉 | **GetX** | 0.40 | 0.39 | 0.42 | 0.38 | 0.44 | 0.02 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 4 | **Riverpod (Notifier)** | 0.62 | 0.60 | 0.73 | 0.56 | 0.77 | 0.06 | 0 | 0 | 100.0% | 10000 | ✅ Pass |
-| 5 | **BLoC (Cubit)** | 0.82 | 0.49 | 2.34 | 0.17 | 3.45 | 0.95 | 0 | 0 | 100.0% | 10000 | ✅ Pass |
-| 6 | **Riverpod (StateNotifier)** | 1.01 | 0.99 | 1.07 | 0.91 | 1.13 | 0.05 | 0 | 0 | 100.0% | 10000 | ✅ Pass |
-| 7 | **Signals** | 9.15 | 9.13 | 9.32 | 8.82 | 9.43 | 0.15 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥇 | **Graft** | 0.16 | 0.15 | 0.16 | 0.14 | 0.24 | 0.02 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥈 | **Provider** | 0.19 | 0.17 | 0.28 | 0.15 | 0.30 | 0.05 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥉 | **GetX** | 0.43 | 0.42 | 0.48 | 0.39 | 0.49 | 0.04 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 4 | **Riverpod (Notifier)** | 0.61 | 0.60 | 0.69 | 0.55 | 0.76 | 0.05 | 0 | 0 | 100.0% | 10000 | ✅ Pass |
+| 5 | **BLoC (Cubit)** | 0.79 | 0.22 | 3.44 | 0.20 | 5.10 | 1.45 | 0 | 0 | 100.0% | 10000 | ✅ Pass |
+| 6 | **Riverpod (StateNotifier)** | 1.30 | 1.27 | 1.65 | 0.97 | 1.97 | 0.26 | 0 | 0 | 100.0% | 10000 | ✅ Pass |
+| 7 | **Signals** | 10.51 | 10.35 | 11.59 | 9.33 | 12.67 | 0.90 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
 
 ### 🔹 Scenario: A4_depth8_nested
 
+> Mutates a leaf node nested 8 levels deep in an object hierarchy, measuring ancestor dirty-flag propagation latency and evaluating direct root-pointer notification dispatch.
+
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | Rebuild Eff. | State Churn | Status |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **Provider** | 0.02 | 0.01 | 0.02 | 0.01 | 0.05 | 0.01 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥈 | **Graft** | 0.03 | 0.01 | 0.05 | 0.01 | 0.18 | 0.04 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥉 | **GetX** | 0.03 | 0.02 | 0.09 | 0.01 | 0.13 | 0.03 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 4 | **Riverpod (Notifier)** | 0.70 | 0.57 | 0.73 | 0.55 | 2.35 | 0.46 | 0 | 0 | 100.0% | 8000 | ✅ Pass |
-| 5 | **Signals** | 0.71 | 0.55 | 1.00 | 0.53 | 2.15 | 0.42 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 6 | **BLoC (Cubit)** | 0.73 | 0.43 | 0.58 | 0.41 | 4.77 | 1.12 | 0 | 0 | 100.0% | 8000 | ✅ Pass |
-| 7 | **Riverpod (StateNotifier)** | 0.76 | 0.69 | 0.75 | 0.67 | 1.67 | 0.25 | 0 | 0 | 100.0% | 8000 | ✅ Pass |
+| 🥇 | **Provider** | 0.02 | 0.01 | 0.03 | 0.01 | 0.07 | 0.01 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥈 | **GetX** | 0.03 | 0.01 | 0.08 | 0.01 | 0.13 | 0.03 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥉 | **Graft** | 0.04 | 0.04 | 0.06 | 0.01 | 0.07 | 0.02 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 4 | **BLoC (Cubit)** | 0.08 | 0.05 | 0.16 | 0.03 | 0.30 | 0.07 | 0 | 0 | 100.0% | 8000 | ✅ Pass |
+| 5 | **Riverpod (StateNotifier)** | 0.29 | 0.26 | 0.58 | 0.10 | 0.74 | 0.19 | 0 | 0 | 100.0% | 8000 | ✅ Pass |
+| 6 | **Signals** | 0.65 | 0.54 | 0.56 | 0.51 | 2.31 | 0.46 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 7 | **Riverpod (Notifier)** | 0.90 | 0.85 | 1.45 | 0.26 | 1.51 | 0.36 | 0 | 0 | 100.0% | 8000 | ✅ Pass |
 
 ### 🔹 Scenario: B1_10_slot_column_120_frames
 
+> Pumps 120 simulated animation frames into a 10-slot Column layout while mutating slot 0, measuring frame rendering latency and asserting zero rebuilds across all 9 static siblings.
+
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | Rebuild Eff. | State Churn | Status |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **GetX** | 13.84 | 13.72 | 14.59 | 12.87 | 15.11 | 0.61 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥈 | **Signals** | 15.11 | 14.76 | 16.86 | 13.97 | 16.93 | 0.95 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥉 | **Riverpod (StateNotifier)** | 16.33 | 15.94 | 18.37 | 14.49 | 21.51 | 1.77 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 4 | **Graft (leaf slot)** | 17.56 | 17.73 | 19.81 | 14.88 | 23.21 | 2.21 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 5 | **Riverpod (Notifier)** | 17.81 | 15.57 | 25.21 | 14.11 | 26.45 | 4.47 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 6 | **Provider** | 18.77 | 19.04 | 23.75 | 14.40 | 25.50 | 3.89 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 7 | **BLoC (Cubit)** | 22.22 | 18.57 | 26.55 | 14.76 | 71.30 | 14.05 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 8 | **Graft (slots)** | 41.11 | 36.04 | 49.17 | 26.22 | 106.37 | 19.29 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥇 | **Signals** | 15.84 | 15.37 | 19.28 | 14.09 | 19.90 | 1.78 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥈 | **GetX** | 17.56 | 15.16 | 22.25 | 13.58 | 29.28 | 4.38 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥉 | **BLoC (Cubit)** | 18.74 | 16.34 | 23.56 | 14.37 | 38.13 | 6.10 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 4 | **Provider** | 19.21 | 18.57 | 23.70 | 15.53 | 24.50 | 2.75 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 5 | **Riverpod (StateNotifier)** | 19.67 | 16.56 | 23.85 | 14.21 | 46.83 | 8.19 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 6 | **Riverpod (Notifier)** | 24.91 | 22.47 | 34.25 | 18.92 | 46.51 | 7.37 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 7 | **Graft (leaf slot)** | 25.12 | 25.20 | 29.60 | 18.99 | 32.24 | 3.41 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 8 | **Graft (slots)** | 27.15 | 26.24 | 33.79 | 21.12 | 36.49 | 5.02 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
 
 ### 🔹 Scenario: B2_50_slot_column_120_frames
 
+> Evaluates high-density rebuild isolation across 120 animation frames in a 50-slot Column, verifying that dirty-mask dispatch scales smoothly without leaking rebuilds to 49 static slots.
+
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | Rebuild Eff. | State Churn | Status |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **BLoC (Cubit)** | 24.90 | 24.88 | 26.30 | 23.91 | 26.62 | 0.81 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥈 | **Riverpod (StateNotifier)** | 24.95 | 24.56 | 25.91 | 23.65 | 29.69 | 1.48 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥉 | **Graft (slots)** | 24.96 | 24.94 | 25.73 | 23.89 | 26.11 | 0.64 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 4 | **Graft (leaf slot)** | 25.09 | 25.02 | 26.76 | 22.87 | 29.29 | 1.65 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 5 | **GetX** | 25.38 | 25.07 | 26.49 | 24.53 | 26.73 | 0.76 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 6 | **Riverpod (Notifier)** | 25.54 | 24.34 | 27.49 | 23.39 | 40.03 | 4.15 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 7 | **Provider** | 27.99 | 26.54 | 30.70 | 25.32 | 42.45 | 4.27 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 8 | **Signals** | 28.34 | 26.66 | 35.16 | 23.40 | 36.27 | 4.12 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥇 | **Provider** | 24.34 | 24.47 | 25.10 | 23.38 | 25.27 | 0.64 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥈 | **GetX** | 24.98 | 23.64 | 27.31 | 22.63 | 38.70 | 4.05 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥉 | **Signals** | 25.10 | 24.38 | 27.96 | 22.93 | 33.82 | 2.73 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 4 | **BLoC (Cubit)** | 35.12 | 34.56 | 41.44 | 30.20 | 45.94 | 4.74 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 5 | **Graft (leaf slot)** | 38.75 | 36.74 | 48.34 | 29.39 | 52.57 | 6.22 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 6 | **Riverpod (Notifier)** | 39.17 | 40.94 | 50.08 | 29.26 | 50.48 | 6.83 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 7 | **Graft (slots)** | 40.30 | 37.02 | 52.13 | 29.34 | 65.71 | 10.31 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 8 | **Riverpod (StateNotifier)** | 41.40 | 40.74 | 46.74 | 35.06 | 51.49 | 4.69 | 120 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
 
 ### 🔹 Scenario: C1_5k_items_300_rapid_updates
 
+> Performs 300 rapid updates to an item in a virtualized 5,000-item ListView, measuring localized slot rebuild latency and proving zero static rebuilds on the 4,999 unaffected items.
+
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | Rebuild Eff. | State Churn | Status |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **Signals** | 33.54 | 31.78 | 44.69 | 30.91 | 44.85 | 4.61 | 300 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥈 | **Graft** | 49.11 | 38.91 | 72.69 | 33.92 | 147.92 | 29.10 | 300 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥉 | **BLoC (Cubit)** | 50.11 | 49.02 | 51.52 | 47.12 | 63.56 | 3.92 | 300 | 0 | 100.0% | 300 | ✅ Pass |
-| 4 | **Riverpod (Notifier)** | 55.46 | 34.05 | 121.13 | 32.34 | 181.48 | 43.37 | 300 | 0 | 100.0% | 300 | ✅ Pass |
-| 5 | **Provider** | 65.31 | 61.65 | 78.91 | 59.08 | 103.38 | 11.55 | 300 | 0 | 100.0% | 300 | ✅ Pass |
-| 6 | **GetX** | 69.05 | 67.20 | 70.37 | 66.06 | 87.47 | 5.36 | 300 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥇 | **Signals** | 32.08 | 29.87 | 44.47 | 29.47 | 45.41 | 5.27 | 300 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥈 | **Graft** | 33.34 | 31.55 | 42.90 | 28.44 | 45.64 | 5.24 | 300 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥉 | **Riverpod (Notifier)** | 35.16 | 35.11 | 38.91 | 31.55 | 39.80 | 2.78 | 300 | 0 | 100.0% | 300 | ✅ Pass |
+| 4 | **BLoC (Cubit)** | 46.34 | 45.24 | 47.78 | 44.66 | 58.69 | 3.51 | 300 | 0 | 100.0% | 300 | ✅ Pass |
+| 5 | **Provider** | 55.73 | 56.01 | 56.94 | 54.24 | 57.59 | 1.02 | 300 | 0 | 100.0% | 300 | ✅ Pass |
+| 6 | **GetX** | 65.58 | 62.99 | 73.72 | 61.46 | 78.47 | 4.96 | 300 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
 
 ### 🔹 Scenario: C2_20k_items_300_rapid_updates
 
+> Tests ultra-scale list virtualization by firing 300 updates into a 20,000-item ListView, verifying that receiver indexing maintains O(1) dispatch time regardless of list size.
+
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | Rebuild Eff. | State Churn | Status |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **Graft** | 39.04 | 36.51 | 53.72 | 32.72 | 57.39 | 7.34 | 300 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥈 | **Signals** | 42.74 | 41.11 | 60.10 | 33.60 | 63.61 | 9.59 | 300 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥉 | **Riverpod (Notifier)** | 50.15 | 48.62 | 53.52 | 45.28 | 69.02 | 5.71 | 300 | 0 | 100.0% | 300 | ✅ Pass |
-| 4 | **BLoC (Cubit)** | 63.96 | 63.32 | 69.50 | 57.03 | 84.40 | 6.68 | 300 | 0 | 100.0% | 300 | ✅ Pass |
-| 5 | **Provider** | 76.46 | 75.17 | 78.88 | 71.00 | 97.97 | 6.27 | 300 | 0 | 100.0% | 300 | ✅ Pass |
-| 6 | **GetX** | 76.51 | 75.89 | 82.45 | 71.76 | 87.82 | 4.10 | 300 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥇 | **Graft** | 31.08 | 29.76 | 37.12 | 28.62 | 37.52 | 2.88 | 300 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥈 | **Signals** | 39.74 | 35.18 | 55.40 | 31.95 | 62.01 | 9.79 | 300 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥉 | **Riverpod (Notifier)** | 41.73 | 41.45 | 43.56 | 40.70 | 43.59 | 0.82 | 300 | 0 | 100.0% | 300 | ✅ Pass |
+| 4 | **BLoC (Cubit)** | 62.78 | 61.08 | 68.61 | 57.32 | 79.85 | 6.03 | 300 | 0 | 100.0% | 300 | ✅ Pass |
+| 5 | **GetX** | 70.92 | 69.70 | 75.96 | 65.92 | 79.17 | 3.75 | 300 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 6 | **Provider** | 72.95 | 71.02 | 79.92 | 69.57 | 83.25 | 4.14 | 300 | 0 | 100.0% | 300 | ✅ Pass |
 
 ### 🔹 Scenario: C3_random_insert_remove_100x
 
+> Executes 100 random insert and remove operations across an indexed collection of 1,000 items, measuring array splice performance, structural diffing, and collection notification overhead.
+
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | Rebuild Eff. | State Churn | Status |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **Graft** | 0.32 | 0.32 | 0.35 | 0.31 | 0.36 | 0.02 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥈 | **Provider** | 0.89 | 0.53 | 0.62 | 0.51 | 5.77 | 1.35 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥉 | **Riverpod (Notifier)** | 1.02 | 0.54 | 3.93 | 0.53 | 4.39 | 1.28 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 4 | **BLoC (Cubit)** | 1.03 | 0.54 | 4.05 | 0.52 | 4.43 | 1.30 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 5 | **GetX (RxList)** | 4.86 | 4.85 | 4.94 | 4.80 | 4.94 | 0.04 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥇 | **Graft** | 0.32 | 0.32 | 0.36 | 0.28 | 0.38 | 0.03 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥈 | **Provider** | 0.76 | 0.47 | 2.63 | 0.43 | 2.75 | 0.78 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥉 | **GetX (RxList)** | 0.85 | 0.85 | 0.87 | 0.83 | 0.87 | 0.01 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 4 | **BLoC (Cubit)** | 0.88 | 0.51 | 3.26 | 0.48 | 3.38 | 0.99 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 5 | **Riverpod (Notifier)** | 0.92 | 0.52 | 2.92 | 0.48 | 3.11 | 0.88 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
 
 ### 🔹 Scenario: D1_product_catalog_and_cart
 
+> Simulates a multi-controller e-commerce workflow with 200 catalog items and reactive cart totals, measuring cross-controller synchronization speed and zero-GC state sharing.
+
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | Rebuild Eff. | State Churn | Status |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **Graft** | 0.01 | 0.01 | 0.01 | 0.01 | 0.01 | 0.00 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥈 | **Signals** | 0.02 | 0.01 | 0.02 | 0.01 | 0.02 | 0.00 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥉 | **BLoC (Cubit)** | 0.03 | 0.03 | 0.03 | 0.03 | 0.04 | 0.00 | 0 | 0 | 100.0% | 40 | ✅ Pass |
+| 🥇 | **Graft** | 0.02 | 0.01 | 0.02 | 0.01 | 0.02 | 0.00 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥈 | **Signals** | 0.02 | 0.01 | 0.02 | 0.01 | 0.04 | 0.01 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥉 | **BLoC (Cubit)** | 0.02 | 0.02 | 0.02 | 0.02 | 0.02 | 0.00 | 0 | 0 | 100.0% | 40 | ✅ Pass |
 
 ### 🔹 Scenario: D2_form_12_interdependent_fields
 
+> Evaluates an interactive 12-field checkout form with interdependent discount, tax, and validation recalculations, measuring branchless register diffing and atomic dirty-mask resolution.
+
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | Rebuild Eff. | State Churn | Status |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **BLoC (Cubit)** | 0.05 | 0.05 | 0.06 | 0.04 | 0.07 | 0.00 | 0 | 0 | 100.0% | 100 | ✅ Pass |
-| 🥈 | **Graft** | 0.05 | 0.05 | 0.06 | 0.05 | 0.07 | 0.01 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥉 | **Signals** | 0.06 | 0.06 | 0.06 | 0.05 | 0.11 | 0.01 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥇 | **Graft** | 0.03 | 0.04 | 0.04 | 0.03 | 0.04 | 0.00 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥈 | **BLoC (Cubit)** | 0.05 | 0.05 | 0.05 | 0.04 | 0.05 | 0.00 | 0 | 0 | 100.0% | 100 | ✅ Pass |
+| 🥉 | **Signals** | 0.06 | 0.06 | 0.07 | 0.05 | 0.08 | 0.01 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
 
 ### 🔹 Scenario: D3_navigation_and_dialog_sharing
 
+> Pushes and pops 10 consecutive modal dialogs that borrow and mutate an ambient controller owned by an underlying page, measuring transient controller borrowing and lifecycle safety.
+
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | Rebuild Eff. | State Churn | Status |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **Graft** | 4.34 | 4.09 | 4.78 | 3.74 | 7.57 | 0.94 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥈 | **BLoC** | 6.57 | 5.71 | 9.86 | 4.56 | 14.63 | 2.69 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥇 | **Graft** | 2.60 | 2.55 | 2.78 | 2.38 | 2.97 | 0.16 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥈 | **BLoC** | 4.39 | 3.30 | 6.77 | 2.99 | 11.00 | 2.17 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
 
 ### 🔹 Scenario: E1_route_push_pop_and_dialog_lifecycle
 
+> Automates 50 route transitions to stress-test memory cleanup, asserting that route-scoped controllers are automatically disposed without leaks or lingering event listeners.
+
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | Rebuild Eff. | State Churn | Status |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **Graft** | 16.03 | 10.56 | 20.61 | 10.12 | 59.10 | 12.53 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥇 | **Graft** | 5.34 | 5.27 | 5.91 | 4.77 | 6.90 | 0.54 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
 
 ### 🔹 Scenario: E2_hot_reload_reassemble_simulation
 
+> Simulates 30 consecutive Flutter hot reload cycles calling reassemble(), measuring state reconstruction speed, observer re-registration, and zero state corruption.
+
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | Rebuild Eff. | State Churn | Status |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **Graft** | 3.55 | 1.99 | 11.36 | 1.73 | 16.08 | 4.23 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥈 | **BLoC** | 5.08 | 2.00 | 20.96 | 1.81 | 29.02 | 8.23 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥇 | **Graft** | 0.93 | 0.90 | 1.02 | 0.82 | 1.31 | 0.12 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥈 | **BLoC** | 0.96 | 0.92 | 1.08 | 0.83 | 1.40 | 0.14 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
 
 ### 🔹 Scenario: E3_disposed_controller_access_safety
+
+> Fires 1,000 updates to a previously disposed controller, verifying that Graft safely handles stale references with zero exceptions, zero crashes, and zero memory leaks.
 
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | Rebuild Eff. | State Churn | Status |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | 🥇 | **Graft** | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥈 | **BLoC** | 0.00 | 0.00 | 0.00 | 0.00 | 0.01 | 0.00 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥉 | **Provider** | 0.01 | 0.01 | 0.02 | 0.01 | 0.03 | 0.01 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥈 | **BLoC** | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥉 | **Provider** | 0.01 | 0.01 | 0.01 | 0.01 | 0.01 | 0.00 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
 
 ### 🔹 Scenario: F1_reactive_diamond_glitch_test
 
+> Executes 5,000 rapid updates in a reactive diamond graph ($A \to B, C \to D$), asserting that downstream consumer $D$ evaluates exactly once per update with zero transient glitches.
+
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | Rebuild Eff. | State Churn | Status |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **BLoC (Cubit)** | 0.06 | 0.06 | 0.07 | 0.06 | 0.07 | 0.00 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥈 | **Graft** | 1.32 | 1.31 | 1.36 | 1.29 | 1.40 | 0.03 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥉 | **Riverpod (Notifier)** | 15.00 | 12.18 | 18.28 | 11.60 | 47.02 | 9.00 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 4 | **Signals** | 23.60 | 21.18 | 34.66 | 14.37 | 75.48 | 15.34 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| ❌ DISQ | **GetX** | 0.46 | 0.46 | 0.48 | 0.45 | 0.48 | 0.01 | 0 | 0 | 100.0% | 0 (Zero-GC) | ❌ Fail |
+| 🥇 | **BLoC (Cubit)** | 0.07 | 0.07 | 0.08 | 0.06 | 0.08 | 0.00 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥈 | **Graft** | 0.46 | 0.32 | 0.55 | 0.29 | 1.60 | 0.33 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥉 | **Signals** | 4.82 | 4.32 | 6.35 | 3.94 | 7.18 | 1.00 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 4 | **Riverpod (Notifier)** | 15.32 | 15.13 | 18.90 | 11.38 | 19.28 | 2.77 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| ❌ DISQ | **GetX** | 0.50 | 0.48 | 0.60 | 0.42 | 0.68 | 0.07 | 0 | 0 | 100.0% | 0 (Zero-GC) | ❌ Fail |
 
 ### 🔹 Scenario: G1_transactional_multi_field_batching
 
+> Tests multi-field transaction containment across 2,000 updates mutating 5 fields each, proving that exactly one notification fires per transaction with zero wasted notifications.
+
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | Rebuild Eff. | State Churn | Status |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **Graft** | 0.16 | 0.15 | 0.16 | 0.15 | 0.28 | 0.03 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥈 | **BLoC (Cubit)** | 0.41 | 0.33 | 0.53 | 0.29 | 1.25 | 0.24 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 🥉 | **Riverpod (Notifier)** | 1.39 | 1.01 | 3.05 | 0.96 | 4.51 | 1.01 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| 4 | **Signals** | 4.00 | 2.23 | 7.57 | 2.09 | 8.46 | 2.61 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
-| ❌ DISQ | **GetX** | 0.42 | 0.37 | 0.57 | 0.30 | 0.59 | 0.10 | 0 | 0 | 100.0% | 0 (Zero-GC) | ❌ Fail |
+| 🥇 | **Graft** | 0.04 | 0.03 | 0.05 | 0.03 | 0.05 | 0.01 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥈 | **BLoC (Cubit)** | 0.50 | 0.45 | 0.96 | 0.13 | 1.66 | 0.39 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 🥉 | **Riverpod (Notifier)** | 0.51 | 0.43 | 0.72 | 0.32 | 1.08 | 0.21 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| 4 | **Signals** | 2.72 | 2.69 | 3.40 | 2.00 | 3.63 | 0.46 | 0 | 0 | 100.0% | 0 (Zero-GC) | ✅ Pass |
+| ❌ DISQ | **GetX** | 0.27 | 0.24 | 0.46 | 0.17 | 0.49 | 0.11 | 0 | 0 | 100.0% | 0 (Zero-GC) | ❌ Fail |
 
 ---
 

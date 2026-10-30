@@ -35,25 +35,8 @@ class GraftRegistry {
 
   /// Registers a factory for a given [Graft] type [T] as a **Global Singleton**.
   ///
-  /// ### Why register as a Singleton?
-  /// Use this for state that must persist across navigation flows throughout the entire app:
-  /// - Authentication sessions & user credentials
-  /// - Application settings & theme preferences
-  /// - Real-time WebSocket or push notification services
-  ///
-  /// ### Parameters:
-  /// - [lazy]: If `true` (default), the instance is created lazily on first access
-  ///   when `context.use<T>()` is called. If `false`, it is instantiated immediately.
-  /// - A singleton is **never re-created** by `context.create<T>()` and is **never disposed** by route pops.
-  ///
-  /// ### Example:
-  /// ```dart
-  /// // Lazy singleton (instantiated on first use):
-  /// GraftRegistry.registerSingleton(AuthGraft.new);
-  ///
-  /// // Eager singleton (instantiated immediately right now):
-  /// GraftRegistry.registerSingleton(SettingsGraft.new, lazy: false);
-  /// ```
+  /// - [lazy]: If `true` (default), created on first access when `context.use<T>()` is called.
+  /// - A singleton is never re-created by `context.create<T>()` and never disposed by route pops.
   static void registerSingleton<T extends Graft>(
     T Function() factory, {
     bool lazy = true,

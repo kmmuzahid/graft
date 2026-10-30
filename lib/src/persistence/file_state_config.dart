@@ -27,12 +27,21 @@ final class FileStateConfig implements GraftStateConfig {
     return await file.readAsBytes();
   }
 
+  static int _writeCounter = 0;
+
   @override
   Future<void> write(String key, Uint8List value) async {
     final file = _fileForKey(key);
-    final tempFile = File('${file.path}.tmp');
+    final tempFile = File('${file.path}.${++_writeCounter}.tmp');
     await tempFile.writeAsBytes(value, flush: true);
-    await tempFile.rename(file.path);
+    try {
+      await tempFile.rename(file.path);
+    } catch (_) {
+      if (await tempFile.exists()) {
+        await tempFile.copy(file.path);
+        await tempFile.delete();
+      }
+    }
   }
 
   @override

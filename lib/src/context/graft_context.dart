@@ -4,39 +4,13 @@ import '../di/graft_registry.dart';
 import '../route/graft_route_tracker.dart';
 
 /// Extension on [BuildContext] providing ergonomic Graft lookups and zero-wrapper ambient lifecycle management.
-///
-/// ### Why use BuildContext extensions?
-/// - **Clean Screen Code:** Access controllers directly from `BuildContext` without wrappers:
-///   `final userGraft = context.use<UserGraft>();`
-/// - **Zero-Wrapper Ambient Engine:** Borrows active controllers across navigation flows automatically.
-/// - **Ref-Counted Teardown:** Disposes instances when all borrower screens pop off the navigation stack.
-/// - **App-Root Singletons:** Automatically promotes instances created above `Navigator` (`route == null`)
-///   to permanent app-wide singletons.
 extension GraftContextX on BuildContext {
   /// Resolves an active [Graft] of type [T] from the ambient pool, or creates one if absent.
   ///
-  /// ### Why use `context.use<T>()`?
-  /// - **Borrow or Create:** If an active instance exists in the ambient pool, borrows it and
-  ///   increments the route reference count. If none exists, creates it.
-  /// - **App-Root Promotion:** When invoked at the App Root (`route == null`), auto-promotes the instance
-  ///   to a permanent app-wide singleton (`isRoot: true`) that stays alive for the entire session.
-  /// - **Ref-Counted Disposal:** When invoked inside a route, tracks borrower routes. The instance stays
-  ///   alive across child pushes (including `pushReplacement`) and is automatically disposed when all
-  ///   borrower routes pop (`refCount == 0`).
-  /// - **Optional Key / Tagging:** Pass [key] for parameterized/recursive entity screens
-  ///   (e.g., `context.use(() => ProductGraft(id), key: id)`).
-  ///
-  /// ### Example:
-  /// ```dart
-  /// class EditProfileScreen extends StatelessWidget {
-  ///   @override
-  ///   Widget build(BuildContext context) {
-  ///     // Borrows existing ProfileGraft from HomeScreen in the route stack:
-  ///     final graft = context.use<ProfileGraft>();
-  ///     return Scaffold(...);
-  ///   }
-  /// }
-  /// ```
+  /// - **Borrow or Create:** If an active instance exists, borrows it and increments refCount.
+  /// - **App-Root Promotion:** When invoked at App Root (`route == null`), auto-promotes to permanent singleton.
+  /// - **Ref-Counted Disposal:** Disposed when all borrower routes pop (`refCount == 0`).
+  /// - Pass optional [key] for parameterized entity screens.
   T use<T extends Graft>([T Function()? factory, Object? key]) {
     // If registered with isNewCreate: false, always return the permanent singleton
     if (!GraftRegistry.canCreateNew<T>()) {

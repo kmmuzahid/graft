@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'save_report.dart';
+import 'scenario_descriptions.dart';
 
 /// Represents the statistical summary of multiple measured runs for a benchmark scenario.
 class BenchmarkStats {
@@ -320,6 +321,8 @@ class BenchmarkReportCollector {
     // -------------------------------------------------------------------------
     sb.writeln('## 📊 Section E: Scenario-by-Scenario Benchmark Latencies');
     sb.writeln();
+    sb.writeln('Presents detailed execution timing distributions (mean, median, p95, min, max, standard deviation) and GC object churn across at least 15 measured runs per framework.');
+    sb.writeln();
 
     // Group results by scenario
     final grouped = <String, List<BenchmarkStats>>{};
@@ -338,6 +341,9 @@ class BenchmarkReportCollector {
         });
 
       sb.writeln('### 🔹 Scenario: $scenarioName');
+      sb.writeln();
+      final desc = ScenarioDescriptions.forScenario(scenarioName);
+      sb.writeln('> $desc');
       sb.writeln();
       sb.writeln('| Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | Rebuild Eff. | State Churn | Status |');
       sb.writeln('| :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |');

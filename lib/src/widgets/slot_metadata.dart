@@ -1,6 +1,9 @@
 import 'package:flutter/widgets.dart';
 import '../core/graft_mask.dart';
 
+part 'slot_fingerprint.dart';
+part 'slot_notifier.dart';
+
 /// Retained structural metadata for each child slot in `graft.slots`.
 ///
 /// Enables the self-optimizing adaptive change detection engine to evaluate
@@ -108,91 +111,5 @@ class SlotMetadata {
 
   /// Computes a fast 64-bit integer fingerprint of a widget's content in nanoseconds.
   @pragma('vm:prefer-inline')
-  static int computeFingerprint(Widget w) {
-    if (w is Text) {
-      return Object.hash(
-        w.data,
-        w.style?.fontSize,
-        w.style?.color,
-        w.style?.fontWeight,
-        w.textAlign,
-      );
-    }
-    if (w is Icon) {
-      return Object.hash(
-        w.icon,
-        w.color,
-        w.size,
-        w.semanticLabel,
-      );
-    }
-    if (w is SizedBox) {
-      return Object.hash(
-        w.width,
-        w.height,
-        w.child != null ? computeFingerprint(w.child!) : 0,
-      );
-    }
-    if (w is Padding) {
-      return Object.hash(
-        w.padding,
-        w.child != null ? computeFingerprint(w.child!) : 0,
-      );
-    }
-    if (w is ColoredBox) {
-      return Object.hash(
-        w.color,
-        w.child != null ? computeFingerprint(w.child!) : 0,
-      );
-    }
-    if (w is Align) {
-      return Object.hash(
-        w.alignment,
-        w.widthFactor,
-        w.heightFactor,
-        w.child != null ? computeFingerprint(w.child!) : 0,
-      );
-    }
-    if (w is Opacity) {
-      return Object.hash(
-        w.opacity,
-        w.child != null ? computeFingerprint(w.child!) : 0,
-      );
-    }
-    if (w.key != null) {
-      return Object.hash(w.runtimeType, w.key);
-    }
-    return w.hashCode;
-  }
-}
-
-/// Ultra-lightweight [ValueNotifier] that tracks element attachment with zero listener overhead.
-class SlotNotifier extends ValueNotifier<Widget> {
-  SlotNotifier(super.value);
-  bool _elementAttached = false;
-  Widget? _latestValue;
-
-  /// Attaches the slot's leaf element.
-  void attachElement() => _elementAttached = true;
-
-  /// Detaches the slot's leaf element.
-  void detachElement() => _elementAttached = false;
-
-  @override
-  bool get hasListeners => _elementAttached || super.hasListeners;
-
-  @override
-  Widget get value => _latestValue ?? super.value;
-
-  @override
-  set value(Widget newValue) {
-    if (identical(value, newValue)) return;
-    _latestValue = newValue;
-    if (super.hasListeners) {
-      super.value = newValue;
-    }
-  }
-
-  /// Whether external listeners are registered on this notifier.
-  bool get hasExternalListeners => super.hasListeners;
+  static int computeFingerprint(Widget w) => _computeWidgetFingerprint(w);
 }

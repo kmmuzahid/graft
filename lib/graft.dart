@@ -37,7 +37,7 @@ export 'src/core/graft_async.dart';
 export 'src/core/graft_change.dart';
 export 'src/core/graft_mask.dart';
 export 'src/core/graft_observer.dart';
-export 'src/core/graft_state.dart' hide GraftStateEngine;
+export 'src/core/graft_state.dart' hide GraftStateEngine, GraftStateStorage;
 export 'src/core/value_graft.dart';
 export 'src/di/disposable.dart';
 export 'src/di/graft_di.dart';

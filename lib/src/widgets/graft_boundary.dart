@@ -7,28 +7,11 @@ import 'child_slot_engine.dart';
 /// An isolated rebuild boundary that automatically discovers all [Graft] instances
 /// accessed inside it and adapts backward via self-optimizing field learning.
 ///
-/// ### Why use GraftBoundary?
-/// 1. **Zero-Boilerplate Multi-Graft Discovery:** Simply read whatever `.state` you need.
-///    Any [Graft] accessed during `builder` is auto-discovered and subscribed with **0 manual lists**:
-///    ```dart
-///    GraftBoundary(
-///      builder: (context) {
-///        return Row(
-///          children: [
-///            Text(userGraft.state.name),
-///            const SizedBox(width: 8),
-///            Text(themeGraft.state.accent),
-///          ],
-///        );
-///      },
-///    )
-///    ```
-/// 2. **Backward Adaptive Learning:** By diffing rendered output with [GraftMultiChildDiffEngine.isWidgetEquivalent],
-///    the boundary learns which properties across all watched Grafts actually affect the UI.
-///    Unrelated property modifications are **bypassed in 1 CPU cycle** without executing `builder`
-///    or allocating any widgets.
-/// 3. **Tree Rebuild Insulation:** Rebuilds are trapped inside this boundary; outside parent and
-///    sibling widgets experience **0 element rebuilds**.
+/// Features:
+/// 1. Zero-boilerplate multi-Graft auto-discovery (no manual lists).
+/// 2. Backward adaptive learning: diffs rendered output with [GraftMultiChildDiffEngine.isWidgetEquivalent]
+///    to bypass unrelated property modifications without executing builder.
+/// 3. Tree rebuild insulation: rebuilds are trapped inside this boundary.
 class GraftBoundary extends StatefulWidget implements GraftEquivalent {
   /// The reactive widget builder.
   final Widget Function(BuildContext context) builder;
