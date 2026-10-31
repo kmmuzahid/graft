@@ -52,6 +52,7 @@ class _GraftSingleSlotElement<S extends GraftState> extends ComponentElement
     _builder = w.builder;
     _graft = w.graft;
     _state = GraftEngine.getState(_graft);
+    GraftStateEngine.props(_state);
     _isSingleScalar = GraftEngine.getScalarCount(_graft) == 1;
     if (!_isSingleScalar) {
       _currentWidget = GraftScopeGuard.run(
@@ -80,6 +81,7 @@ class _GraftSingleSlotElement<S extends GraftState> extends ComponentElement
     _builder = newWidget.builder;
     _graft = newWidget.graft;
     _state = GraftEngine.getState(_graft);
+    GraftStateEngine.props(_state);
     _isSingleScalar = GraftEngine.getScalarCount(_graft) == 1;
     if (oldGraft != _graft) {
       oldGraft.removeMaskListener(_onMaskDirty);

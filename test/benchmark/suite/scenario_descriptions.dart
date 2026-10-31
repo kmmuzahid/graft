@@ -24,12 +24,12 @@ abstract final class ScenarioDescriptions {
         '> Critical for complex nested enterprise models (e.g. user -> organization -> settings -> preferences -> theme) without requiring copyWith chains.',
     'B1_10_slot_column_120_frames':
         'Pumps 120 simulated animation frames into a 10-slot Column layout while mutating slot 0 on every frame.\n'
-        '> Verifies that native ComponentElement slots isolate rebuilds to the mutated child, maintaining 0 rebuilds on all 9 static siblings.\n'
-        '> Directly impacts animation smoothness and battery life by eliminating wasteful parent layout rebuilds during rapid UI updates.',
+        '> Measures rebuild isolation using an O(1) dry-layout RenderBox and interleaved round-robin runs, eliminating text-shaping noise.\n'
+        '> Verifies that native ComponentElement slots isolate rebuilds to the mutated child, maintaining 0 rebuilds on all 9 static siblings.',
     'B2_50_slot_column_120_frames':
         'Evaluates high-density rebuild containment across 120 animation frames in a heavy 50-slot Column layout.\n'
-        '> Tests that dirty-mask dispatch scales smoothly to large widget trees without leaking rebuilds to the 49 unaffected static slots.\n'
-        '> Guarantees 60fps/120fps fluid scrolling and animation performance in complex production dashboards and dense data forms.',
+        '> Measures dirty-mask dispatch with O(1) dry layout nodes and temporal round-robin execution, free from font engine interference.\n'
+        '> Guarantees 60fps/120fps fluid performance by isolating updates to 1 slot while 49 static slots experience 0 rebuilds.',
     'C1_5k_items_300_rapid_updates':
         'Performs 300 rapid updates to an item in a virtualized 5,000-item ListView.\n'
         '> Measures localized slot rebuild latency and verifies that the remaining 4,999 items experience 0 wasted rebuilds.\n'
@@ -67,7 +67,7 @@ abstract final class ScenarioDescriptions {
         '> Verifies that Graft safely handles stale references with zero unhandled exceptions, zero crashes, and zero memory leaks.\n'
         '> Protects production apps from crashing when delayed async responses or animations complete after screen dismissal.',
     'F1_reactive_diamond_glitch_test':
-        r'Executes 5,000 rapid updates in a classic reactive diamond graph ($A \to B, C \to D$).' '\n'
+        r'Executes 50,000 rapid updates in a classic reactive diamond graph ($A \to B, C \to D$).' '\n'
         '> Asserts that downstream consumer D evaluates exactly once per update with zero transient glitches or corrupt intermediate reads.\n'
         '> Guarantees mathematical correctness and UI integrity in complex reactive dependency networks.',
     'G1_transactional_multi_field_batching':
@@ -113,6 +113,14 @@ abstract final class ScenarioDescriptions {
         'Executes 100 random insert and remove operations in a 1,000-item collection on Web.\n'
         '> Measures JavaScript array splice performance and dynamic receiver re-indexing.\n'
         '> Proves responsive item manipulation in interactive web data grids and tables.',
+    'F1_reactive_diamond_glitch_test':
+        r'Executes 50,000 rapid updates in a reactive diamond graph ($A \to B, C \to D$) inside the Chromium V8 engine.' '\n'
+        '> Evaluates topological glitch-freedom and intermediate consistency under browser microtask scheduling.\n'
+        '> Guarantees zero corrupt reads and exact 1:1 evaluation ratios on the Web.',
+    'G1_transactional_multi_field_batching':
+        'Tests 2,000 multi-field transactions modifying 5 fields simultaneously on Web (10,000 total mutations).\n'
+        '> Measures single-notification transaction batching under browser event loop constraints.\n'
+        '> Prevents event loop thrashing and wasted renders in complex Web applications.',
   };
 
   /// Returns the 2-3 line methodology description for a native scenario.

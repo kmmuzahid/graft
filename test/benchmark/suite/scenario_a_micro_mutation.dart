@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart' as riverpod_pkg;
 import 'package:signals_flutter/signals_flutter.dart' as signals_pkg;
 import 'package:get/get.dart' as getx;
 import 'package:flutter/foundation.dart';
+import 'benchmark_isolation.dart';
 import 'benchmark_models.dart';
 
 // =============================================================================
@@ -455,6 +456,7 @@ class ScenarioAMicroMutationRunner {
 
     // 1. Graft
     {
+      BenchmarkIsolation.flushHeap();
       final samples = <double>[];
       for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final ctrl = GraftSingleController();
@@ -481,6 +483,7 @@ class ScenarioAMicroMutationRunner {
 
     // 2. Riverpod (Notifier - Codegen style)
     {
+      BenchmarkIsolation.flushHeap();
       final samples = <double>[];
       for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final container = riverpod_pkg.ProviderContainer();
@@ -507,6 +510,7 @@ class ScenarioAMicroMutationRunner {
 
     // 3. Riverpod (StateNotifier - without codegen)
     {
+      BenchmarkIsolation.flushHeap();
       final samples = <double>[];
       for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final container = riverpod_pkg.ProviderContainer();
@@ -533,6 +537,7 @@ class ScenarioAMicroMutationRunner {
 
     // 4. BLoC (Cubit)
     {
+      BenchmarkIsolation.flushHeap();
       final samples = <double>[];
       for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final cubit = BlocSingleCubit();
@@ -558,6 +563,7 @@ class ScenarioAMicroMutationRunner {
 
     // 5. Signals
     {
+      BenchmarkIsolation.flushHeap();
       final samples = <double>[];
       for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final s = signals_pkg.signal(0);
@@ -586,6 +592,7 @@ class ScenarioAMicroMutationRunner {
 
     // 6. GetX
     {
+      BenchmarkIsolation.flushHeap();
       final samples = <double>[];
       for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final ctrl = GetXSingleController();
@@ -610,6 +617,7 @@ class ScenarioAMicroMutationRunner {
 
     // 7. Provider (ChangeNotifier)
     {
+      BenchmarkIsolation.flushHeap();
       final samples = <double>[];
       for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final model = ProviderSingleModel();
@@ -659,6 +667,7 @@ class ScenarioAMicroMutationRunner {
 
     // 1. Graft
     {
+      BenchmarkIsolation.flushHeap();
       final samples = <double>[];
       for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final ctrl = Graft5FieldController();
@@ -735,6 +744,7 @@ class ScenarioAMicroMutationRunner {
 
     // 4. BLoC (Cubit)
     {
+      BenchmarkIsolation.flushHeap();
       final samples = <double>[];
       for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final cubit = Bloc5FieldCubit();
@@ -760,6 +770,7 @@ class ScenarioAMicroMutationRunner {
 
     // 5. Signals
     {
+      BenchmarkIsolation.flushHeap();
       final samples = <double>[];
       for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final sig = Signals5Field();
@@ -792,6 +803,7 @@ class ScenarioAMicroMutationRunner {
 
     // 6. GetX
     {
+      BenchmarkIsolation.flushHeap();
       final samples = <double>[];
       for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final ctrl = GetX5FieldController();
@@ -816,6 +828,7 @@ class ScenarioAMicroMutationRunner {
 
     // 7. Provider
     {
+      BenchmarkIsolation.flushHeap();
       final samples = <double>[];
       for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final model = Provider5FieldModel();
@@ -863,6 +876,7 @@ class ScenarioAMicroMutationRunner {
 
     // 1. Graft
     {
+      BenchmarkIsolation.flushHeap();
       final samples = <double>[];
       for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final ctrl = GraftNestedDepth8Controller();
@@ -939,6 +953,7 @@ class ScenarioAMicroMutationRunner {
 
     // 4. BLoC (Cubit)
     {
+      BenchmarkIsolation.flushHeap();
       final samples = <double>[];
       for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final cubit = BlocNestedCubit();
@@ -964,6 +979,7 @@ class ScenarioAMicroMutationRunner {
 
     // 5. Signals
     {
+      BenchmarkIsolation.flushHeap();
       final samples = <double>[];
       for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final sig = SignalsDepth8();
@@ -992,6 +1008,7 @@ class ScenarioAMicroMutationRunner {
 
     // 6. GetX
     {
+      BenchmarkIsolation.flushHeap();
       final samples = <double>[];
       for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final ctrl = GetXDepth8Controller();
@@ -1016,6 +1033,7 @@ class ScenarioAMicroMutationRunner {
 
     // 7. Provider
     {
+      BenchmarkIsolation.flushHeap();
       final samples = <double>[];
       for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
         final model = ProviderDepth8Model();

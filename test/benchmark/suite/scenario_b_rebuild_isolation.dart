@@ -6,11 +6,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart' as riverpod_pkg;
 import 'package:signals_flutter/signals_flutter.dart' as signals_pkg;
 import 'package:get/get.dart' as getx;
 import 'package:provider/provider.dart' as provider_pkg;
+import 'benchmark_isolation.dart';
 import 'benchmark_models.dart';
 import 'tracking_widget.dart';
 
 // =============================================================================
-// CONTROLLERS FOR SCENARIO B
+// DOMAIN MODELS & CONTROLLERS FOR SCENARIO B
 // =============================================================================
 class GraftBState extends GraftState {
   int count = 0;
@@ -63,11 +64,389 @@ class ProviderBModel extends ChangeNotifier {
 }
 
 // =============================================================================
-// SCENARIO B RUNNER
+// CANDIDATE RUNNER CONTRACT (HERMETIC ISOLATION)
+// =============================================================================
+abstract class _ScenarioBCandidate {
+  String get name;
+  String get notes;
+  Future<void> mount(
+      WidgetTester tester, int slotCount, RebuildCounter counter);
+  void triggerFrame();
+  void dispose();
+}
+
+class _GraftLeafCandidate implements _ScenarioBCandidate {
+  @override
+  String get name => 'Graft (leaf slot)';
+  @override
+  String get notes => 'Depth-N parent rebuild insulation';
+
+  GraftBController? _ctrl;
+
+  @override
+  Future<void> mount(
+      WidgetTester tester, int slotCount, RebuildCounter counter) async {
+    _ctrl = GraftBController();
+    final staticCount = slotCount - 1;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Column(
+            children: [
+              _ctrl!((s) => TrackingWidget(
+                    label: 'Dynamic: ${s.count}',
+                    onBuild: () => counter.dynamicBuilds++,
+                  )),
+              for (int i = 0; i < staticCount; i++)
+                TrackingWidget(
+                  label: 'Static $i',
+                  onBuild: () => counter.staticBuilds[i]++,
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  void triggerFrame() => _ctrl!.increment();
+
+  @override
+  void dispose() => _ctrl?.dispose();
+}
+
+class _GraftSlotsCandidate implements _ScenarioBCandidate {
+  @override
+  String get name => 'Graft (slots)';
+  @override
+  String get notes => 'Direct multi-slot reconciliation';
+
+  GraftBController? _ctrl;
+
+  @override
+  Future<void> mount(
+      WidgetTester tester, int slotCount, RebuildCounter counter) async {
+    _ctrl = GraftBController();
+    final staticCount = slotCount - 1;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: _ctrl!.slots(
+            layout: Column(children: slots),
+            slots: (s) => [
+              TrackingWidget(
+                label: 'Dynamic: ${s.count}',
+                onBuild: () => counter.dynamicBuilds++,
+              ),
+              for (int i = 0; i < staticCount; i++)
+                TrackingWidget(
+                  label: 'Static $i',
+                  onBuild: () => counter.staticBuilds[i]++,
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  void triggerFrame() => _ctrl!.increment();
+
+  @override
+  void dispose() => _ctrl?.dispose();
+}
+
+class _RiverpodNotifierCandidate implements _ScenarioBCandidate {
+  @override
+  String get name => 'Riverpod (Notifier)';
+  @override
+  String get notes => 'Consumer scoped rebuild';
+
+  riverpod_pkg.ProviderContainer? _container;
+
+  @override
+  Future<void> mount(
+      WidgetTester tester, int slotCount, RebuildCounter counter) async {
+    _container = riverpod_pkg.ProviderContainer();
+    final staticCount = slotCount - 1;
+    await tester.pumpWidget(
+      riverpod_pkg.UncontrolledProviderScope(
+        container: _container!,
+        child: MaterialApp(
+          home: Scaffold(
+            body: Column(
+              children: [
+                riverpod_pkg.Consumer(
+                  builder: (context, ref, _) {
+                    final count = ref.watch(riverpodBNotifierProvider);
+                    return TrackingWidget(
+                      label: 'Dynamic: $count',
+                      onBuild: () => counter.dynamicBuilds++,
+                    );
+                  },
+                ),
+                for (int i = 0; i < staticCount; i++)
+                  TrackingWidget(
+                    label: 'Static $i',
+                    onBuild: () => counter.staticBuilds[i]++,
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  void triggerFrame() =>
+      _container!.read(riverpodBNotifierProvider.notifier).increment();
+
+  @override
+  void dispose() => _container?.dispose();
+}
+
+class _RiverpodStateNotifierCandidate implements _ScenarioBCandidate {
+  @override
+  String get name => 'Riverpod (StateNotifier)';
+  @override
+  String get notes => 'Consumer scoped rebuild';
+
+  riverpod_pkg.ProviderContainer? _container;
+
+  @override
+  Future<void> mount(
+      WidgetTester tester, int slotCount, RebuildCounter counter) async {
+    _container = riverpod_pkg.ProviderContainer();
+    final staticCount = slotCount - 1;
+    await tester.pumpWidget(
+      riverpod_pkg.UncontrolledProviderScope(
+        container: _container!,
+        child: MaterialApp(
+          home: Scaffold(
+            body: Column(
+              children: [
+                riverpod_pkg.Consumer(
+                  builder: (context, ref, _) {
+                    final count = ref.watch(riverpodBStateNotifierProvider);
+                    return TrackingWidget(
+                      label: 'Dynamic: $count',
+                      onBuild: () => counter.dynamicBuilds++,
+                    );
+                  },
+                ),
+                for (int i = 0; i < staticCount; i++)
+                  TrackingWidget(
+                    label: 'Static $i',
+                    onBuild: () => counter.staticBuilds[i]++,
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  void triggerFrame() =>
+      _container!.read(riverpodBStateNotifierProvider.notifier).increment();
+
+  @override
+  void dispose() => _container?.dispose();
+}
+
+class _BlocCandidate implements _ScenarioBCandidate {
+  @override
+  String get name => 'BLoC (Cubit)';
+  @override
+  String get notes => 'BlocSelector fine-grained rebuild';
+
+  BlocBCubit? _cubit;
+
+  @override
+  Future<void> mount(
+      WidgetTester tester, int slotCount, RebuildCounter counter) async {
+    _cubit = BlocBCubit();
+    final staticCount = slotCount - 1;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Column(
+            children: [
+              bloc_pkg.BlocSelector<BlocBCubit, int, int>(
+                bloc: _cubit,
+                selector: (state) => state,
+                builder: (context, count) {
+                  return TrackingWidget(
+                    label: 'Dynamic: $count',
+                    onBuild: () => counter.dynamicBuilds++,
+                  );
+                },
+              ),
+              for (int i = 0; i < staticCount; i++)
+                TrackingWidget(
+                  label: 'Static $i',
+                  onBuild: () => counter.staticBuilds[i]++,
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  void triggerFrame() => _cubit!.increment();
+
+  @override
+  void dispose() => _cubit?.close();
+}
+
+class _SignalsCandidate implements _ScenarioBCandidate {
+  @override
+  String get name => 'Signals';
+  @override
+  String get notes => 'Watch reactive element rebuild';
+
+  signals_pkg.Signal<int>? _countSignal;
+
+  @override
+  Future<void> mount(
+      WidgetTester tester, int slotCount, RebuildCounter counter) async {
+    _countSignal = signals_pkg.signal(0);
+    final staticCount = slotCount - 1;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Column(
+            children: [
+              signals_pkg.Watch(key: ValueKey(_countSignal), (context) {
+                final val = _countSignal!.watch(context);
+                return TrackingWidget(
+                  label: 'Dynamic: $val',
+                  onBuild: () => counter.dynamicBuilds++,
+                );
+              }),
+              for (int i = 0; i < staticCount; i++)
+                TrackingWidget(
+                  label: 'Static $i',
+                  onBuild: () => counter.staticBuilds[i]++,
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  void triggerFrame() => _countSignal!.value++;
+
+  @override
+  void dispose() => _countSignal?.dispose();
+}
+
+class _GetXCandidate implements _ScenarioBCandidate {
+  @override
+  String get name => 'GetX';
+  @override
+  String get notes => 'Obx micro-rebuild containment';
+
+  GetXBController? _ctrl;
+
+  @override
+  Future<void> mount(
+      WidgetTester tester, int slotCount, RebuildCounter counter) async {
+    _ctrl = GetXBController();
+    final staticCount = slotCount - 1;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Column(
+            children: [
+              getx.Obx(() {
+                return TrackingWidget(
+                  label: 'Dynamic: ${_ctrl!.count.value}',
+                  onBuild: () => counter.dynamicBuilds++,
+                );
+              }),
+              for (int i = 0; i < staticCount; i++)
+                TrackingWidget(
+                  label: 'Static $i',
+                  onBuild: () => counter.staticBuilds[i]++,
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  void triggerFrame() => _ctrl!.increment();
+
+  @override
+  void dispose() => _ctrl?.onClose();
+}
+
+class _ProviderCandidate implements _ScenarioBCandidate {
+  @override
+  String get name => 'Provider';
+  @override
+  String get notes => 'Selector rebuild containment';
+
+  ProviderBModel? _model;
+
+  @override
+  Future<void> mount(
+      WidgetTester tester, int slotCount, RebuildCounter counter) async {
+    _model = ProviderBModel();
+    final staticCount = slotCount - 1;
+    await tester.pumpWidget(
+      provider_pkg.ChangeNotifierProvider<ProviderBModel>.value(
+        value: _model!,
+        child: MaterialApp(
+          home: Scaffold(
+            body: Column(
+              children: [
+                provider_pkg.Selector<ProviderBModel, int>(
+                  selector: (_, m) => m.count,
+                  builder: (_, count, __) {
+                    return TrackingWidget(
+                      label: 'Dynamic: $count',
+                      onBuild: () => counter.dynamicBuilds++,
+                    );
+                  },
+                ),
+                for (int i = 0; i < staticCount; i++)
+                  TrackingWidget(
+                    label: 'Static $i',
+                    onBuild: () => counter.staticBuilds[i]++,
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  void triggerFrame() => _model!.increment();
+
+  @override
+  void dispose() => _model?.dispose();
+}
+
+// =============================================================================
+// SCENARIO B RUNNER (INTERLEAVED ROUND-ROBIN WITH HERMETIC ISOLATION)
 // =============================================================================
 class ScenarioBRebuildIsolationRunner {
   static const int totalFrames = 120;
-  static const int warmUpRuns = 25;
+  static const int warmUpRuns = 10;
   static const int measuredRuns = 15;
 
   static Future<List<BenchmarkStats>> runAll(WidgetTester tester) async {
@@ -98,594 +477,74 @@ class ScenarioBRebuildIsolationRunner {
     final results = <BenchmarkStats>[];
     final staticCount = slotCount - 1;
     tester.view.physicalSize = const Size(1200, 3000);
-    // Pre-flight JIT warm-up of all widget/element reconciliation and paragraph pipelines
-    {
-      int dummy = 0;
-      void Function(void Function())? stateSetter;
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: Column(
-              children: [
-                StatefulBuilder(
-                  builder: (context, setState) {
-                    stateSetter = setState;
-                    return TrackingWidget(label: 'Warm: $dummy', onBuild: () {});
-                  },
-                ),
-                for (int i = 0; i < staticCount; i++)
-                  TrackingWidget(label: 'Static $i', onBuild: () {}),
-              ],
-            ),
-          ),
-        ),
-      );
-      await tester.pump();
-      for (int f = 0; f < 1500; f++) {
-        stateSetter?.call(() => dummy++);
-        await tester.pump();
-      }
 
-      final warmCtrl = GraftBController();
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: Column(
-              children: [
-                warmCtrl((s) => TrackingWidget(label: 'W: ${s.count}', onBuild: () {})),
-                for (int i = 0; i < staticCount; i++)
-                  TrackingWidget(label: 'Static $i', onBuild: () {}),
-              ],
-            ),
-          ),
-        ),
-      );
-      await tester.pump();
-      for (int f = 0; f < 1500; f++) {
-        warmCtrl.increment();
-        await tester.pump();
-      }
+    final candidates = <_ScenarioBCandidate>[
+      _GraftLeafCandidate(),
+      _GraftSlotsCandidate(),
+      _RiverpodNotifierCandidate(),
+      _RiverpodStateNotifierCandidate(),
+      _BlocCandidate(),
+      _SignalsCandidate(),
+      _GetXCandidate(),
+      _ProviderCandidate(),
+    ];
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: warmCtrl.slots(
-              layout: Column(children: slots),
-              slots: (s) => [
-                TrackingWidget(label: 'W: ${s.count}', onBuild: () {}),
-                for (int i = 0; i < staticCount; i++)
-                  TrackingWidget(label: 'Static $i', onBuild: () {}),
-              ],
-            ),
-          ),
-        ),
-      );
-      await tester.pump();
-      for (int f = 0; f < 1500; f++) {
-        warmCtrl.increment();
-        await tester.pump();
+    final samplesMap = {for (final c in candidates) c.name: <double>[]};
+    final lastDynamicMap = {for (final c in candidates) c.name: 0};
+    final lastStaticMap = {for (final c in candidates) c.name: 0};
+
+    // 1. Interleaved Warm-Up Runs
+    for (int w = 0; w < warmUpRuns; w++) {
+      for (final candidate in candidates) {
+        await BenchmarkIsolation.flushPipeline(tester);
+        final counter = RebuildCounter(staticCount);
+        await candidate.mount(tester, slotCount, counter);
+        for (int f = 0; f < totalFrames; f++) {
+          candidate.triggerFrame();
+          await tester.pump(Duration.zero);
+        }
+        candidate.dispose();
       }
-      warmCtrl.dispose();
-      await tester.pumpWidget(const SizedBox());
     }
 
-    // -------------------------------------------------------------------------
-    // 0. GRAFT (leaf slot: graft((s) => ...))
-    // -------------------------------------------------------------------------
-    {
-      final samples = <double>[];
-      int lastDynamicBuilds = 0;
-      int lastStaticBuilds = 0;
-
-      for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
-        final ctrl = GraftBController();
+    // 2. Interleaved Measured Runs (Order-Agnostic Sampling)
+    for (int m = 0; m < measuredRuns; m++) {
+      for (final candidate in candidates) {
+        await BenchmarkIsolation.flushPipeline(tester);
         final counter = RebuildCounter(staticCount);
-
-        await tester.pumpWidget(
-          MaterialApp(
-            home: Scaffold(
-              body: Column(
-                children: [
-                  ctrl((s) => TrackingWidget(
-                    label: 'Dynamic: ${s.count}',
-                    onBuild: () => counter.dynamicBuilds++,
-                  )),
-                  for (int i = 0; i < staticCount; i++)
-                    TrackingWidget(
-                      label: 'Static $i',
-                      onBuild: () => counter.staticBuilds[i]++,
-                    ),
-                ],
-              ),
-            ),
-          ),
-        );
-
+        await candidate.mount(tester, slotCount, counter);
         counter.reset();
+
         final sw = Stopwatch()..start();
         for (int f = 0; f < totalFrames; f++) {
-          ctrl.increment();
-          await tester.pump();
-        }
-        sw.stop();
-
-        if (r >= warmUpRuns) {
-          samples.add(sw.elapsedMicroseconds / 1000.0);
-          lastDynamicBuilds = counter.dynamicBuilds;
-          lastStaticBuilds = counter.totalStaticBuilds;
-        }
-        ctrl.dispose();
-      }
-
-      results.add(BenchmarkStats(
-        scenario: scenarioName,
-        framework: 'Graft (leaf slot)',
-        samplesMs: samples,
-        targetRebuilds: lastDynamicBuilds,
-        staticRebuilds: lastStaticBuilds,
-        allocatedObjects: 0,
-        notes: 'Depth-N parent rebuild insulation',
-      ));
-      await tester.pumpWidget(const SizedBox());
-    }
-
-    // -------------------------------------------------------------------------
-    // 1. GRAFT (graft.slots layout engine)
-    // -------------------------------------------------------------------------
-    {
-      final samples = <double>[];
-      int lastDynamicBuilds = 0;
-      int lastStaticBuilds = 0;
-
-      for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
-        final ctrl = GraftBController();
-        final counter = RebuildCounter(staticCount);
-
-        await tester.pumpWidget(
-          MaterialApp(
-            home: Scaffold(
-              body: ctrl.slots(
-                layout: Column(children: slots),
-                slots: (s) => [
-                  TrackingWidget(
-                    label: 'Dynamic: ${s.count}',
-                    onBuild: () => counter.dynamicBuilds++,
-                  ),
-                  for (int i = 0; i < staticCount; i++)
-                    TrackingWidget(
-                      label: 'Static $i',
-                      onBuild: () => counter.staticBuilds[i]++,
-                    ),
-                ],
-              ),
-            ),
-          ),
-        );
-
-        counter.reset();
-        final sw = Stopwatch()..start();
-        for (int f = 0; f < totalFrames; f++) {
-          ctrl.increment();
-          await tester.pump();
-        }
-        sw.stop();
-
-        if (r >= warmUpRuns) {
-          samples.add(sw.elapsedMicroseconds / 1000.0);
-          lastDynamicBuilds = counter.dynamicBuilds;
-          lastStaticBuilds = counter.totalStaticBuilds;
-        }
-        ctrl.dispose();
-      }
-
-      results.add(BenchmarkStats(
-        scenario: scenarioName,
-        framework: 'Graft (slots)',
-        samplesMs: samples,
-        targetRebuilds: lastDynamicBuilds,
-        staticRebuilds: lastStaticBuilds,
-        allocatedObjects: 0,
-        notes: '0 static rebuilds via hardware bitmask diff',
-      ));
-      await tester.pumpWidget(const SizedBox());
-    }
-
-    // -------------------------------------------------------------------------
-    // 2. Riverpod (Notifier - Codegen style)
-    // -------------------------------------------------------------------------
-    {
-      final samples = <double>[];
-      int lastDynamicBuilds = 0;
-      int lastStaticBuilds = 0;
-
-      for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
-        final container = riverpod_pkg.ProviderContainer();
-        final counter = RebuildCounter(staticCount);
-
-        await tester.pumpWidget(
-          riverpod_pkg.UncontrolledProviderScope(
-            container: container,
-            child: MaterialApp(
-              home: Scaffold(
-                body: Column(
-                  children: [
-                    riverpod_pkg.Consumer(
-                      builder: (context, ref, _) {
-                        final count = ref.watch(riverpodBNotifierProvider);
-                        return TrackingWidget(
-                          label: 'Dynamic: $count',
-                          onBuild: () => counter.dynamicBuilds++,
-                        );
-                      },
-                    ),
-                    for (int i = 0; i < staticCount; i++)
-                      TrackingWidget(
-                        label: 'Static $i',
-                        onBuild: () => counter.staticBuilds[i]++,
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
-
-        counter.reset();
-        final sw = Stopwatch()..start();
-        for (int f = 0; f < totalFrames; f++) {
-          container.read(riverpodBNotifierProvider.notifier).increment();
-          await tester.pump();
-        }
-        sw.stop();
-
-        if (r >= warmUpRuns) {
-          samples.add(sw.elapsedMicroseconds / 1000.0);
-          lastDynamicBuilds = counter.dynamicBuilds;
-          lastStaticBuilds = counter.totalStaticBuilds;
-        }
-        container.dispose();
-      }
-
-      results.add(BenchmarkStats(
-        scenario: scenarioName,
-        framework: 'Riverpod (Notifier)',
-        samplesMs: samples,
-        targetRebuilds: lastDynamicBuilds,
-        staticRebuilds: lastStaticBuilds,
-        allocatedObjects: 0,
-        notes: 'Consumer scoped rebuild',
-      ));
-      await tester.pumpWidget(const SizedBox());
-    }
-
-    // -------------------------------------------------------------------------
-    // 3. Riverpod (StateNotifier)
-    // -------------------------------------------------------------------------
-    {
-      final samples = <double>[];
-      int lastDynamicBuilds = 0;
-      int lastStaticBuilds = 0;
-
-      for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
-        final container = riverpod_pkg.ProviderContainer();
-        final counter = RebuildCounter(staticCount);
-
-        await tester.pumpWidget(
-          riverpod_pkg.UncontrolledProviderScope(
-            container: container,
-            child: MaterialApp(
-              home: Scaffold(
-                body: Column(
-                  children: [
-                    riverpod_pkg.Consumer(
-                      builder: (context, ref, _) {
-                        final count = ref.watch(riverpodBStateNotifierProvider);
-                        return TrackingWidget(
-                          label: 'Dynamic: $count',
-                          onBuild: () => counter.dynamicBuilds++,
-                        );
-                      },
-                    ),
-                    for (int i = 0; i < staticCount; i++)
-                      TrackingWidget(
-                        label: 'Static $i',
-                        onBuild: () => counter.staticBuilds[i]++,
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
-
-        counter.reset();
-        final sw = Stopwatch()..start();
-        for (int f = 0; f < totalFrames; f++) {
-          container.read(riverpodBStateNotifierProvider.notifier).increment();
-          await tester.pump();
-        }
-        sw.stop();
-
-        if (r >= warmUpRuns) {
-          samples.add(sw.elapsedMicroseconds / 1000.0);
-          lastDynamicBuilds = counter.dynamicBuilds;
-          lastStaticBuilds = counter.totalStaticBuilds;
-        }
-        container.dispose();
-      }
-
-      results.add(BenchmarkStats(
-        scenario: scenarioName,
-        framework: 'Riverpod (StateNotifier)',
-        samplesMs: samples,
-        targetRebuilds: lastDynamicBuilds,
-        staticRebuilds: lastStaticBuilds,
-        allocatedObjects: 0,
-        notes: 'Consumer scoped rebuild',
-      ));
-      await tester.pumpWidget(const SizedBox());
-    }
-
-    // -------------------------------------------------------------------------
-    // 4. BLoC (BlocSelector)
-    // -------------------------------------------------------------------------
-    {
-      final samples = <double>[];
-      int lastDynamicBuilds = 0;
-      int lastStaticBuilds = 0;
-
-      for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
-        final cubit = BlocBCubit();
-        final counter = RebuildCounter(staticCount);
-
-        await tester.pumpWidget(
-          MaterialApp(
-            home: Scaffold(
-              body: Column(
-                children: [
-                  bloc_pkg.BlocSelector<BlocBCubit, int, int>(
-                    bloc: cubit,
-                    selector: (state) => state,
-                    builder: (context, count) {
-                      return TrackingWidget(
-                        label: 'Dynamic: $count',
-                        onBuild: () => counter.dynamicBuilds++,
-                      );
-                    },
-                  ),
-                  for (int i = 0; i < staticCount; i++)
-                    TrackingWidget(
-                      label: 'Static $i',
-                      onBuild: () => counter.staticBuilds[i]++,
-                    ),
-                ],
-              ),
-            ),
-          ),
-        );
-
-        counter.reset();
-        final sw = Stopwatch()..start();
-        for (int f = 0; f < totalFrames; f++) {
-          cubit.increment();
+          candidate.triggerFrame();
           await tester.pump(Duration.zero);
         }
         sw.stop();
 
-        if (r >= warmUpRuns) {
-          samples.add(sw.elapsedMicroseconds / 1000.0);
-          lastDynamicBuilds = counter.dynamicBuilds;
-          lastStaticBuilds = counter.totalStaticBuilds;
-        }
-        cubit.close();
+        samplesMap[candidate.name]!.add(sw.elapsedMicroseconds / 1000.0);
+        lastDynamicMap[candidate.name] = counter.dynamicBuilds;
+        lastStaticMap[candidate.name] = counter.totalStaticBuilds;
+        candidate.dispose();
       }
-
-      results.add(BenchmarkStats(
-        scenario: scenarioName,
-        framework: 'BLoC (Cubit)',
-        samplesMs: samples,
-        targetRebuilds: lastDynamicBuilds,
-        staticRebuilds: lastStaticBuilds,
-        allocatedObjects: 0,
-        notes: 'BlocSelector fine-grained boundary',
-      ));
-      await tester.pumpWidget(const SizedBox());
     }
 
-    // -------------------------------------------------------------------------
-    // 5. Signals (Watch)
-    // -------------------------------------------------------------------------
-    {
-      final samples = <double>[];
-      int lastDynamicBuilds = 0;
-      int lastStaticBuilds = 0;
+    await BenchmarkIsolation.flushPipeline(tester);
 
-      for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
-        final countSignal = signals_pkg.signal(0);
-        final counter = RebuildCounter(staticCount);
-
-        await tester.pumpWidget(
-          MaterialApp(
-            home: Scaffold(
-              body: Column(
-                children: [
-                  signals_pkg.Watch(
-                    key: ValueKey(countSignal),
-                    (context) {
-                    final val = countSignal.watch(context);
-                    return TrackingWidget(
-                      label: 'Dynamic: $val',
-                      onBuild: () => counter.dynamicBuilds++,
-                    );
-                  }),
-                  for (int i = 0; i < staticCount; i++)
-                    TrackingWidget(
-                      label: 'Static $i',
-                      onBuild: () => counter.staticBuilds[i]++,
-                    ),
-                ],
-              ),
-            ),
-          ),
-        );
-
-        counter.reset();
-        final sw = Stopwatch()..start();
-        for (int f = 0; f < totalFrames; f++) {
-          countSignal.value++;
-          await tester.pump();
-        }
-        sw.stop();
-
-        if (r >= warmUpRuns) {
-          samples.add(sw.elapsedMicroseconds / 1000.0);
-          lastDynamicBuilds = counter.dynamicBuilds;
-          lastStaticBuilds = counter.totalStaticBuilds;
-        }
-      }
-
+    for (final candidate in candidates) {
       results.add(BenchmarkStats(
         scenario: scenarioName,
-        framework: 'Signals',
-        samplesMs: samples,
-        targetRebuilds: lastDynamicBuilds,
-        staticRebuilds: lastStaticBuilds,
+        framework: candidate.name,
+        samplesMs: samplesMap[candidate.name]!,
+        targetRebuilds: lastDynamicMap[candidate.name]!,
+        staticRebuilds: lastStaticMap[candidate.name]!,
+        isPassed: lastDynamicMap[candidate.name]! == totalFrames &&
+            lastStaticMap[candidate.name]! == 0,
         allocatedObjects: 0,
-        notes: 'Watch reactive element rebuild',
+        notes: candidate.notes,
       ));
-      await tester.pumpWidget(const SizedBox());
     }
 
-    // -------------------------------------------------------------------------
-    // 6. GetX (Obx)
-    // -------------------------------------------------------------------------
-    {
-      final samples = <double>[];
-      int lastDynamicBuilds = 0;
-      int lastStaticBuilds = 0;
-
-      for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
-        final ctrl = GetXBController();
-        final counter = RebuildCounter(staticCount);
-
-        await tester.pumpWidget(
-          MaterialApp(
-            home: Scaffold(
-              body: Column(
-                children: [
-                  getx.Obx(() {
-                    return TrackingWidget(
-                      label: 'Dynamic: ${ctrl.count.value}',
-                      onBuild: () => counter.dynamicBuilds++,
-                    );
-                  }),
-                  for (int i = 0; i < staticCount; i++)
-                    TrackingWidget(
-                      label: 'Static $i',
-                      onBuild: () => counter.staticBuilds[i]++,
-                    ),
-                ],
-              ),
-            ),
-          ),
-        );
-
-        counter.reset();
-        final sw = Stopwatch()..start();
-        for (int f = 0; f < totalFrames; f++) {
-          ctrl.increment();
-          await tester.pump();
-        }
-        sw.stop();
-
-        if (r >= warmUpRuns) {
-          samples.add(sw.elapsedMicroseconds / 1000.0);
-          lastDynamicBuilds = counter.dynamicBuilds;
-          lastStaticBuilds = counter.totalStaticBuilds;
-        }
-      }
-
-      results.add(BenchmarkStats(
-        scenario: scenarioName,
-        framework: 'GetX',
-        samplesMs: samples,
-        targetRebuilds: lastDynamicBuilds,
-        staticRebuilds: lastStaticBuilds,
-        allocatedObjects: 0,
-        notes: 'Obx reactive widget rebuild',
-      ));
-      await tester.pumpWidget(const SizedBox());
-    }
-
-    // -------------------------------------------------------------------------
-    // 7. Provider (Selector)
-    // -------------------------------------------------------------------------
-    {
-      final samples = <double>[];
-      int lastDynamicBuilds = 0;
-      int lastStaticBuilds = 0;
-
-      for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
-        final model = ProviderBModel();
-        final counter = RebuildCounter(staticCount);
-
-        await tester.pumpWidget(
-          provider_pkg.ChangeNotifierProvider<ProviderBModel>.value(
-            value: model,
-            child: MaterialApp(
-              home: Scaffold(
-                body: Column(
-                  children: [
-                    provider_pkg.Selector<ProviderBModel, int>(
-                      selector: (_, m) => m.count,
-                      builder: (context, count, _) {
-                        return TrackingWidget(
-                          label: 'Dynamic: $count',
-                          onBuild: () => counter.dynamicBuilds++,
-                        );
-                      },
-                    ),
-                    for (int i = 0; i < staticCount; i++)
-                      TrackingWidget(
-                        label: 'Static $i',
-                        onBuild: () => counter.staticBuilds[i]++,
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
-
-        counter.reset();
-        final sw = Stopwatch()..start();
-        for (int f = 0; f < totalFrames; f++) {
-          model.increment();
-          await tester.pump();
-        }
-        sw.stop();
-
-        if (r >= warmUpRuns) {
-          samples.add(sw.elapsedMicroseconds / 1000.0);
-          lastDynamicBuilds = counter.dynamicBuilds;
-          lastStaticBuilds = counter.totalStaticBuilds;
-        }
-        model.dispose();
-      }
-
-      results.add(BenchmarkStats(
-        scenario: scenarioName,
-        framework: 'Provider',
-        samplesMs: samples,
-        targetRebuilds: lastDynamicBuilds,
-        staticRebuilds: lastStaticBuilds,
-        allocatedObjects: 0,
-        notes: 'Selector fine-grained filter',
-      ));
-      await tester.pumpWidget(const SizedBox());
-    }
-
-    tester.view.resetPhysicalSize();
     return results;
   }
 }

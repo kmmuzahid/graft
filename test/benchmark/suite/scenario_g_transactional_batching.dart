@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart' as bloc_pkg;
 import 'package:flutter_riverpod/flutter_riverpod.dart' as riverpod_pkg;
 import 'package:signals_flutter/signals_flutter.dart' as signals_pkg;
 import 'package:get/get.dart' as getx;
+import 'benchmark_isolation.dart';
 import 'benchmark_models.dart';
 
 // =============================================================================
@@ -150,6 +151,7 @@ class ScenarioGTransactionalBatchingRunner {
 
     // 1. BLoC
     {
+      BenchmarkIsolation.flushHeap();
       final samples = <double>[];
       int lastFires = 0;
       for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
@@ -180,6 +182,7 @@ class ScenarioGTransactionalBatchingRunner {
 
     // 2. Graft
     {
+      BenchmarkIsolation.flushHeap();
       final samples = <double>[];
       int lastFires = 0;
       for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
@@ -212,6 +215,7 @@ class ScenarioGTransactionalBatchingRunner {
 
     // 3. Riverpod
     {
+      BenchmarkIsolation.flushHeap();
       final samples = <double>[];
       int lastFires = 0;
       for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
@@ -244,6 +248,7 @@ class ScenarioGTransactionalBatchingRunner {
 
     // 4. Signals
     {
+      BenchmarkIsolation.flushHeap();
       final samples = <double>[];
       int lastFires = 0;
       for (int r = 0; r < warmUpRuns + measuredRuns; r++) {
@@ -278,6 +283,7 @@ class ScenarioGTransactionalBatchingRunner {
 
     // 5. GetX
     {
+      BenchmarkIsolation.flushHeap();
       final samples = <double>[];
       int lastFires = 0;
       for (int r = 0; r < warmUpRuns + measuredRuns; r++) {

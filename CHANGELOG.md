@@ -57,11 +57,17 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
   - Single-child and leaf slot elements bypass all property inspections in synchronous states, eliminating redundant getter dispatches on every frame.
 - **Zero-Workaround Idiomatic Developer Ergonomics**:
   - Fully removed internal benchmark workarounds; all scenarios evaluate pure, natural `state..update()` fluent mutations.
+- **Hermetic Memory Isolation & Temporal Round-Robin Execution**:
+  - Implemented `BenchmarkIsolation.flushHeap()` with generational GC sweeps and memory compaction between framework runs to prevent cross-scenario GC pauses and memory inheritance.
+  - Introduced temporal round-robin execution across all frameworks to eliminate thermal throttling and CPU cache ordering bias.
+- **$O(1)$ Dry-Layout Rebuild Auditing (`TrackingRenderBox`)**:
+  - Replaced heavy text layout widgets in Section B rebuild containment tests with $O(1)$ dry-layout render nodes, completely eliminating font-measurement and text-shaping engine noise.
+- **Consolidated Benchmark Reporting (`BENCHMARK_REPORT.md`)**:
+  - Unified all benchmarking into a single authoritative deliverable (`BENCHMARK_REPORT.md`) featuring Native IO vs Web cross-platform comparisons, Scorecards, visual status badges, and 2–3 line transparent methodology descriptions across all 17 scenarios.
+  - Removed redundant `benchmark.md` and updated `benchmark.sh` and documentation to reference `BENCHMARK_REPORT.md` exclusively.
 - **Benchmark Suite Correctness & Disqualification Engine**:
   - Report generator and suite runners now strictly prioritize passing frameworks (`isPassed: true`).
   - Degraded runs (such as unbatched churn or reactive glitches) are automatically labeled `❌ DISQ` (Disqualified) and barred from podium awards.
-- **Widget Tree & GC Boundary Insulation**:
-  - Pumping clean teardowns between widget scenarios isolates memory pressure and prevents cross-scenario GC pauses from distorting measurement loops.
 
 ## 1.0.0-alpha.6
 

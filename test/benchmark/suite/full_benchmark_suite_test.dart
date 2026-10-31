@@ -49,7 +49,7 @@ void main() {
   // ---------------------------------------------------------------------------
   // SCENARIO F: REACTIVE DIAMOND & GLITCH-FREE EVALUATION
   // ---------------------------------------------------------------------------
-  test('Scenario F: Reactive Diamond & Glitch-Free Evaluation (5,000 updates)', () {
+  test('Scenario F: Reactive Diamond & Glitch-Free Evaluation (50,000 updates)', () {
     // ignore: avoid_print
     print('▶ Running Scenario F: Reactive Diamond & Glitch-Free Evaluation...');
     final statsF = ScenarioFReactiveDiamondRunner.runAll();
@@ -143,7 +143,6 @@ void main() {
   tearDownAll(() {
     const csvPath = 'benchmark_results.csv';
     const reportPath = 'BENCHMARK_REPORT.md';
-    const crossPlatformPath = 'benchmark.md';
 
     collector.saveCsv(csvPath);
     // ignore: avoid_print
@@ -157,15 +156,6 @@ void main() {
     );
     // ignore: avoid_print
     print('📄 Saved comprehensive report to: $reportPath');
-
-    collector.saveCrossPlatformMarkdown(
-      crossPlatformPath,
-      flutterVersion: 'Flutter 3.47.6 (stable channel)',
-      dartVersion: 'Dart 3.13.5 (stable)',
-      platform: getBenchmarkPlatform(),
-    );
-    // ignore: avoid_print
-    print('🌐 Saved cross-platform comparison report to: $crossPlatformPath');
 
     // Print quick executive summary table
     // ignore: avoid_print
@@ -237,6 +227,5 @@ void main() {
 
     expect(benchmarkFileExists(csvPath), true);
     expect(benchmarkFileExists(reportPath), true);
-    expect(benchmarkFileExists(crossPlatformPath), true);
   });
 }

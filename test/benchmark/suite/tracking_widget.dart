@@ -1,3 +1,4 @@
+import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:graft/graft.dart';
 
@@ -22,8 +23,34 @@ class TrackingWidget extends StatelessWidget implements GraftEquivalent {
   @override
   Widget build(BuildContext context) {
     onBuild();
-    return Text(label, key: ValueKey(label));
+    return _TrackingRenderBoxWidget(label: label);
   }
+}
+
+class _TrackingRenderBoxWidget extends LeafRenderObjectWidget {
+  final String label;
+  const _TrackingRenderBoxWidget({required this.label});
+
+  @override
+  RenderObject createRenderObject(BuildContext context) => _RenderTrackingBox();
+
+  @override
+  void updateRenderObject(
+      BuildContext context, _RenderTrackingBox renderObject) {}
+}
+
+class _RenderTrackingBox extends RenderBox {
+  @override
+  Size computeDryLayout(BoxConstraints constraints) =>
+      constraints.constrain(const Size(100, 20));
+
+  @override
+  void performLayout() {
+    size = constraints.constrain(const Size(100, 20));
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) {}
 }
 
 /// Helper counter holding exact rebuild statistics for target and static children.

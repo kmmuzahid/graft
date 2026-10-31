@@ -15,7 +15,6 @@ fvm flutter test test/benchmark/suite/full_benchmark_suite_test.dart
 echo "================================================================================"
 echo "  ✅ BENCHMARK SUITE COMPLETE"
 echo "  📊 Results CSV: benchmark_results.csv"
-echo "  📄 Primary Report: BENCHMARK_REPORT.md"
-echo "  🌐 Cross-Platform Comparison: benchmark.md"
+echo "  📄 Benchmark Report: BENCHMARK_REPORT.md"
 echo "================================================================================"
 
