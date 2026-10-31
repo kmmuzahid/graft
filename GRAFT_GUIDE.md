@@ -26,7 +26,7 @@
 7. [Zero-Controller Forms on Frame 0](#zero-controller-forms-on-frame-0)
 8. [Micro-State Persistence (`ValueGraft.dry`)](#micro-state-persistence-valuegraftdry)
 9. [Flow-Wide Scope Invalidation (`invalidateDry`)](#flow-wide-scope-invalidation-invalidatedry)
-10. [Storage Drivers & Testing Setup (`configurePersistence`)](#storage-drivers--testing-setup-configurepersistence)
+10. [Storage Drivers & Custom Storage Abstraction (`configurePersistence`)](#storage-drivers--custom-storage-abstraction-configurepersistence)
 11. [Linter & Architectural Best Practices](#linter--architectural-best-practices)
 12. [Related Technical Guides & Reports](#related-technical-guides--reports)
 
@@ -123,6 +123,16 @@ class UserGraft extends Graft<UserState> {
 ## Surgical UI Slots & Leaf Rebuilds
 
 Graft provides a comprehensive suite of ergonomic reactive slot primitives designed to isolate widget rebuilds to the exact leaf element without requiring selector boilerplate:
+
+### ⚡ Architectural Foundation: Native `ComponentElement` Slots
+Unlike traditional Flutter state management libraries that wrap reactive nodes in `StatefulWidget`, `State`, and `ValueNotifier`, Graft's slots (`graft((s) => ...)`, `graft.slot`, and `graft.slots`) subclass Flutter's core `ComponentElement` directly:
+- **Direct Pointer Dispatch (`GraftFastReceiver`)**: The controller maintains a direct pointer to the mounted leaf element. State mutations invoke `fast.markFastDirty()` in $< 5\text{ ns}$, which directly executes Flutter's native `Element.markNeedsBuild()`.
+- **Zero Intermediate Wrappers**: Zero `ValueNotifier`, zero `StreamSubscription`, and zero closure allocations on notification.
+- **Single-Scalar Fast Path**: When a state contains a single property (`_scalarCount == 1`), multi-child diffing is bypassed completely. The slot marks dirty and executes `_builder(_state)` directly once per frame.
+- **Level-0 Pre-Flight Bypass (`_commonIgnoredMask`)**: For multi-child layouts (`graft.slots`), an $O(1)$ single-cycle pre-flight bitwise test aborts layout reconciliation in $< 1\text{ ns}$ when mutations affect fields universally ignored by all child slots.
+- **Depth-$N$ Parent Rebuild Insulation**: Slots execute within an internal `NoSubscriptionContext`, preventing ambient `Theme` or `MediaQuery` subscriptions from leaking into parent layout containers.
+
+---
 
 ### 1. Signature Callable Leaf Slot (`graft((s) => ...)`)
 The fastest syntax for single-child slots. Provides **Depth-$N$ parent rebuild insulation**—outer containers (`Card`, `Padding`, `AppBar`) experience **0 rebuilds**:
@@ -730,7 +740,7 @@ MaterialApp(
 ## 📚 Related Technical Guides & Reports
 
 - 🚀 **[graft_template](https://github.com/kmmuzahid/graft_template):** Official production-ready starter template integrating **Graft** with **CoreKit** (`core_kit`).
-- 🏛️ **[ARCHITECTURE.md](https://github.com/kmmuzahid/graft/blob/main/ARCHITECTURE.md):** Deep dive into the 6 Core Engineering Pillars, bitmask diffing, monotonic TypeId, and DAG teardowns.
+- 🏛️ **[ARCHITECTURE.md](https://github.com/kmmuzahid/graft/blob/main/ARCHITECTURE.md):** Deep dive into the 7 Core Engineering Pillars, bitmask diffing, native `ComponentElement` slots, monotonic TypeId, and DAG teardowns.
 - 💉 **[DI_GUIDE.md](https://github.com/kmmuzahid/graft/blob/main/DI_GUIDE.md):** Dedicated guide for the DI engine (developer enum scopes, zero-scope boot, singleton lock, non-blocking async DB/network, route leasing).
 - 📊 **[BENCHMARK_REPORT.md](https://github.com/kmmuzahid/graft/blob/main/BENCHMARK_REPORT.md):** Empirical benchmark methodology, hardware specs, and full logs across all 21 benchmark scenarios (including Frame-0 dry persistence at ~1.5 µs latency).
 - 🧪 **[TEST_REPORT.md](https://github.com/kmmuzahid/graft/blob/main/TEST_REPORT.md):** Comprehensive test verification report across 304 passing tests (including 51 persistence and dry state tests).

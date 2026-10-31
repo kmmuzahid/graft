@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'cross_platform_report_generator.dart';
 import 'save_report.dart';
 import 'scenario_descriptions.dart';
 
@@ -403,6 +404,23 @@ class BenchmarkReportCollector {
     saveBenchmarkFile(
       filePath,
       toMarkdownReport(
+        flutterVersion: flutterVersion,
+        dartVersion: dartVersion,
+        platform: platform,
+      ),
+    );
+  }
+
+  /// Saves the cross-platform comparative report (Native IO vs Web Browser) to Markdown file.
+  void saveCrossPlatformMarkdown(String filePath, {
+    required String flutterVersion,
+    required String dartVersion,
+    required String platform,
+  }) {
+    saveBenchmarkFile(
+      filePath,
+      CrossPlatformReportGenerator.generate(
+        nativeResults: results,
         flutterVersion: flutterVersion,
         dartVersion: dartVersion,
         platform: platform,

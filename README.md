@@ -20,7 +20,7 @@
 
 For deep dives into specific subsystems, architecture philosophy, empirical benchmarks, and test matrices:
 - 🚀 **[graft_template](https://github.com/kmmuzahid/graft_template):** Official production-ready starter template integrating **Graft** with **CoreKit** (`core_kit`), featuring route scoping, Frame-0 dry persistence, responsive UI, Dio HTTP, and dark/light theming.
-- 🏛️ **[ARCHITECTURE.md](https://github.com/kmmuzahid/graft/blob/main/ARCHITECTURE.md):** Deep dive into the 6 Core Engineering Pillars, bitmask diffing, monotonic TypeId, DAG teardowns, automated async gates, and dry persistence.
+- 🏛️ **[ARCHITECTURE.md](https://github.com/kmmuzahid/graft/blob/main/ARCHITECTURE.md):** Deep dive into the 7 Core Engineering Pillars, bitmask diffing, native `ComponentElement` slots, monotonic TypeId, DAG teardowns, automated async gates, and dry persistence.
 - 💉 **[DI_GUIDE.md](https://github.com/kmmuzahid/graft/blob/main/DI_GUIDE.md):** Major dedicated guide for the DI engine (developer enum scopes, zero-scope boot, singleton lock, non-blocking async DB/network, route leasing).
 - 💾 **[GRAFT_GUIDE.md](https://github.com/kmmuzahid/graft/blob/main/GRAFT_GUIDE.md):** Major dedicated guide for State Management & Frame-0 Persistence (propsOf, surgical slots, zero-controller forms, Option B GraftModel, Frame-0 dry state).
 - 📊 **[BENCHMARK_REPORT.md](https://github.com/kmmuzahid/graft/blob/main/BENCHMARK_REPORT.md):** Empirical benchmark methodology, hardware specs, and full logs across all 21 benchmark scenarios.
@@ -30,9 +30,12 @@ For deep dives into specific subsystems, architecture philosophy, empirical benc
 
 ## 📑 Table of Contents
 - [📦 Installation & Linter Setup](#-installation--linter-setup)
-- [🛠️ 1-Minute Quick Start](#️-1-minute-quick-start)
-- [🏆 Benchmark Scorecard Summary](#-late-2026-flutter-state-management-benchmark-scorecard)
+- [🛠️ Quick Start](#️-quick-start)
+- [🏛️ The 7 Core Architectural Pillars](#️-the-7-core-architectural-pillars)
+- [📊 Empirical Benchmarks](#-empirical-benchmarks)
+- [📚 Complete Public API Reference](#-complete-public-api-reference)
 - [📋 Complete Public API Cheat Sheet](#-complete-public-api-cheat-sheet)
+- [🏗️ High-Performance Architecture](#️-high-performance-architecture)
 - [🧪 Test Verification Summary](#-test-verification--quality-assurance)
 - [📄 License](#-license)
 
@@ -270,51 +273,34 @@ class UserScreen extends StatelessWidget {
 
 ---
 
-## 🏛️ The 6 Core Pillars (Philosophy)
+## 🏛️ The 7 Core Architectural Pillars
 
 State management in Flutter has historically forced developers to choose between two extremes:
 1. **Architectural Cleanliness with Rebuild Overhead:** Clean domain classes (BLoC/Provider) that rebuild entire widget subtrees unless wrapped in dozens of verbose `BlocSelector` or `Selector` widgets.
 2. **Rebuild Precision with Domain Fragmentation:** Fine-grained reactivity (Signals/GetX/MobX) that shatters cohesive domain models into fragmented primitive wrappers (`signal()`, `.obs`, `.value`, `rx`), cluttering business logic and polluting UI code.
 
-Graft rejects this compromise through 6 foundational pillars:
+Graft rejects this compromise through 7 foundational architectural pillars:
 
 1. **Zero-Wrapper Domain State:** State models are pure Dart classes extending `GraftState`. No `Signal<T>`, no `.obs`, no `.value`, and strictly zero code generation (`build_runner` is never required).
 2. **Mandatory `props` & Recursive Snapshot Contract:** Domain properties are declared via `GraftProps get props => propsOf(...)`, an abstract compiler-enforced contract. Graft uses recursive deep snapshotting for nested `GraftState` sub-states and collections, eliminating forgotten fields and ensuring 100% snapshot integrity during in-place cascade mutations.
-3. **Unbounded Hardware-Aligned `GraftMask`:** State field modifications are mapped into an unbounded, 32-bit chunked word-based bitset (`GraftMask`). It diffs ≤ 64 fields in CPU registers and effortlessly scales to 128, 500, or 1,000+ fields with 100% web JS compatibility and 0 GC heap allocations.
+3. **Unbounded Hardware-Aligned `GraftMask`:** State field modifications are mapped into an unbounded, 32-bit chunked word-based bitset (`GraftMask`). It diffs ≤ 64 fields in CPU registers in $< 50\text{ ns}$ and effortlessly scales to 128, 500, or 1,000+ fields with 100% web JS compatibility and 0 GC heap allocations.
 4. **Synchronous In-Place Cascade Mutation & In-Place Reset:** Direct synchronous updates via `state..field = val..update()` and complete baseline resets via `state.reset()`. Primitives, nested models, and collection items are accurately diffed without requiring immutable `copyWith` methods.
-5. **Two-Wrapper Architecture & Context Decoupling:**
+5. **Native `ComponentElement` Slots & Surgical Rebuild Firewall:**
+   - **`graft((s) => ...)` / `graft.slot(...)`**: Fine-grained surgical leaf slot subclassing Flutter's native `ComponentElement` directly with zero `ValueNotifier` wrappers and direct C-level pointer dispatch (`GraftFastReceiver`). Features Depth-$N$ parent rebuild insulation and runs inside `NoSubscriptionContext` to prevent `Theme`/`MediaQuery` subscription bleeding.
+   - **`graft.slots(...)`**: Universal multi-child layout slot diffing (`Column`, `Row`, `Wrap`, `Flex`) with Level-0 `_commonIgnoredMask` pre-flight bypass and self-optimizing learned `_ignoredMask`.
    - **`GraftBoundary`**: Subtree-level rebuild barrier featuring **Ambient Auto-Discovery** (zero manual lists via `GraftScopeTracker`) and **Backward Adaptive Learning** with multi-field bitwise union accumulation.
-   - **`graft((s) => ...)`**: Fine-grained surgical leaf slot with Depth-$N$ parent rebuild insulation, powered by `NoSubscriptionContext` to prevent `Theme`/`MediaQuery` subscription bleeding during widget diffing.
-   - **`graft.slots(...)`**: Universal multi-child layout slot diffing with self-optimizing `ignoredMask` pre-flight bypass.
-6. **Automatic Route-Aware Lifecycle & PopupRoute Protection:** Controllers automatically inherit down predecessor routes and cleanly self-dispose when their owning screen route pops. Transient routes (`showDialog`, `showModalBottomSheet`) borrow safely without prematurely disposing host controllers via `resolveOwnerRoute`.
+6. **Frame-0 Dry State & Coalescing Background Persistence:** Synchronous L1 RAM cache restores persistent states in $< 50\text{ ns}$ on Frame 0 before initial paint, eliminating blank frames and flash. Zero-controller forms bind directly to restored state, while disk writes coalesce into a 300ms debounced queue.
+7. **Ref-Counted Ambient Engine (Zero-Wrapper Architecture):** 100% wrapper-free state management. No `GraftScope` or `MultiProvider` widgets. `context.use<T>()` borrows ambient instances across navigation flows with App-Root permanent auto-promotion (`route == null`), while `context.create<T>()` provides isolated route ownership. Disposes via topological reverse DAG teardown with tombstone-deferred exit transition safety.
 
 ---
 
-## 🏆 Late-2026 Flutter State Management Benchmark Scorecard
+## 📊 Empirical Benchmarks
 
-Empirically verified across 15+ measured runs per scenario against **Riverpod**, **flutter_bloc / Cubit**, **Signals**, **GetX**, and **Provider** on both Native IO and Web.
+Graft is empirically evaluated against the primary Flutter state management frameworks (**Riverpod**, **flutter_bloc / Cubit**, **signals_flutter**, **GetX**, and **Provider**) across 21 rigorous benchmark scenarios spanning micro-mutations, high-density layouts, 20k virtualized lists, reactive DAGs, and navigation lifecycles on both Native IO (macOS/ARM64) and Web (Chromium/WASM).
 
-> 📊 For the complete statistical breakdown (Mean, Median, p95, Min, Max, StdDev, Rebuilds), see [`BENCHMARK_REPORT.md`](https://github.com/kmmuzahid/graft/blob/main/BENCHMARK_REPORT.md).
-
-| Benchmark Scenario | Metric | Native IO Winner | Native IO Graft (Rank & Gap) | Web Browser Winner | Web Browser Graft (Rank & Gap) |
-| :--- | :--- | :---: | :---: | :---: | :---: |
-| **A1: 10,000 Synchronous Increments** | Latency (ms) | 🥇 **Graft (0.10 ms)** | — | 🥇 Provider (0.62 ms) | 🥉 **1.21 ms (#3, +0.59ms)** |
-| **A2: 100,000 Micro-State Mutations** | Latency (ms) | 🥇 **Graft (0.66 ms)** | — | 🥇 Provider (4.77 ms) | 🥉 **13.10 ms (#3, +8.33ms)** |
-| **A3: 5-Field Atomic Batch Mutation** | Latency (ms) | 🥇 **Graft (0.12 ms)** | — | 🥇 Provider (0.72 ms) | 4th · **3.69 ms (#4, +2.97ms)** |
-| **A4: Depth-8 Nested Sub-State Mutation** | Latency (ms) | 🥇 **Graft (0.01 ms)** | — | 🥇 Provider (0.11 ms) | 🥈 **0.13 ms (#2, +0.02ms)** |
-| **B1: 10-Slot Column Layout (120 Frames)** | Render (ms) | 🥇 Provider (16.06 ms) | 🥈 **23.36 ms (#2, +7.30ms)** | 🥇 Riverpod (76.37 ms) | 4th · **78.29 ms (#4, +1.92ms)** |
-| **B2: 50-Slot Heavy Layout (120 Frames)** | Render (ms) | 🥇 Riverpod (24.74 ms) | 🥈 **24.83 ms (#2, +0.09ms)** | 🥇 **Graft (168.55 ms)** | — |
-| **C1: 5,000 Item List (300 Rapid Updates)** | Throughput (ms) | 🥇 **Graft (28.99 ms)** | — | 🥇 **Graft (136.11 ms)** | — |
-| **C2: 20,000 Item List (300 Rapid Updates)**| Throughput (ms) | 🥇 **Graft (31.02 ms)** | — | 🥇 **Graft (136.29 ms)** | — |
-| **C3: Random Item Insert / Delete (100x)**  | Latency (ms) | 🥇 **Graft (0.30 ms)** | — | 🥇 **Graft (0.07 ms)** | — |
-| **D1: Product Catalog & Shopping Cart**    | Latency (ms) | 🥇 **Graft (0.02 ms)** | — | 🥇 **Graft (0.03 ms)** | — |
-| **D2: Form (12 Interdependent Fields)**    | Latency (ms) | 🥇 **Graft (0.06 ms)** | — | 🥇 BLoC (0.06 ms) | 🥈 **0.07 ms (#2, +0.01ms)** |
-| **D3: Navigation & Dialog State Sharing**  | Latency (ms) | 🥇 **Graft (2.54 ms)** | — | 🥇 **Graft (8.17 ms)** | — |
-| **E1: Route Stack Push / Pop Lifecycle**   | Latency (ms) | 🥇 **Graft (6.05 ms)** | — | 🥇 **Graft (17.28 ms)** | — |
-| **E2: Hot Reload Reassemble Simulation**   | Latency (ms) | 🥇 **Graft (0.92 ms)** | — | 🥇 **Graft (3.35 ms)** | — |
-| **E3: Disposed Controller Access Safety**  | Safety (ms)  | 🥇 **Graft (0.00 ms)** | — | 🥇 **Graft (0.00 ms)** | — |
-| **F1: Reactive Diamond Glitch Elimination** | Glitch Count | 🥇 **Graft (0 Glitches, Glitch-Free)** | — | 🥇 **Graft (Glitch-Free)** | — |
-| **G1: 2,000 Multi-Field Batch Transactions** | Batching (%) | 🥇 **Graft (100% Batched, 0 Wasted)** | — | 🥇 **Graft (100% Batched)** | — |
+> 📊 **Full Benchmark Report & Methodology:**  
+> For the complete statistical breakdown (Mean, Median, p95, Min, Max, StdDev, Rebuild Containment, Glitch Elimination, and GC Object Churn), consult the dedicated benchmark document:  
+> 👉 **[`BENCHMARK_REPORT.md`](https://github.com/kmmuzahid/graft/blob/main/BENCHMARK_REPORT.md)**
 
 ---
 
@@ -427,12 +413,17 @@ graft.async<UserProfile>(
 #### 7. Zero-Wrapper Ambient Lifecycle (`context.use` vs `context.create`)
 100% wrapper-free state management across screens, tabs, and modals:
 
-- **`context.use<T>()`**: Borrows an existing ambient instance across the navigation flow, or creates one if absent. Automatically promoted to an app-wide permanent singleton when called at the App Root (`route == null`). Auto-disposes when all borrower screens pop.
-- **`context.create<T>()`**: Always forces a brand-new, isolated instance owned exclusively by the current screen.
+- **`context.use<T>([factory, key])`**: Borrows an existing ambient instance across the navigation flow, or creates one if absent. Automatically promoted to an app-wide permanent singleton when called at the App Root (`route == null`). Auto-disposes when all borrower screens pop.
+- **`context.create<T>([factory, key])`**: Always forces a brand-new, isolated instance owned exclusively by the current screen.
+- **Parameterized Keys (`key: id`)**: Supports entity-specific controller instances (e.g. `context.use(() => ProductGraft(id), key: id)`).
+- **Multi-Controller Resolution**: Ergonomic Dart 3 record unpacking via `final (user, cart) = context.use2(UserGraft.new, CartGraft.new);` and `context.use3(...)`.
 
 ```dart
 // Shared across the flow:
 final checkout = context.use(CheckoutGraft.new);
+
+// Parameterized by entity ID:
+final product = context.use(() => ProductGraft(productId), key: productId);
 
 // Isolated to this screen only:
 final form = context.create(TempFormGraft.new);
@@ -1046,7 +1037,7 @@ flutter analyze
 | **Route Isolation & Context Lifecycle** | 20 | ✅ Pass | `context.use<T>()` route-stack borrowing, transient `PopupRoute` protection, auto-disposal. |
 | **DevTools, Observers & Diagnosibility** | 18 | ✅ Pass | Multi-controller ambient auto-discovery, colorized terminal output, Flutter timeline profiling. |
 | **Empirical Benchmark Integration** | 18 | ✅ Pass | Comparative benchmarks against Riverpod, Bloc, Signals, GetX, and Provider. |
-| **Async State & Error Boundaries** | 11 | ✅ Pass | Monotonic task tokens, stale response dropping, declarative `graft.asyncSlot`. |
+| **Async State & Error Boundaries** | 11 | ✅ Pass | Monotonic task tokens, stale response dropping, declarative `graft.async`. |
 | **High-Concurrency & Chaos Stress** | 9 | ✅ Pass | Glitch-free reactive diamond DAG, deep computed chains, 50k item list throughput. |
 
 ---

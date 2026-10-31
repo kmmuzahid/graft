@@ -56,31 +56,34 @@ state
 
 When `update()` executes, Graft compares the current values of `props` against an in-place baseline snapshot using bitwise shift operations (`w |= 1 << i`) across 64-bit integer words (`GraftMask`).
 
-```text
-┌────────────────────────────────────────────────────────────────────────┐
-│                      DEVELOPER CALL (ZERO BOILERPLATE)                 │
-│         state..address.city = 'Berlin'..tasks.add(item)..update()      │
-└───────────────────────────────────┬────────────────────────────────────┘
-                                    │
-                                    ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│                          GRAFT CORE ENGINE                             │
-│                  diffChanges(): Evaluate props against _baseline       │
-│                                   │                                    │
-│         ┌─────────────────────────┼────────────────────────┐           │
-│         ▼                         ▼                        ▼           │
-│  [ Primitive Values ]   [ Nested Sub-States ]     [ Collections ]      │
-│  (int, String, bool)    (GraftState in props)    (List, Set, Map)      │
-│  1-Cycle Identity:      Deep Recursive Props     Recursive Elements    │
-│  identical(prev, curr)  Snapshot Comparison      Snapshot Equality     │
-│         │                         │                        │           │
-│         └─────────────────────────┼────────────────────────┘           │
-│                                   ▼                                    │
-│            Compute 64-bit Integer dirtyMask in CPU registers           │
-│                                   │                                    │
-│                                   ▼                                    │
-│                       notifyMask(dirtyMask)                            │
-└────────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph DevCall["Developer Call (Zero Boilerplate)"]
+        Mutation["state..address.city = 'Berlin'..tasks.add(item)..update()"]
+    end
+
+    subgraph CoreEngine["Graft Core Engine: diffChanges()"]
+        Baseline["Evaluate current props against _baseline"]
+        
+        subgraph DiffPaths["Property Inspection Paths"]
+            direction LR
+            Prim["Primitive Values<br/>(int, String, bool)<br/>identical(prev, curr)"]
+            Nest["Nested Sub-States<br/>(GraftState in props)<br/>Deep recursive props diff"]
+            Coll["Collections<br/>(List, Set, Map)<br/>Structural element diff"]
+        end
+        
+        Bitmask["Compute 64-bit Integer dirtyMask in CPU registers<br/>(w |= 1 << i)"]
+        Notify["Dispatch via notifyMask(dirtyMask)"]
+    end
+
+    Mutation --> Baseline
+    Baseline --> Prim
+    Baseline --> Nest
+    Baseline --> Coll
+    Prim --> Bitmask
+    Nest --> Bitmask
+    Coll --> Bitmask
+    Bitmask --> Notify
 ```
 
 - **Zero Allocations:** No intermediate `Change` objects, no `copyWith` copies, no stream events.
@@ -93,35 +96,43 @@ When `update()` executes, Graft compares the current values of `props` against a
 
 Traditional Flutter state management approaches rely on `AnimatedBuilder`, `ValueListenableBuilder`, or `StreamBuilder` widgets, adding an intermediate `StatefulWidget`, an extra `StatefulElement`, listener registration maps, and closure allocations for every reactive UI node.
 
-Graft completely eliminates `ValueNotifier`, `ValueListenable`, and intermediate builder widgets. Leaf slots (`graft((s) => ...)` and `graft.slot()`) and multi-child slots (`graft.slots()`) subclass Flutter's core [`ComponentElement`](file:///Users/km/Documents/km muzahid/graft/lib/src/widgets/slots/single_slot_scope.dart#L24) directly:
+Graft completely eliminates `ValueNotifier`, `ValueListenable`, and intermediate builder widgets. Leaf slots (`graft((s) => ...)` and `graft.slot()`) and multi-child slots (`graft.slots()`) subclass Flutter's core [`ComponentElement`](lib/src/widgets/slots/single_slot_scope.dart#L24) directly:
 
-- **Direct Element Pointer Dispatch:** `Graft` controllers maintain a direct pointer to the active [`GraftFastReceiver`](file:///Users/km/Documents/km muzahid/graft/lib/src/widgets/slots/single_slot_scope.dart#L25) (`_GraftSingleSlotElement` or `_ChildSlotElement`).
+- **Direct Element Pointer Dispatch:** `Graft` controllers maintain a direct pointer to the active [`GraftFastReceiver`](lib/src/widgets/slots/single_slot_scope.dart#L25) (`_GraftSingleSlotElement` or `_ChildSlotElement`).
 - **Bare-Metal `markNeedsBuild()`:** State mutations call `fast.markFastDirty()` in $< 5\text{ ns}$, which directly invokes Flutter's native `Element.markNeedsBuild()`.
 - **Zero Intermediate Wrappers:** Zero `ValueNotifier`, zero `StreamSubscription`, and zero listener closures.
 - **Zero Rebuild Leaks:** Parent and sibling widgets experience **0 rebuilds** (100% rebuild isolation verified across 50-slot column benchmarks).
 
-```text
-┌────────────────────────────────────────────────────────────────────────┐
-│             NATIVE ELEMENT LEAF RECONCILIATION PIPELINE                │
-│       _GraftSingleSlotElement / _ChildSlotElement (ComponentElement)   │
-│                                   │                                    │
-│         Does dirtyMask intersect slot's learned ignoredMask?           │
-│                    ┌──────────────┴──────────────┐                     │
-│                   YES                            NO                    │
-│                    │                             │                     │
-│        [⚡ 1-Cycle Direct Path]        [🔬 Subtree Isolation Check]    │
-│        Direct Element Dirty Mark      Bypass element rebuild entirely  │
-│        element.markNeedsBuild();                 │                     │
-│                    │                             ▼                     │
-│                    ▼                        [0 Rebuild]                │
-│        Flutter BuildOwner Queue           100% Insulated               │
-│        ComponentElement.performRebuild()                               │
-│                    │                                                   │
-│       ┌────────────┴────────────┐                                      │
-│   Single-Scalar           Multi-Prop                                  │
-│   _builder(_state)        Diff against _currentWidget                 │
-│   Direct return           Match? -> Self-heal ignoredMask!            │
-└────────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph Signal["State Mutation Notification"]
+        DirtySignal["notifyMask(dirtyMask)"]
+    end
+
+    subgraph SlotElement["Native Leaf Slot (ComponentElement)"]
+        IgnoredCheck{"Does dirtyMask intersect<br/>slot's learned ignoredMask?"}
+        
+        subgraph DirectPath["1-Cycle Direct Path"]
+            MarkDirty["fast.markFastDirty()<br/>Direct element.markNeedsBuild()"]
+            BuildQueue["Flutter BuildOwner Queue<br/>ComponentElement.performRebuild()"]
+        end
+        
+        subgraph SubtreeCheck["Subtree Isolation Check"]
+            ZeroRebuild["Bypass element rebuild entirely<br/>(0 Rebuilds · 100% Insulated)"]
+        end
+
+        Reconcile{"Is Single-Scalar<br/>(_scalarCount == 1)?"}
+        SingleReturn["_builder(_state)<br/>Direct return without diffing"]
+        MultiDiff["Diff against _currentWidget<br/>Match? Self-heal ignoredMask!"]
+    end
+
+    DirtySignal --> IgnoredCheck
+    IgnoredCheck -- "No (Ignored)" --> ZeroRebuild
+    IgnoredCheck -- "Yes (Changed)" --> MarkDirty
+    MarkDirty --> BuildQueue
+    BuildQueue --> Reconcile
+    Reconcile -- "Yes" --> SingleReturn
+    Reconcile -- "No" --> MultiDiff
 ```
 
 - **Level-0 Group Summary Register (`_commonIgnoredMask`):** `graft.slots(...)` maintains an aggregate Level-0 summary register (`_commonIgnoredMask`) representing the intersection of properties universally ignored by all active child slots. Before inspecting individual slot dependencies or iterating the widget tree, an $O(1)$ single-cycle pre-flight bitwise test executes:
@@ -155,6 +166,17 @@ When a scope or feature unmounts, dependencies must be torn down strictly in **r
 - On `drop()`, an in-degree topological sort disposes consumers first and base dependencies last, guaranteeing zero dangling pointer crashes or leaked file descriptors.
 - Circular dependency cycles are detected during resolution with descriptive DAG stack traces.
 
+```mermaid
+flowchart LR
+    subgraph TeardownOrder["Reverse Topological Teardown Pipeline (on scope.drop)"]
+        direction LR
+        S3["1️⃣ Disposed First:<br/>CheckoutCoordinator<br/>(Leaf Consumer)"]
+        S2["2️⃣ Disposed Second:<br/>CartDao<br/>(Intermediate DAO)"]
+        S1["3️⃣ Disposed Last:<br/>DatabaseService<br/>(Root Connection)"]
+        S3 --> S2 --> S1
+    end
+```
+
 ---
 
 ### Pillar 5: Self-Healing Non-Blocking Async Execution Gate
@@ -179,6 +201,30 @@ Hydrating persisted form states via asynchronous storage engines (SQLite, Shared
 - **Zero-Controller Forms:** Standard Flutter `TextFormField(initialValue: graft.state.customerName)` takes the Frame-0 restored state directly with ZERO controllers and ZERO `initState`.
 - **Coalescing 300ms Background Queue:** Keystrokes update L1 RAM synchronously on every frame, while coalescing disk writes into a single debounced 300ms I/O operation.
 - **Structural Schema Fingerprinting with `schemaVersion`:** Combines deterministic 32-bit FNV-1a hashing of `props` structure with `schemaVersion`. Stale caches are discarded safely across app updates with zero migration scripts.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as User / App Launch
+    participant Widget as UI / BuildContext
+    participant Engine as Graft Engine
+    participant L1 as L1 RAM Cache
+    participant Disk as Background Disk Queue
+
+    Note over User,Engine: Frame 0 (< 50ns, before initial paint)
+    User->>Widget: App Mount / Navigation
+    Widget->>Engine: context.use(FormGraft.new)
+    Engine->>L1: Synchronous binary read
+    L1-->>Engine: Cached bytes
+    Engine->>Widget: Hydrated FormState (0 blank frames!)
+    
+    Note over User,Disk: User Interaction & Background Coalescing
+    User->>Widget: Keystroke (customerName = 'Alice')
+    Widget->>Engine: state..customerName = 'Alice'..update()
+    Engine->>L1: Synchronous L1 RAM update (< 50ns)
+    Engine->>Disk: Enqueue 300ms debounced write
+    Disk-->>Disk: Coalesce rapid keystrokes into 1 I/O
+```
 
 ---
 
@@ -239,7 +285,7 @@ flowchart TD
 
 ## ⚡ Undisputed Rank-1 Execution Pipeline & Modular Engine Architecture
 
-To ensure undisputed Rank-1 benchmark performance across all 17 independent evaluation scenarios while preserving maximum codebase maintainability, Graft's runtime engine adheres to two core architectural invariants:
+To ensure undisputed Rank-1 benchmark performance across all 17 core evaluation suites and 21 benchmark scenarios while preserving maximum codebase maintainability, Graft's runtime engine adheres to two core architectural invariants:
 
 1. **Zero New Public APIs & Zero Overhead Ergonomics:** Developers interact strictly through the fluent `state..field = value..update()` pattern and `context.use<T>()`. All high-performance optimizations, register allocations, and receiver windowing engines operate internally in `lib/src/` or hidden behind library-private boundaries.
 2. **Strict Modularity Constraint ($\le$ 160 LOC per file):** No file in `lib/` exceeds 160 physical lines of code. Subsystems are partitioned into single-responsibility Dart `part` files sharing private namespaces, avoiding getter indirection while enabling full Dart VM AOT `@pragma('vm:prefer-inline')` inlining.
@@ -286,10 +332,11 @@ When a widget attaches to a `Graft` controller or displays virtualized collectio
 
 ### 3. Modular Engine Structure
 All core subsystems are cleanly decomposed into focused modules strictly $\le 160$ lines:
-- **`src/core/state/` (18 parts):** Partitioned into `graft_state_props.dart`, `graft_state_baseline.dart`, `graft_state_snapshot.dart`, `graft_state_collection_diff.dart`, `graft_state_diff_dual.dart`, `graft_state_diff_triple.dart`, `graft_state_diff_quad.dart`, `graft_state_diff_penta.dart`, `graft_state_diff_general.dart`, `graft_state_diff_engine.dart`, `graft_state_fast_scalar.dart`, `graft_state_fast_buffer.dart`, `graft_state_fast_nested.dart`, `graft_state_dispatch.dart`, and `graft_state_engine.dart`.
-- **`src/widgets/slots/` (16 parts):** Partitioned into reconcilers, layout resolvers, diff matchers, dirty dispatchers, and scope guards.
-- **`src/route/` (6 parts):** Partitioned into route tracker, ambient key, route observer, ambient lifecycle engine, ambient pool engine, and ambient search engine.
-- **`src/di/` (7 parts):** Partitioned into registry, scope node, scope resolution, scope teardown, scope tier, scope block, and async binding.
+- **`src/core/state/` (19 files):** Partitioned into `graft_state_props.dart`, `graft_props_types.dart`, `graft_state_storage.dart`, `graft_state_baseline.dart`, `graft_state_snapshot.dart`, `graft_state_fast_scalar.dart`, `graft_state_fast_buffer.dart`, `graft_state_fast_nested.dart`, `graft_state_diff_single.dart`, `graft_state_diff_dual.dart`, `graft_state_diff_triple.dart`, `graft_state_diff_quad.dart`, `graft_state_diff_penta.dart`, `graft_state_diff_general.dart`, `graft_state_diff_helper.dart`, `graft_state_diff_engine.dart`, `graft_state_collection_diff.dart`, `graft_state_dispatch.dart`, and `graft_state_engine.dart`.
+- **`src/widgets/slots/` (16 files):** Partitioned into reconcilers, layout resolvers, diff matchers, dirty dispatchers, and scope guards.
+- **`src/route/` (6 files):** Partitioned into `graft_route_tracker.dart`, `graft_route_observer.dart`, `ambient_key.dart`, `ambient_lifecycle_engine.dart`, `ambient_pool_engine.dart`, and `ambient_search_engine.dart`.
+- **`src/di/` (10 files):** Partitioned into `graft_di.dart`, `graft_registry.dart`, `type_id.dart`, `disposable.dart`, `scope_node.dart`, `scope_tier.dart`, `scope_block.dart`, `scope_resolution.dart`, `scope_teardown.dart`, and `async_binding.dart`.
+- **`src/persistence/` (16 files):** Partitioned into `state_config.dart`, `l1_cache.dart`, `debounce_queue.dart`, `lifecycle_observer.dart`, `file_state_config.dart`, `memory_state_config.dart`, `storage_coordinator.dart`, `ambient_locator.dart`, dry hooks, and binary serializers.
 
 ---
 

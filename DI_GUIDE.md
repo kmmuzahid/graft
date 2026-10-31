@@ -133,10 +133,12 @@ Calling `context.use<T>()` automatically binds the controller's lifecycle to the
 - **Popup Protection**: Dialogs (`showDialog`) and modal bottom sheets (`showModalBottomSheet`) borrow safely without prematurely disposing the host screen's controller.
 
 ### 2. Zero-Wrapper Ambient Lifecycle (`context.use` vs `context.create`)
-With **Alpha 6**, you never need to wrap widgets or shell routes in scopes:
+With Graft's **Ref-Counted Ambient Engine**, you never need to wrap widgets or shell routes in scopes or providers:
 
-- **`context.use<T>()`**: Borrows the existing ambient instance across the navigation flow, or creates one if absent. Automatically promoted to an app-wide permanent singleton when called at the App Root (`route == null`). Auto-disposes when all borrower routes pop.
-- **`context.create<T>()`**: Forces a fresh, isolated instance owned exclusively by the caller route.
+- **`context.use<T>([factory, key])`**: Borrows the existing ambient instance across the navigation flow, or creates one if absent. Automatically promoted to an app-wide permanent singleton when called at the App Root (`route == null`). Auto-disposes when all borrower routes pop.
+- **`context.create<T>([factory, key])`**: Forces a fresh, isolated instance owned exclusively by the caller route.
+- **Parameterized Keys (`key: id`)**: Pass an optional key to maintain distinct ambient instances per entity ID (e.g., `ProductGraft` per product ID).
+- **Multi-Controller Resolution**: Unpack multiple controllers cleanly with Dart 3 records via `context.use2` and `context.use3`.
 
 ```dart
 // Shared across the flow:
@@ -145,8 +147,55 @@ final checkout = context.use(() => CheckoutGraft(
   cartDao: use<CartDao>(),
 ));
 
+// Parameterized by entity ID:
+final product = context.use(() => ProductGraft(productId), key: productId);
+
+// Multi-controller record unpacking:
+final (user, cart) = context.use2(UserGraft.new, CartGraft.new);
+
 // Isolated to this screen only:
 final tempForm = context.create(TempFormGraft.new);
+```
+
+### 3. App-Root Singleton Auto-Promotion
+When `context.use<T>()` is called at the root of your application (e.g. inside `MaterialApp.builder` or any root builder where `ModalRoute.of(context) == null`), the ambient engine automatically detects that no route owns the instance:
+- Sets `isRoot = true` and `refCount = 1`.
+- Automatically promotes the instance to an **Application-Wide Permanent Singleton**.
+- Survives all navigation pushes, pops, and tab switches, living for the entire application session until the app terminates.
+
+### 4. Ambient Lifecycle Decision Flowchart
+
+```mermaid
+flowchart TD
+    subgraph ClientCall["Developer Call"]
+        UseCall["context.use<T>([factory, key])"]
+        CreateCall["context.create<T>([factory, key])"]
+    end
+
+    subgraph AmbientEngine["Ambient Lifecycle Engine"]
+        SingletonCheck{"Is Singleton Lock?<br/>(!canCreateNew)"}
+        PoolLookup{"Matching AmbientEntry<br/>in _ambientPool[key]?"}
+        BranchCheck{"Matches Navigator Branch<br/>or isRoot == true?"}
+        BorrowRoute["borrowerRoutes.add(route)<br/>refCount++<br/>Attach route.popped release listener"]
+        CreateAbsent["Instantiate T<br/>(factory or GraftRegistry.create)"]
+        IsRootCheck{"route == null?"}
+        RegisterRoot["Register AmbientEntry<br/>isRoot = true, refCount = 1<br/>(Permanent App-Root Singleton)"]
+        RegisterRoute["Register AmbientEntry<br/>isRoot = false, refCount = 1<br/>borrowerRoutes = {route}"]
+        CreatePrivate["Instantiate fresh T<br/>Anchor to _privateRouteInstances[route]<br/>Attach route.popped disposal"]
+    end
+
+    UseCall --> SingletonCheck
+    SingletonCheck -- "Yes" --> RetSingleton["Return Singleton"]
+    SingletonCheck -- "No" --> PoolLookup
+    PoolLookup -- "Found" --> BranchCheck
+    BranchCheck -- "Yes" --> BorrowRoute --> RetInstance["Return entry.instance"]
+    BranchCheck -- "Different Navigator" --> CreateAbsent
+    PoolLookup -- "Not Found" --> CreateAbsent
+    CreateAbsent --> IsRootCheck
+    IsRootCheck -- "Yes (App Root)" --> RegisterRoot --> RetInstance
+    IsRootCheck -- "No (Route)" --> RegisterRoute --> RetInstance
+
+    CreateCall --> CreatePrivate --> RetPrivate["Return isolated T"]
 ```
 
 ---
@@ -509,7 +558,7 @@ final user = context.use(UserGraft.new);
 ## 📚 Related Technical Guides & Reports
 
 - 🚀 **[graft_template](https://github.com/kmmuzahid/graft_template):** Official production-ready starter template integrating **Graft** with **CoreKit** (`core_kit`).
-- 🏛️ **[ARCHITECTURE.md](https://github.com/kmmuzahid/graft/blob/main/ARCHITECTURE.md):** Deep dive into the 6 Core Engineering Pillars, monotonic TypeId, in-degree reverse DAG teardowns, and non-blocking async execution gates.
+- 🏛️ **[ARCHITECTURE.md](https://github.com/kmmuzahid/graft/blob/main/ARCHITECTURE.md):** Deep dive into the 7 Core Engineering Pillars, bitmask diffing, native `ComponentElement` slots, monotonic TypeId, DAG teardowns, and the ref-counted ambient engine.
 - 💾 **[GRAFT_GUIDE.md](https://github.com/kmmuzahid/graft/blob/main/GRAFT_GUIDE.md):** Major dedicated guide for State Management & Frame-0 Persistence (propsOf, surgical slots, zero-controller forms, and Frame-0 dry state).
 - 📊 **[BENCHMARK_REPORT.md](https://github.com/kmmuzahid/graft/blob/main/BENCHMARK_REPORT.md):** Empirical benchmark methodology and full logs (including **Scenario F2**: DI Engine lookups $\le 12$ ns cold, $< 0.8$ ns hot V-table access).
 - 🧪 **[TEST_REPORT.md](https://github.com/kmmuzahid/graft/blob/main/TEST_REPORT.md):** Comprehensive test verification report across 304 passing tests (including 22 Dependency Injection engine tests).
