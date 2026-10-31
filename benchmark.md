@@ -59,12 +59,23 @@ This benchmark suite empirically evaluates **Graft** (`1.0.0-alpha.7`) against t
 
 ---
 
-# 💻 Section 1: Native Platform Benchmarks (macOS / ARM64 VM)
+# 💻 ══════════════════════════════════════════════════════════════════════════════ 💻
+# 💻 SECTION 1: NATIVE PLATFORM BENCHMARKS (macOS / ARM64 DART VM) 💻
+# 💻 ══════════════════════════════════════════════════════════════════════════════ 💻
+
+[![Platform: macOS Native](https://img.shields.io/badge/Platform-macOS%20(ARM64%20Apple%20Silicon)-000000.svg?logo=apple&logoColor=white)](https://flutter.dev)
+[![Diff Engine: 64-Bit Hardware Registers](https://img.shields.io/badge/Diff%20Engine-64--Bit%20Hardware%20Registers-6A1B9A.svg?logo=dart&logoColor=white)](https://flutter.dev)
+[![Runtime: AOT / JIT Sub-50ns](https://img.shields.io/badge/Runtime-AOT%20%2F%20JIT%20Sub--50ns-00C853.svg)](https://flutter.dev)
+[![Memory: Zero-GC In-Place](https://img.shields.io/badge/Memory-Zero--GC%20In--Place-FF6D00.svg)](https://flutter.dev)
 
 > [!NOTE]
-> ### 💻 Native IO Execution Environment
-> These benchmarks execute on the ahead-of-time (AOT) and JIT 64-bit Dart VM on Apple Silicon ARM64 hardware.
-> Graft leverages 64-bit integer registers directly for sub-50ns bitmask diffing and direct C-level Element pointer dispatch.
+> ### 💻 ATTENTION: ALL BENCHMARKS BELOW ARE EXECUTED NATIVELY ON THE 64-BIT DART VM
+> **From this point forward, every benchmark scenario is executed natively on Apple Silicon ARM64 hardware running the Ahead-of-Time (AOT) and JIT 64-bit Dart VM.**
+>
+> **Key Native Architectural Highlights:**
+> - **64-Bit Hardware Word Registers:** Scalar dirty masks are diffed directly within CPU registers (`int` bitwise XOR/AND) in sub-50 nanoseconds, eliminating heap diff operations.
+> - **Direct Element Pointer Dispatch:** `GraftFastReceiver` and `GraftLeaf` bypass `ValueNotifier` listener arrays, scheduling rebuilds directly on Flutter's `ComponentElement` pointer.
+> - **Zero-GC In-Place Mutations:** Zero wrapper allocations during state transitions eliminate Gen-0 nursery GC churn, guaranteeing zero dropped frames at 120 FPS.
 
 ### 🔹 Scenario: A1_10k_increments (Native IO)
 
@@ -74,13 +85,13 @@ This benchmark suite empirically evaluates **Graft** (`1.0.0-alpha.7`) against t
 
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | State Churn |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **Graft** | **0.09** | **0.07** | **0.14** | **0.06** | **0.19** | 0.04 | 0 | 0 | 0 (Zero-GC) |
-| 🥈 | GetX | 0.14 | 0.14 | 0.16 | 0.13 | 0.17 | 0.01 | 0 | 0 | 0 (Zero-GC) |
-| 🥉 | Provider | 0.21 | 0.14 | 0.41 | 0.14 | 0.44 | 0.11 | 0 | 0 | 0 (Zero-GC) |
-| 4 | BLoC (Cubit) | 0.25 | 0.13 | 0.23 | 0.13 | 1.78 | 0.42 | 0 | 0 | 0 (Zero-GC) |
-| 5 | Riverpod (Notifier) | 0.91 | 0.86 | 1.12 | 0.53 | 1.69 | 0.29 | 0 | 0 | 0 (Zero-GC) |
-| 6 | Riverpod (StateNotifier) | 1.23 | 1.03 | 1.89 | 0.86 | 2.22 | 0.43 | 0 | 0 | 0 (Zero-GC) |
-| 7 | Signals | 3.48 | 3.69 | 4.43 | 2.43 | 4.72 | 0.71 | 0 | 0 | 0 (Zero-GC) |
+| 🥇 | **Graft** | **0.05** | **0.05** | **0.05** | **0.05** | **0.06** | 0.00 | 0 | 0 | 0 (Zero-GC) |
+| 🥈 | GetX | 0.12 | 0.12 | 0.14 | 0.11 | 0.15 | 0.01 | 0 | 0 | 0 (Zero-GC) |
+| 🥉 | Provider | 0.14 | 0.12 | 0.20 | 0.12 | 0.22 | 0.03 | 0 | 0 | 0 (Zero-GC) |
+| 4 | BLoC (Cubit) | 0.21 | 0.12 | 0.16 | 0.11 | 1.38 | 0.32 | 0 | 0 | 0 (Zero-GC) |
+| 5 | Riverpod (Notifier) | 0.56 | 0.55 | 0.62 | 0.50 | 0.65 | 0.04 | 0 | 0 | 0 (Zero-GC) |
+| 6 | Riverpod (StateNotifier) | 0.81 | 0.81 | 0.83 | 0.78 | 0.86 | 0.02 | 0 | 0 | 0 (Zero-GC) |
+| 7 | Signals | 2.25 | 2.24 | 2.33 | 2.16 | 2.36 | 0.07 | 0 | 0 | 0 (Zero-GC) |
 
 ### 🔹 Scenario: A2_100k_increments (Native IO)
 
@@ -90,13 +101,13 @@ This benchmark suite empirically evaluates **Graft** (`1.0.0-alpha.7`) against t
 
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | State Churn |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **Graft** | **0.66** | **0.62** | **0.71** | **0.59** | **1.07** | 0.12 | 0 | 0 | 0 (Zero-GC) |
-| 🥈 | Provider | 1.40 | 1.39 | 1.59 | 1.30 | 1.61 | 0.09 | 0 | 0 | 0 (Zero-GC) |
-| 🥉 | GetX | 1.55 | 1.52 | 1.72 | 1.42 | 1.74 | 0.10 | 0 | 0 | 0 (Zero-GC) |
-| 4 | BLoC (Cubit) | 5.06 | 4.37 | 9.62 | 1.34 | 11.75 | 3.30 | 0 | 0 | 0 (Zero-GC) |
-| 5 | Riverpod (Notifier) | 7.67 | 7.26 | 9.22 | 6.43 | 10.26 | 1.14 | 0 | 0 | 0 (Zero-GC) |
-| 6 | Riverpod (StateNotifier) | 10.04 | 10.09 | 11.09 | 8.56 | 11.14 | 0.93 | 0 | 0 | 0 (Zero-GC) |
-| 7 | Signals | 25.98 | 25.81 | 27.80 | 24.15 | 28.91 | 1.18 | 0 | 0 | 0 (Zero-GC) |
+| 🥇 | **Graft** | **0.56** | **0.55** | **0.65** | **0.53** | **0.71** | 0.05 | 0 | 0 | 0 (Zero-GC) |
+| 🥈 | Provider | 1.24 | 1.22 | 1.29 | 1.17 | 1.44 | 0.06 | 0 | 0 | 0 (Zero-GC) |
+| 🥉 | GetX | 1.33 | 1.33 | 1.41 | 1.28 | 1.42 | 0.04 | 0 | 0 | 0 (Zero-GC) |
+| 4 | BLoC (Cubit) | 3.51 | 3.37 | 5.54 | 1.05 | 8.98 | 2.16 | 0 | 0 | 0 (Zero-GC) |
+| 5 | Riverpod (Notifier) | 5.70 | 5.55 | 6.04 | 5.38 | 6.91 | 0.40 | 0 | 0 | 0 (Zero-GC) |
+| 6 | Riverpod (StateNotifier) | 7.84 | 7.87 | 7.96 | 7.70 | 7.99 | 0.09 | 0 | 0 | 0 (Zero-GC) |
+| 7 | Signals | 21.98 | 21.99 | 22.23 | 21.82 | 22.27 | 0.15 | 0 | 0 | 0 (Zero-GC) |
 
 ### 🔹 Scenario: A3_multi_field_5 (Native IO)
 
@@ -106,13 +117,13 @@ This benchmark suite empirically evaluates **Graft** (`1.0.0-alpha.7`) against t
 
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | State Churn |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **Graft** | **0.12** | **0.12** | **0.12** | **0.11** | **0.14** | 0.01 | 0 | 0 | 0 (Zero-GC) |
-| 🥈 | Provider | 0.25 | 0.15 | 0.44 | 0.15 | 0.46 | 0.13 | 0 | 0 | 0 (Zero-GC) |
-| 🥉 | GetX | 0.46 | 0.40 | 0.72 | 0.38 | 0.81 | 0.13 | 0 | 0 | 0 (Zero-GC) |
-| 4 | Riverpod (Notifier) | 0.67 | 0.61 | 0.85 | 0.59 | 1.01 | 0.12 | 0 | 0 | 10000 |
-| 5 | Riverpod (StateNotifier) | 1.09 | 1.12 | 1.31 | 0.90 | 1.52 | 0.18 | 0 | 0 | 10000 |
-| 6 | BLoC (Cubit) | 1.13 | 0.50 | 3.49 | 0.20 | 4.70 | 1.48 | 0 | 0 | 10000 |
-| 7 | Signals | 11.02 | 10.64 | 12.98 | 9.77 | 13.43 | 1.14 | 0 | 0 | 0 (Zero-GC) |
+| 🥇 | **Graft** | **0.11** | **0.10** | **0.12** | **0.10** | **0.14** | 0.01 | 0 | 0 | 0 (Zero-GC) |
+| 🥈 | Provider | 0.14 | 0.13 | 0.15 | 0.13 | 0.24 | 0.03 | 0 | 0 | 0 (Zero-GC) |
+| 🥉 | GetX | 0.35 | 0.35 | 0.37 | 0.33 | 0.43 | 0.02 | 0 | 0 | 0 (Zero-GC) |
+| 4 | BLoC (Cubit) | 0.39 | 0.18 | 0.24 | 0.18 | 3.24 | 0.79 | 0 | 0 | 10000 |
+| 5 | Riverpod (Notifier) | 0.57 | 0.56 | 0.62 | 0.53 | 0.68 | 0.04 | 0 | 0 | 10000 |
+| 6 | Riverpod (StateNotifier) | 0.92 | 0.90 | 0.99 | 0.87 | 1.01 | 0.05 | 0 | 0 | 10000 |
+| 7 | Signals | 8.23 | 8.22 | 8.38 | 7.99 | 8.53 | 0.13 | 0 | 0 | 0 (Zero-GC) |
 
 ### 🔹 Scenario: A4_depth8_nested (Native IO)
 
@@ -122,13 +133,13 @@ This benchmark suite empirically evaluates **Graft** (`1.0.0-alpha.7`) against t
 
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | State Churn |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **Graft** | **0.01** | **0.01** | **0.01** | **0.01** | **0.03** | 0.01 | 0 | 0 | 0 (Zero-GC) |
-| 🥈 | GetX | 0.01 | 0.01 | 0.01 | 0.01 | 0.01 | 0.00 | 0 | 0 | 0 (Zero-GC) |
-| 🥉 | BLoC (Cubit) | 0.04 | 0.03 | 0.05 | 0.03 | 0.08 | 0.01 | 0 | 0 | 8000 |
-| 4 | Provider | 0.07 | 0.05 | 0.29 | 0.01 | 0.30 | 0.09 | 0 | 0 | 0 (Zero-GC) |
-| 5 | Riverpod (StateNotifier) | 0.41 | 0.35 | 0.78 | 0.10 | 1.17 | 0.29 | 0 | 0 | 8000 |
-| 6 | Riverpod (Notifier) | 0.68 | 0.61 | 1.10 | 0.54 | 1.15 | 0.19 | 0 | 0 | 8000 |
-| 7 | Signals | 1.60 | 1.35 | 2.36 | 0.69 | 3.62 | 0.73 | 0 | 0 | 0 (Zero-GC) |
+| 🥇 | **Graft** | **0.01** | **0.01** | **0.01** | **0.01** | **0.03** | 0.00 | 0 | 0 | 0 (Zero-GC) |
+| 🥈 | GetX | 0.02 | 0.01 | 0.03 | 0.01 | 0.04 | 0.01 | 0 | 0 | 0 (Zero-GC) |
+| 🥉 | Provider | 0.02 | 0.02 | 0.02 | 0.02 | 0.03 | 0.00 | 0 | 0 | 0 (Zero-GC) |
+| 4 | BLoC (Cubit) | 0.17 | 0.03 | 0.04 | 0.03 | 2.12 | 0.54 | 0 | 0 | 8000 |
+| 5 | Riverpod (StateNotifier) | 0.24 | 0.24 | 0.30 | 0.13 | 0.39 | 0.08 | 0 | 0 | 8000 |
+| 6 | Riverpod (Notifier) | 0.61 | 0.52 | 1.05 | 0.49 | 1.40 | 0.26 | 0 | 0 | 8000 |
+| 7 | Signals | 1.78 | 0.64 | 3.89 | 0.47 | 6.07 | 1.76 | 0 | 0 | 0 (Zero-GC) |
 
 ### 🔹 Scenario: B1_10_slot_column_120_frames (Native IO)
 
@@ -138,14 +149,14 @@ This benchmark suite empirically evaluates **Graft** (`1.0.0-alpha.7`) against t
 
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | State Churn |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **Graft (slots)** | **13.35** | **13.30** | **13.80** | **12.56** | **14.43** | 0.53 | 120 | 0 | 0 (Zero-GC) |
-| 🥈 | **Graft (leaf slot)** | **14.01** | **14.01** | **14.62** | **13.24** | **15.30** | 0.55 | 120 | 0 | 0 (Zero-GC) |
-| 🥉 | GetX | 14.15 | 14.13 | 15.29 | 12.31 | 19.55 | 1.73 | 120 | 0 | 0 (Zero-GC) |
-| 4 | Riverpod (Notifier) | 14.89 | 14.01 | 17.35 | 12.94 | 26.91 | 3.49 | 120 | 0 | 0 (Zero-GC) |
-| 5 | Signals | 15.23 | 15.07 | 16.53 | 13.09 | 16.74 | 1.10 | 120 | 0 | 0 (Zero-GC) |
-| 6 | BLoC (Cubit) | 17.06 | 15.86 | 18.38 | 14.14 | 34.40 | 4.97 | 120 | 0 | 0 (Zero-GC) |
-| 7 | Riverpod (StateNotifier) | 22.15 | 21.84 | 34.65 | 12.93 | 34.72 | 8.52 | 120 | 0 | 0 (Zero-GC) |
-| 8 | Provider | 25.72 | 23.07 | 42.26 | 14.94 | 44.57 | 9.20 | 120 | 0 | 0 (Zero-GC) |
+| 🥇 | Riverpod (Notifier) | 12.67 | 12.61 | 13.56 | 11.89 | 14.15 | 0.67 | 120 | 0 | 0 (Zero-GC) |
+| 🥈 | **Graft (leaf slot)** | **13.07** | **12.95** | **13.84** | **12.42** | **13.94** | 0.45 | 120 | 0 | 0 (Zero-GC) |
+| 🥉 | Riverpod (StateNotifier) | 13.34 | 13.42 | 14.38 | 12.06 | 14.50 | 0.73 | 120 | 0 | 0 (Zero-GC) |
+| 4 | GetX | 13.36 | 13.03 | 14.78 | 12.50 | 14.98 | 0.79 | 120 | 0 | 0 (Zero-GC) |
+| 5 | **Graft (slots)** | **13.49** | **13.31** | **14.24** | **12.67** | **15.23** | 0.66 | 120 | 0 | 0 (Zero-GC) |
+| 6 | Signals | 14.38 | 14.38 | 15.98 | 13.11 | 16.32 | 1.00 | 120 | 0 | 0 (Zero-GC) |
+| 7 | BLoC (Cubit) | 14.94 | 14.06 | 20.57 | 13.13 | 21.22 | 2.52 | 120 | 0 | 0 (Zero-GC) |
+| 8 | Provider | 16.26 | 15.96 | 19.27 | 13.77 | 20.11 | 2.00 | 120 | 0 | 0 (Zero-GC) |
 
 ### 🔹 Scenario: B2_50_slot_column_120_frames (Native IO)
 
@@ -155,14 +166,14 @@ This benchmark suite empirically evaluates **Graft** (`1.0.0-alpha.7`) against t
 
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | State Churn |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **Graft (leaf slot)** | **26.13** | **26.03** | **27.60** | **24.40** | **27.82** | 0.98 | 120 | 0 | 0 (Zero-GC) |
-| 🥈 | Signals | 31.46 | 31.16 | 34.23 | 27.72 | 35.54 | 2.08 | 120 | 0 | 0 (Zero-GC) |
-| 🥉 | Riverpod (StateNotifier) | 31.95 | 32.05 | 35.38 | 24.50 | 36.65 | 3.86 | 120 | 0 | 0 (Zero-GC) |
-| 4 | Riverpod (Notifier) | 32.12 | 30.58 | 34.48 | 28.27 | 52.70 | 5.90 | 120 | 0 | 0 (Zero-GC) |
-| 5 | GetX | 37.76 | 36.38 | 43.74 | 33.66 | 46.33 | 3.86 | 120 | 0 | 0 (Zero-GC) |
-| 6 | Provider | 38.07 | 38.48 | 41.57 | 30.88 | 43.29 | 3.28 | 120 | 0 | 0 (Zero-GC) |
-| 7 | BLoC (Cubit) | 39.70 | 38.81 | 44.18 | 31.49 | 58.65 | 6.56 | 120 | 0 | 0 (Zero-GC) |
-| 8 | **Graft (slots)** | **46.48** | **42.91** | **59.18** | **35.02** | **73.97** | 10.75 | 120 | 0 | 0 (Zero-GC) |
+| 🥇 | Riverpod (Notifier) | 25.85 | 25.61 | 27.45 | 23.50 | 27.49 | 1.24 | 120 | 0 | 0 (Zero-GC) |
+| 🥈 | **Graft (leaf slot)** | **26.19** | **25.70** | **27.37** | **25.01** | **27.57** | 1.00 | 120 | 0 | 0 (Zero-GC) |
+| 🥉 | BLoC (Cubit) | 26.28 | 26.34 | 28.15 | 24.11 | 29.56 | 1.48 | 120 | 0 | 0 (Zero-GC) |
+| 4 | Signals | 26.46 | 26.39 | 29.32 | 24.26 | 29.54 | 1.53 | 120 | 0 | 0 (Zero-GC) |
+| 5 | Riverpod (StateNotifier) | 27.13 | 26.47 | 28.99 | 25.61 | 29.12 | 1.33 | 120 | 0 | 0 (Zero-GC) |
+| 6 | GetX | 27.56 | 27.15 | 29.17 | 26.10 | 30.23 | 1.21 | 120 | 0 | 0 (Zero-GC) |
+| 7 | Provider | 29.36 | 28.89 | 31.71 | 26.83 | 32.12 | 1.64 | 120 | 0 | 0 (Zero-GC) |
+| 8 | **Graft (slots)** | **32.71** | **28.49** | **45.46** | **25.72** | **66.44** | 10.82 | 120 | 0 | 0 (Zero-GC) |
 
 ### 🔹 Scenario: C1_5k_items_300_rapid_updates (Native IO)
 
@@ -172,12 +183,12 @@ This benchmark suite empirically evaluates **Graft** (`1.0.0-alpha.7`) against t
 
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | State Churn |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **Graft** | **27.87** | **27.97** | **28.52** | **26.99** | **28.54** | 0.52 | 300 | 0 | 0 (Zero-GC) |
-| 🥈 | Riverpod (Notifier) | 30.95 | 31.28 | 31.68 | 29.34 | 32.38 | 0.87 | 300 | 0 | 300 |
-| 🥉 | Signals | 33.99 | 32.08 | 38.72 | 31.13 | 49.58 | 4.75 | 300 | 0 | 0 (Zero-GC) |
-| 4 | BLoC (Cubit) | 49.67 | 47.74 | 58.51 | 44.81 | 63.05 | 5.46 | 300 | 0 | 300 |
-| 5 | Provider | 60.19 | 60.58 | 62.54 | 57.61 | 62.85 | 1.92 | 300 | 0 | 300 |
-| 6 | GetX | 67.06 | 66.42 | 69.94 | 63.54 | 71.45 | 2.16 | 300 | 0 | 0 (Zero-GC) |
+| 🥇 | **Graft** | **28.32** | **28.29** | **29.09** | **27.10** | **30.06** | 0.70 | 300 | 0 | 0 (Zero-GC) |
+| 🥈 | Riverpod (Notifier) | 31.37 | 31.40 | 32.24 | 29.84 | 33.39 | 0.82 | 300 | 0 | 300 |
+| 🥉 | Signals | 31.70 | 30.31 | 33.57 | 28.80 | 49.59 | 5.12 | 300 | 0 | 0 (Zero-GC) |
+| 4 | BLoC (Cubit) | 46.79 | 46.80 | 49.45 | 44.34 | 51.13 | 1.87 | 300 | 0 | 300 |
+| 5 | Provider | 55.53 | 55.84 | 57.63 | 52.36 | 58.80 | 2.00 | 300 | 0 | 300 |
+| 6 | GetX | 65.45 | 64.19 | 66.23 | 61.60 | 84.87 | 5.51 | 300 | 0 | 0 (Zero-GC) |
 
 ### 🔹 Scenario: C2_20k_items_300_rapid_updates (Native IO)
 
@@ -187,12 +198,12 @@ This benchmark suite empirically evaluates **Graft** (`1.0.0-alpha.7`) against t
 
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | State Churn |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **Graft** | **34.41** | **32.09** | **35.16** | **31.32** | **62.03** | 7.73 | 300 | 0 | 0 (Zero-GC) |
-| 🥈 | Signals | 43.22 | 40.65 | 65.13 | 35.83 | 66.65 | 9.63 | 300 | 0 | 0 (Zero-GC) |
-| 🥉 | Riverpod (Notifier) | 54.38 | 52.19 | 60.91 | 48.73 | 81.40 | 8.21 | 300 | 0 | 300 |
-| 4 | BLoC (Cubit) | 67.82 | 65.98 | 72.83 | 60.13 | 98.39 | 9.07 | 300 | 0 | 300 |
-| 5 | GetX | 77.54 | 77.40 | 79.34 | 72.10 | 81.97 | 2.03 | 300 | 0 | 0 (Zero-GC) |
-| 6 | Provider | 80.57 | 80.62 | 83.15 | 77.90 | 83.52 | 2.05 | 300 | 0 | 300 |
+| 🥇 | **Graft** | **32.16** | **29.80** | **38.05** | **29.40** | **50.17** | 5.55 | 300 | 0 | 0 (Zero-GC) |
+| 🥈 | Signals | 41.47 | 37.77 | 62.20 | 32.58 | 64.29 | 10.69 | 300 | 0 | 0 (Zero-GC) |
+| 🥉 | Riverpod (Notifier) | 47.00 | 45.15 | 49.41 | 42.63 | 71.76 | 7.08 | 300 | 0 | 300 |
+| 4 | BLoC (Cubit) | 65.14 | 63.65 | 65.59 | 60.12 | 92.13 | 7.60 | 300 | 0 | 300 |
+| 5 | GetX | 73.26 | 71.01 | 72.85 | 68.27 | 105.16 | 8.95 | 300 | 0 | 0 (Zero-GC) |
+| 6 | Provider | 79.09 | 75.59 | 91.23 | 68.75 | 103.22 | 9.14 | 300 | 0 | 300 |
 
 ### 🔹 Scenario: C3_random_insert_remove_100x (Native IO)
 
@@ -202,11 +213,11 @@ This benchmark suite empirically evaluates **Graft** (`1.0.0-alpha.7`) against t
 
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | State Churn |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **Graft** | **0.28** | **0.28** | **0.30** | **0.27** | **0.31** | 0.01 | 0 | 0 | 0 (Zero-GC) |
-| 🥈 | GetX (RxList) | 0.87 | 0.87 | 0.89 | 0.81 | 0.94 | 0.04 | 0 | 0 | 0 (Zero-GC) |
-| 🥉 | Provider | 1.29 | 0.49 | 4.54 | 0.44 | 4.60 | 1.69 | 0 | 0 | 0 (Zero-GC) |
-| 4 | Riverpod (Notifier) | 1.89 | 0.55 | 7.13 | 0.52 | 7.41 | 2.75 | 0 | 0 | 0 (Zero-GC) |
-| 5 | BLoC (Cubit) | 2.24 | 0.52 | 5.45 | 0.47 | 14.92 | 3.91 | 0 | 0 | 0 (Zero-GC) |
+| 🥇 | **Graft** | **0.28** | **0.28** | **0.31** | **0.25** | **0.34** | 0.02 | 0 | 0 | 0 (Zero-GC) |
+| 🥈 | GetX (RxList) | 0.84 | 0.83 | 0.91 | 0.78 | 0.91 | 0.04 | 0 | 0 | 0 (Zero-GC) |
+| 🥉 | Provider | 1.00 | 0.47 | 4.25 | 0.43 | 4.65 | 1.41 | 0 | 0 | 0 (Zero-GC) |
+| 4 | BLoC (Cubit) | 1.21 | 0.49 | 5.53 | 0.46 | 6.13 | 1.88 | 0 | 0 | 0 (Zero-GC) |
+| 5 | Riverpod (Notifier) | 1.24 | 0.54 | 5.57 | 0.51 | 5.99 | 1.85 | 0 | 0 | 0 (Zero-GC) |
 
 ### 🔹 Scenario: D1_product_catalog_and_cart (Native IO)
 
@@ -216,9 +227,9 @@ This benchmark suite empirically evaluates **Graft** (`1.0.0-alpha.7`) against t
 
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | State Churn |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **Graft** | **0.02** | **0.02** | **0.02** | **0.01** | **0.02** | 0.00 | 0 | 0 | 0 (Zero-GC) |
-| 🥈 | Signals | 0.02 | 0.02 | 0.02 | 0.01 | 0.03 | 0.00 | 0 | 0 | 0 (Zero-GC) |
-| 🥉 | BLoC (Cubit) | 0.03 | 0.03 | 0.03 | 0.03 | 0.03 | 0.00 | 0 | 0 | 40 |
+| 🥇 | **Graft** | **0.02** | **0.02** | **0.02** | **0.02** | **0.02** | 0.00 | 0 | 0 | 0 (Zero-GC) |
+| 🥈 | Signals | 0.02 | 0.02 | 0.02 | 0.02 | 0.02 | 0.00 | 0 | 0 | 0 (Zero-GC) |
+| 🥉 | BLoC (Cubit) | 0.03 | 0.03 | 0.03 | 0.03 | 0.04 | 0.00 | 0 | 0 | 40 |
 
 ### 🔹 Scenario: D2_form_12_interdependent_fields (Native IO)
 
@@ -228,9 +239,9 @@ This benchmark suite empirically evaluates **Graft** (`1.0.0-alpha.7`) against t
 
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | State Churn |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | BLoC (Cubit) | 0.05 | 0.05 | 0.05 | 0.05 | 0.07 | 0.01 | 0 | 0 | 100 |
-| 🥈 | **Graft** | **0.06** | **0.06** | **0.06** | **0.05** | **0.08** | 0.01 | 0 | 0 | 0 (Zero-GC) |
-| 🥉 | Signals | 0.06 | 0.06 | 0.06 | 0.06 | 0.06 | 0.00 | 0 | 0 | 0 (Zero-GC) |
+| 🥇 | BLoC (Cubit) | 0.05 | 0.05 | 0.05 | 0.05 | 0.05 | 0.00 | 0 | 0 | 100 |
+| 🥈 | **Graft** | **0.06** | **0.06** | **0.06** | **0.06** | **0.06** | 0.00 | 0 | 0 | 0 (Zero-GC) |
+| 🥉 | Signals | 0.06 | 0.06 | 0.07 | 0.06 | 0.08 | 0.01 | 0 | 0 | 0 (Zero-GC) |
 
 ### 🔹 Scenario: D3_navigation_and_dialog_sharing (Native IO)
 
@@ -240,8 +251,8 @@ This benchmark suite empirically evaluates **Graft** (`1.0.0-alpha.7`) against t
 
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | State Churn |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **Graft** | **3.27** | **2.96** | **4.03** | **2.44** | **4.04** | 0.55 | 0 | 0 | 0 (Zero-GC) |
-| 🥈 | BLoC | 3.73 | 3.02 | 5.45 | 2.86 | 8.12 | 1.46 | 0 | 0 | 0 (Zero-GC) |
+| 🥇 | **Graft** | **3.56** | **3.36** | **5.35** | **2.52** | **5.75** | 0.94 | 0 | 0 | 0 (Zero-GC) |
+| 🥈 | BLoC | 4.90 | 3.88 | 9.22 | 3.02 | 12.64 | 2.67 | 0 | 0 | 0 (Zero-GC) |
 
 ### 🔹 Scenario: E1_route_push_pop_and_dialog_lifecycle (Native IO)
 
@@ -251,7 +262,7 @@ This benchmark suite empirically evaluates **Graft** (`1.0.0-alpha.7`) against t
 
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | State Churn |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **Graft** | **5.80** | **5.54** | **7.25** | **5.08** | **7.81** | 0.83 | 0 | 0 | 0 (Zero-GC) |
+| 🥇 | **Graft** | **6.37** | **6.33** | **7.42** | **5.29** | **7.63** | 0.70 | 0 | 0 | 0 (Zero-GC) |
 
 ### 🔹 Scenario: E2_hot_reload_reassemble_simulation (Native IO)
 
@@ -261,8 +272,8 @@ This benchmark suite empirically evaluates **Graft** (`1.0.0-alpha.7`) against t
 
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | State Churn |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | BLoC | 0.88 | 0.84 | 0.99 | 0.78 | 1.10 | 0.09 | 0 | 0 | 0 (Zero-GC) |
-| 🥈 | **Graft** | **0.99** | **0.92** | **1.25** | **0.78** | **1.28** | 0.18 | 0 | 0 | 0 (Zero-GC) |
+| 🥇 | BLoC | 0.91 | 0.86 | 1.15 | 0.78 | 1.27 | 0.14 | 0 | 0 | 0 (Zero-GC) |
+| 🥈 | **Graft** | **0.92** | **0.90** | **1.11** | **0.82** | **1.19** | 0.11 | 0 | 0 | 0 (Zero-GC) |
 
 ### 🔹 Scenario: E3_disposed_controller_access_safety (Native IO)
 
@@ -284,11 +295,11 @@ This benchmark suite empirically evaluates **Graft** (`1.0.0-alpha.7`) against t
 
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | State Churn |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | BLoC (Cubit) | 0.07 | 0.06 | 0.08 | 0.06 | 0.10 | 0.01 | 0 | 0 | 0 (Zero-GC) |
-| 🥈 | **Graft** | **0.27** | **0.16** | **0.48** | **0.12** | **0.86** | 0.21 | 0 | 0 | 0 (Zero-GC) |
-| 🥉 | Signals | 4.99 | 4.83 | 5.78 | 4.34 | 6.43 | 0.62 | 0 | 0 | 0 (Zero-GC) |
-| 4 | Riverpod (Notifier) | 17.95 | 16.68 | 22.65 | 13.47 | 24.09 | 2.95 | 0 | 0 | 0 (Zero-GC) |
-| ❌ DISQ | GetX | 0.66 | 0.45 | 1.00 | 0.41 | 1.81 | 0.38 | 0 | 0 | 0 (Zero-GC) |
+| 🥇 | BLoC (Cubit) | 0.06 | 0.06 | 0.07 | 0.06 | 0.11 | 0.01 | 0 | 0 | 0 (Zero-GC) |
+| 🥈 | **Graft** | **0.09** | **0.03** | **0.16** | **0.03** | **0.19** | 0.06 | 0 | 0 | 0 (Zero-GC) |
+| 🥉 | Signals | 3.76 | 3.76 | 3.91 | 3.62 | 3.99 | 0.12 | 0 | 0 | 0 (Zero-GC) |
+| 4 | Riverpod (Notifier) | 11.04 | 11.01 | 11.21 | 10.87 | 11.27 | 0.12 | 0 | 0 | 0 (Zero-GC) |
+| ❌ DISQ | GetX | 0.40 | 0.39 | 0.44 | 0.38 | 0.46 | 0.02 | 0 | 0 | 0 (Zero-GC) |
 
 ### 🔹 Scenario: G1_transactional_multi_field_batching (Native IO)
 
@@ -298,11 +309,11 @@ This benchmark suite empirically evaluates **Graft** (`1.0.0-alpha.7`) against t
 
 | Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | State Churn |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 🥇 | **Graft** | **0.08** | **0.07** | **0.18** | **0.02** | **0.19** | 0.06 | 0 | 0 | 0 (Zero-GC) |
-| 🥈 | BLoC (Cubit) | 0.36 | 0.30 | 0.60 | 0.29 | 0.62 | 0.11 | 0 | 0 | 0 (Zero-GC) |
-| 🥉 | Riverpod (Notifier) | 0.37 | 0.34 | 0.51 | 0.32 | 0.56 | 0.07 | 0 | 0 | 0 (Zero-GC) |
-| 4 | Signals | 2.17 | 2.00 | 2.67 | 1.78 | 3.12 | 0.38 | 0 | 0 | 0 (Zero-GC) |
-| ❌ DISQ | GetX | 0.19 | 0.18 | 0.22 | 0.17 | 0.24 | 0.02 | 0 | 0 | 0 (Zero-GC) |
+| 🥇 | **Graft** | **0.02** | **0.02** | **0.03** | **0.02** | **0.03** | 0.00 | 0 | 0 | 0 (Zero-GC) |
+| 🥈 | BLoC (Cubit) | 0.31 | 0.28 | 0.42 | 0.12 | 0.88 | 0.18 | 0 | 0 | 0 (Zero-GC) |
+| 🥉 | Riverpod (Notifier) | 0.34 | 0.32 | 0.41 | 0.30 | 0.65 | 0.09 | 0 | 0 | 0 (Zero-GC) |
+| 4 | Signals | 1.77 | 1.76 | 1.94 | 1.65 | 2.02 | 0.11 | 0 | 0 | 0 (Zero-GC) |
+| ❌ DISQ | GetX | 0.16 | 0.15 | 0.17 | 0.15 | 0.17 | 0.01 | 0 | 0 | 0 (Zero-GC) |
 
 ---
 
@@ -312,6 +323,7 @@ This benchmark suite empirically evaluates **Graft** (`1.0.0-alpha.7`) against t
 
 [![Platform: Web](https://img.shields.io/badge/Platform-Web%20(Chromium%20%2F%20WASM%20%26%20JS)-0288D1.svg?logo=googlechrome&logoColor=white)](https://flutter.dev)
 [![Runtime: 32-Bit](https://img.shields.io/badge/Diff%20Engine-32--Bit%20Chunked%20Words-FF6D00.svg)](https://flutter.dev)
+[![Runtime: V8 JS & WASM](https://img.shields.io/badge/Runtime-V8%20JS%20%26%20WASM-E91E63.svg)](https://flutter.dev)
 [![Environment: V8 GC](https://img.shields.io/badge/Memory-Browser%20GC%20Dynamics-00C853.svg)](https://flutter.dev)
 
 > [!IMPORTANT]
