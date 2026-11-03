@@ -9,11 +9,6 @@ class CounterState extends GraftState {
 
   @override
   GraftProps get props => propsOf(count);
-
-  @override
-  void onReset() {
-    count = 0;
-  }
 }
 
 class CounterGraft extends Graft<CounterState> {

@@ -212,11 +212,6 @@ class LiveCounterState extends GraftState {
 
   @override
   GraftProps get props => propsOf(count);
-
-  @override
-  void onReset() {
-    count = 0;
-  }
 }
 
 class LiveCounterGraft extends Graft<LiveCounterState> {
@@ -231,6 +226,12 @@ class LiveCounterGraft extends Graft<LiveCounterState> {
   void decrement() {
     state
       ..count -= 1
+      ..update();
+  }
+
+  void reset() {
+    state
+      ..count = 0
       ..update();
   }
 }
@@ -258,13 +259,6 @@ class AddressModel extends GraftModel {
 
   @override
   Function get factory => AddressModel.new;
-
-  @override
-  void onReset() {
-    street = '221B Baker Street';
-    city = 'London';
-    zipCode = 10001;
-  }
 }
 
 class PersistentProfileState extends GraftState {
@@ -285,14 +279,6 @@ class PersistentProfileState extends GraftState {
 
   @override
   GraftProps get props => propsOf(fullName, notes, isSyncing, address);
-
-  @override
-  void onReset() {
-    fullName = 'Sherlock Holmes';
-    notes = 'Consulting Detective';
-    isSyncing = false;
-    address.onReset();
-  }
 }
 
 class PersistentProfileGraft extends Graft<PersistentProfileState> {
@@ -329,7 +315,14 @@ class PersistentProfileGraft extends Graft<PersistentProfileState> {
   }
 
   void resetAll() {
-    state.reset();
+    state
+      ..fullName = 'Sherlock Holmes'
+      ..notes = 'Consulting Detective'
+      ..isSyncing = false
+      ..address.street = '221B Baker Street'
+      ..address.city = 'London'
+      ..address.zipCode = 10001
+      ..update();
   }
 }
 

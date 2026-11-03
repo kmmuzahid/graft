@@ -73,18 +73,4 @@ abstract class GraftState extends GraftStateStorage with GraftStateProps {
   @nonVirtual
   @pragma('vm:prefer-inline')
   void update({int? itemIndex}) => _stateUpdate(this, itemIndex: itemIndex);
-
-  /// Resets this state by invoking [onReset] and triggering fine-grained diffing synchronously.
-  @nonVirtual
-  void reset() {
-    _baseline = null;
-    _singleBaseline = _undefined;
-    _dirtyMask = GraftMask.allDirty;
-    onReset();
-    update();
-  }
-
-  /// Optional lifecycle hook called during [reset] to restore domain field values.
-  @protected
-  void onReset() {}
 }

@@ -40,11 +40,6 @@ class LargeListState extends GraftState {
 
   @override
   GraftProps get props => propsOf(items);
-
-  @override
-  void onReset() {
-    items = [];
-  }
 }
 
 class LargeListGraft extends Graft<LargeListState> {

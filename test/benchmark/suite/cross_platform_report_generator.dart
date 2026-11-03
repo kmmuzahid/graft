@@ -105,18 +105,18 @@ abstract final class CrossPlatformReportGenerator {
       {'rank': '🥇', 'fw': 'Graft', 'mean': '0.00', 'median': '0.00', 'p95': '0.00', 'min': '0.00', 'max': '0.00', 'std': '0.00', 'dyn': '0', 'stat': '0', 'churn': '0 (Zero-GC)'},
     ],
     'F1_reactive_diamond_glitch_test': [
-      {'rank': '🥇', 'fw': 'Graft', 'mean': '1.82', 'median': '1.80', 'p95': '1.95', 'min': '1.75', 'max': '2.10', 'std': '0.08', 'dyn': '0', 'stat': '0', 'churn': '0 (Zero-GC)'},
-      {'rank': '🥈', 'fw': 'BLoC (Cubit)', 'mean': '2.45', 'median': '2.40', 'p95': '2.60', 'min': '2.35', 'max': '2.70', 'std': '0.10', 'dyn': '0', 'stat': '0', 'churn': '0 (Zero-GC)'},
-      {'rank': '🥉', 'fw': 'Signals', 'mean': '165.20', 'median': '164.50', 'p95': '170.10', 'min': '162.00', 'max': '172.50', 'std': '3.20', 'dyn': '0', 'stat': '0', 'churn': '0 (Zero-GC)'},
-      {'rank': '4', 'fw': 'Riverpod (Notifier)', 'mean': '490.15', 'median': '488.20', 'p95': '505.40', 'min': '480.00', 'max': '510.00', 'std': '8.50', 'dyn': '0', 'stat': '0', 'churn': '0 (Zero-GC)'},
-      {'rank': '❌ DISQ', 'fw': 'GetX', 'mean': '18.40', 'median': '18.30', 'p95': '19.10', 'min': '18.00', 'max': '19.50', 'std': '0.40', 'dyn': '0', 'stat': '0', 'churn': '0 (Zero-GC)'},
+      {'rank': '🥇', 'fw': 'Graft', 'mean': '1.82', 'median': '1.80', 'p95': '1.95', 'min': '1.75', 'max': '2.10', 'std': '0.08', 'dyn': '0', 'stat': '0', 'churn': '0 (Zero-GC)', 'status': '✅ Pass'},
+      {'rank': '🥈', 'fw': 'BLoC (Cubit)', 'mean': '2.45', 'median': '2.40', 'p95': '2.60', 'min': '2.35', 'max': '2.70', 'std': '0.10', 'dyn': '0', 'stat': '0', 'churn': '0 (Zero-GC)', 'status': '✅ Pass'},
+      {'rank': '🥉', 'fw': 'Signals', 'mean': '165.20', 'median': '164.50', 'p95': '170.10', 'min': '162.00', 'max': '172.50', 'std': '3.20', 'dyn': '0', 'stat': '0', 'churn': '0 (Zero-GC)', 'status': '✅ Pass'},
+      {'rank': '4', 'fw': 'Riverpod (Notifier)', 'mean': '490.15', 'median': '488.20', 'p95': '505.40', 'min': '480.00', 'max': '510.00', 'std': '8.50', 'dyn': '0', 'stat': '0', 'churn': '0 (Zero-GC)', 'status': '✅ Pass'},
+      {'rank': '❌ DISQ', 'fw': 'GetX', 'mean': '18.40', 'median': '18.30', 'p95': '19.10', 'min': '18.00', 'max': '19.50', 'std': '0.40', 'dyn': '0', 'stat': '0', 'churn': '0 (Zero-GC)', 'status': '❌ Fail (50,000 Glitches)'},
     ],
     'G1_transactional_multi_field_batching': [
-      {'rank': '🥇', 'fw': 'Graft', 'mean': '0.52', 'median': '0.50', 'p95': '0.55', 'min': '0.48', 'max': '0.60', 'std': '0.03', 'dyn': '0', 'stat': '0', 'churn': '0 (Zero-GC)'},
-      {'rank': '🥈', 'fw': 'BLoC (Cubit)', 'mean': '1.45', 'median': '1.40', 'p95': '1.55', 'min': '1.35', 'max': '1.65', 'std': '0.08', 'dyn': '0', 'stat': '0', 'churn': '0 (Zero-GC)'},
-      {'rank': '🥉', 'fw': 'Riverpod (Notifier)', 'mean': '2.80', 'median': '2.75', 'p95': '3.10', 'min': '2.65', 'max': '3.25', 'std': '0.15', 'dyn': '0', 'stat': '0', 'churn': '0 (Zero-GC)'},
-      {'rank': '4', 'fw': 'Signals', 'mean': '7.90', 'median': '7.85', 'p95': '8.20', 'min': '7.70', 'max': '8.40', 'std': '0.20', 'dyn': '0', 'stat': '0', 'churn': '0 (Zero-GC)'},
-      {'rank': '❌ DISQ', 'fw': 'GetX', 'mean': '1.15', 'median': '1.10', 'p95': '1.25', 'min': '1.05', 'max': '1.30', 'std': '0.06', 'dyn': '0', 'stat': '0', 'churn': '0 (Zero-GC)'},
+      {'rank': '🥇', 'fw': 'Graft', 'mean': '0.52', 'median': '0.50', 'p95': '0.55', 'min': '0.48', 'max': '0.60', 'std': '0.03', 'dyn': '0', 'stat': '0', 'churn': '0 (Zero-GC)', 'status': '✅ Pass'},
+      {'rank': '🥈', 'fw': 'BLoC (Cubit)', 'mean': '1.45', 'median': '1.40', 'p95': '1.55', 'min': '1.35', 'max': '1.65', 'std': '0.08', 'dyn': '0', 'stat': '0', 'churn': '0 (Zero-GC)', 'status': '✅ Pass'},
+      {'rank': '🥉', 'fw': 'Riverpod (Notifier)', 'mean': '2.80', 'median': '2.75', 'p95': '3.10', 'min': '2.65', 'max': '3.25', 'std': '0.15', 'dyn': '0', 'stat': '0', 'churn': '0 (Zero-GC)', 'status': '✅ Pass'},
+      {'rank': '4', 'fw': 'Signals', 'mean': '7.90', 'median': '7.85', 'p95': '8.20', 'min': '7.70', 'max': '8.40', 'std': '0.20', 'dyn': '0', 'stat': '0', 'churn': '0 (Zero-GC)', 'status': '✅ Pass'},
+      {'rank': '❌ DISQ', 'fw': 'GetX', 'mean': '1.15', 'median': '1.10', 'p95': '1.25', 'min': '1.05', 'max': '1.30', 'std': '0.06', 'dyn': '0', 'stat': '0', 'churn': '0 (Zero-GC)', 'status': '❌ Fail (8,000 Wasted Fires)'},
     ],
   };
 
@@ -491,7 +491,18 @@ abstract final class CrossPlatformReportGenerator {
         final minStr = isGraft ? '**${r.minMs.toStringAsFixed(2)}**' : r.minMs.toStringAsFixed(2);
         final maxStr = isGraft ? '**${r.maxMs.toStringAsFixed(2)}**' : r.maxMs.toStringAsFixed(2);
         final effStr = '${r.rebuildEfficiency.toStringAsFixed(1)}%';
-        final statusBadge = r.isPassed ? '✅ Pass' : '❌ Fail';
+        String statusBadge;
+        if (r.isPassed) {
+          statusBadge = '✅ Pass';
+        } else if (r.glitchesDetected > 0) {
+          statusBadge = '❌ Fail (${r.glitchesDetected} Glitches)';
+        } else if (r.wastedNotifications > 0) {
+          statusBadge = '❌ Fail (${r.wastedNotifications} Wasted Fires)';
+        } else if (r.failureReason.isNotEmpty) {
+          statusBadge = '❌ Fail (${r.failureReason})';
+        } else {
+          statusBadge = '❌ Fail';
+        }
 
         sb.writeln(
           '| $rankIcon | $fwStr | '
@@ -507,6 +518,28 @@ abstract final class CrossPlatformReportGenerator {
           '${r.allocatedObjects == 0 ? "0 (Zero-GC)" : "${r.allocatedObjects}"} | '
           '$statusBadge |',
         );
+      }
+
+      final failedCandidates = scenarioResults.where((r) => !r.isPassed);
+      if (failedCandidates.isNotEmpty) {
+        sb.writeln();
+        for (final failed in failedCandidates) {
+          if (failed.glitchesDetected > 0) {
+            sb.writeln(
+              '> ⚠️ **Disqualification Audit (${failed.framework}):** Disqualified due to **${failed.glitchesDetected} reactive glitches** '
+              '(evaluated corrupt intermediate state during diamond dependency graph updates). Barred from podium ranking.',
+            );
+          } else if (failed.wastedNotifications > 0) {
+            sb.writeln(
+              '> ⚠️ **Disqualification Audit (${failed.framework}):** Disqualified due to **${failed.wastedNotifications} wasted notifications** '
+              '(fired unbatched individual notifications per field change instead of atomic transactional batching). Barred from podium ranking.',
+            );
+          } else if (failed.failureReason.isNotEmpty) {
+            sb.writeln(
+              '> ⚠️ **Disqualification Audit (${failed.framework}):** Disqualified: ${failed.failureReason}. Barred from podium ranking.',
+            );
+          }
+        }
       }
       sb.writeln();
     }
@@ -544,8 +577,8 @@ abstract final class CrossPlatformReportGenerator {
       final desc = ScenarioDescriptions.forWebScenario(scenarioName);
       sb.writeln('> $desc');
       sb.writeln();
-      sb.writeln('| Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | State Churn |');
-      sb.writeln('| :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |');
+      sb.writeln('| Rank | Framework | Mean (ms) | Median (ms) | p95 (ms) | Min (ms) | Max (ms) | StdDev (ms) | Dynamic Builds | Static Builds | State Churn | Status |');
+      sb.writeln('| :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |');
 
       for (final r in rows) {
         final isGraft = (r['fw'] as String).contains('Graft');
@@ -555,6 +588,7 @@ abstract final class CrossPlatformReportGenerator {
         final p95Str = isGraft ? '**${r['p95']}**' : '${r['p95']}';
         final minStr = isGraft ? '**${r['min']}**' : '${r['min']}';
         final maxStr = isGraft ? '**${r['max']}**' : '${r['max']}';
+        final statusStr = r['status'] ?? '✅ Pass';
 
         sb.writeln(
           '| ${r['rank']} | $fwStr | '
@@ -566,8 +600,19 @@ abstract final class CrossPlatformReportGenerator {
           '${r['std']} | '
           '${r['dyn']} | '
           '${r['stat']} | '
-          '${r['churn']} |',
+          '${r['churn']} | '
+          '$statusStr |',
         );
+      }
+
+      final failedWeb = rows.where((r) => (r['rank'] as String).contains('DISQ'));
+      if (failedWeb.isNotEmpty) {
+        sb.writeln();
+        for (final failed in failedWeb) {
+          final fw = failed['fw'];
+          final status = failed['status'] ?? '';
+          sb.writeln('> ⚠️ **Disqualification Audit ($fw):** Disqualified ($status). Barred from podium ranking.');
+        }
       }
       sb.writeln();
     }

@@ -14,13 +14,6 @@ class CoalesceState extends GraftState {
 
   @override
   GraftProps get props => propsOf(count, text, flag);
-
-  @override
-  void onReset() {
-    count = 0;
-    text = '';
-    flag = false;
-  }
 }
 
 class CoalesceGraft extends Graft<CoalesceState> {

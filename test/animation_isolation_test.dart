@@ -15,13 +15,6 @@ class AnimationBenchmarkState extends GraftState {
 
   @override
   GraftProps get props => propsOf(counter, isExpanded, status);
-
-  @override
-  void onReset() {
-    counter = 0;
-    isExpanded = false;
-    status = 'idle';
-  }
 }
 
 class AnimationBenchmarkGraft extends Graft<AnimationBenchmarkState> {

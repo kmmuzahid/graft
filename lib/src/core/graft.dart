@@ -134,9 +134,6 @@ class Graft<S extends GraftState> extends ChangeNotifier {
     return _state;
   }
 
-  @nonVirtual
-  void reset() => !_isDisposed ? _state.reset() : null;
-
   @protected
   @nonVirtual
   void addError(Object error, [StackTrace? stackTrace]) =>

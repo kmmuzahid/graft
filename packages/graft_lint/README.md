@@ -37,7 +37,7 @@ Or manually in your `pubspec.yaml`:
 ```yaml
 dev_dependencies:
   custom_lint: ^0.8.1
-  graft_lint: ^1.0.0-alpha.4
+  graft_lint: ^1.0.0-alpha.5
 ```
 
 ### 2. Configure `analysis_options.yaml`

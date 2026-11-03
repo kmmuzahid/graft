@@ -11,12 +11,6 @@ class TestState extends GraftState {
   GraftProps get props => propsOf(count, text);
 
   @override
-  void onReset() {
-    count = 0;
-    text = '';
-  }
-
-  @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is TestState &&

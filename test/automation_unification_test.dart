@@ -14,12 +14,6 @@ class AutoCounterState extends GraftState {
 
   @override
   GraftProps get props => propsOf(count, title);
-
-  @override
-  void onReset() {
-    count = 0;
-    title = 'Counter';
-  }
 }
 
 class AutoCounterGraft extends Graft<AutoCounterState> {

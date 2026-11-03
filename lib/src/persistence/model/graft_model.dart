@@ -49,14 +49,6 @@ abstract class GraftModel {
   /// ```
   Function? get factory => null;
 
-  /// Optional reset callback to restore baseline values.
-  @protected
-  void onReset() {}
-
-  /// Resets this model by invoking [onReset].
-  @nonVirtual
-  void reset() => onReset();
-
   /// Convenience helper to create [GraftProps].
   @protected
   @nonVirtual

@@ -15,13 +15,6 @@ class ConditionalState extends GraftState {
 
   @override
   GraftProps get props => propsOf(fieldA, fieldB, showB);
-
-  @override
-  void onReset() {
-    fieldA = 'A_init';
-    fieldB = 'B_init';
-    showB = false;
-  }
 }
 
 class ConditionalGraft extends Graft<ConditionalState> {

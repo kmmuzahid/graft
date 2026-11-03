@@ -277,14 +277,6 @@ class AddressModel extends GraftModel {
   // 2. 1-line constructor tear-off for auto-hydration on Frame 0:
   @override
   Function get factory => AddressModel.new;
-
-  // 3. Reset in-place to initial baseline:
-  @override
-  void onReset() {
-    street = '221B Baker Street';
-    city = 'London';
-    zipCode = 10001;
-  }
 }
 ```
 
@@ -292,7 +284,7 @@ class AddressModel extends GraftModel {
 > ### 💡 When does a `GraftModel` need `factory`?
 > A `GraftModel` implements `@override Function get factory => Model.new;` so that Frame-0 hydration can instantiate restored models automatically into constructor arguments without any manual index casting.
 >
-> If your domain sub-model is used purely in-memory (or belongs to a transient state), no `factory` or `schemaVersion` is needed. Simply declare `props => propsOf(...)` and optional `onReset()`.
+> If your domain sub-model is used purely in-memory (or belongs to a transient state), no `factory` or `schemaVersion` is needed. Simply declare `props => propsOf(...)`.
 
 ---
 
@@ -318,13 +310,6 @@ class UserProfileState extends GraftState {
   // 1. All fields listed for surgical leaf diffing:
   @override
   GraftProps get props => propsOf(fullName, isSaving, address);
-
-  @override
-  void onReset() {
-    fullName = 'Sherlock Holmes';
-    isSaving = false;
-    address.onReset();
-  }
 }
 ```
 
@@ -353,7 +338,13 @@ class UserProfileGraft extends Graft<UserProfileState> {
 
   // Reset entire state tree in-place:
   void resetProfile() {
-    state.reset(); // Restores fullName and address in 1 synchronous pass!
+    state
+      ..fullName = 'Sherlock Holmes'
+      ..isSaving = false
+      ..address.street = '221B Baker Street'
+      ..address.city = 'London'
+      ..address.zipCode = 10001
+      ..update();
   }
 }
 ```

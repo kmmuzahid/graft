@@ -432,12 +432,17 @@ class ScenarioFReactiveDiamondRunner {
     }
 
     for (final candidate in candidates) {
+      final glitches = lastGlitchesMap[candidate.name]!;
+      final passed = isPassedMap[candidate.name]!;
       results.add(BenchmarkStats(
         scenario: scenarioName,
         framework: candidate.name,
         samplesMs: samplesMap[candidate.name]!,
-        glitchesDetected: lastGlitchesMap[candidate.name]!,
-        isPassed: isPassedMap[candidate.name]!,
+        glitchesDetected: glitches,
+        isPassed: passed,
+        failureReason: passed
+            ? ''
+            : '$glitches glitches detected ($glitches corrupt intermediate evaluations / $updates updates)',
         notes: candidate.notes,
       ));
     }

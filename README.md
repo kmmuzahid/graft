@@ -96,13 +96,6 @@ class UserState extends GraftState {
 
   @override
   GraftProps get props => propsOf(name, email, points);
-
-  @override
-  void onReset() {
-    name = 'Alice';
-    email = 'alice@example.com';
-    points = 0;
-  }
 }
 
 class UserGraft extends Graft<UserState> {
@@ -121,7 +114,11 @@ class UserGraft extends Graft<UserState> {
   }
 
   void reset() {
-    state.reset(); // Restores initial baseline values via onReset() synchronously
+    state
+      ..name = 'Alice'
+      ..email = 'alice@example.com'
+      ..points = 0
+      ..update();
   }
 }
 ```
@@ -284,7 +281,7 @@ Graft rejects this compromise through 7 foundational architectural pillars:
 1. **Zero-Wrapper Domain State:** State models are pure Dart classes extending `GraftState`. No `Signal<T>`, no `.obs`, no `.value`, and strictly zero code generation (`build_runner` is never required).
 2. **Mandatory `props` & Recursive Snapshot Contract:** Domain properties are declared via `GraftProps get props => propsOf(...)`, an abstract compiler-enforced contract. Graft uses recursive deep snapshotting for nested `GraftState` sub-states and collections, eliminating forgotten fields and ensuring 100% snapshot integrity during in-place cascade mutations.
 3. **Unbounded Hardware-Aligned `GraftMask`:** State field modifications are mapped into an unbounded, 32-bit chunked word-based bitset (`GraftMask`). It diffs ≤ 64 fields in CPU registers in $< 50\text{ ns}$ and effortlessly scales to 128, 500, or 1,000+ fields with 100% web JS compatibility and 0 GC heap allocations.
-4. **Synchronous In-Place Cascade Mutation & In-Place Reset:** Direct synchronous updates via `state..field = val..update()` and complete baseline resets via `state.reset()`. Primitives, nested models, and collection items are accurately diffed without requiring immutable `copyWith` methods.
+4. **Synchronous In-Place Cascade Mutation:** Direct synchronous updates via `state..field = val..update()`. Primitives, nested models, and collection items are accurately diffed without requiring immutable `copyWith` methods.
 5. **Native `ComponentElement` Slots & Surgical Rebuild Firewall:**
    - **`graft((s) => ...)` / `graft.slot(...)`**: Fine-grained surgical leaf slot subclassing Flutter's native `ComponentElement` directly with zero `ValueNotifier` wrappers and direct C-level pointer dispatch (`GraftFastReceiver`). Features Depth-$N$ parent rebuild insulation and runs inside `NoSubscriptionContext` to prevent `Theme`/`MediaQuery` subscription bleeding.
    - **`graft.slots(...)`**: Universal multi-child layout slot diffing (`Column`, `Row`, `Wrap`, `Flex`) with Level-0 `_commonIgnoredMask` pre-flight bypass and self-optimizing learned `_ignoredMask`.
@@ -459,18 +456,11 @@ class CartState extends GraftState {
 
   @override
   GraftProps get props => propsOf(items, discount);
-
-  @override
-  void onReset() {
-    items.clear();
-    discount = 0.0;
-  }
 }
 ```
 
 * **`GraftProps get props`**: Mandatory abstract contract declaring properties for diffing via `propsOf(...)` or `propsOfMany(...)`.
 * **`state.update()`**: Computes dirty bitmask against in-place baseline snapshot and triggers UI notification.
-* **`state.reset()`**: Calls `onReset()` and flushes baseline changes synchronously with 0 GC allocations.
 * **`GraftMask get dirtyMask`**: Read-only bitmask from the last diff evaluation.
 
 #### 2. `Graft<S extends GraftState>`
@@ -499,7 +489,7 @@ class CartGraft extends Graft<CartState> {
 * **`ValueListenable<S> get listenable`**: Direct interop with standard Flutter `ValueListenableBuilder`.
 * **`Future<T?> runAsync<T>({required task, required onUpdate})`**: Executes an asynchronous task with an internal monotonically increasing task token guard that **automatically discards out-of-order stale responses**.
 * **`void addError(Object error, [StackTrace? stackTrace])`**: Dispatches unhandled errors to `GraftObserver`.
-* **`void reset()`**: Resets state and flushes baseline synchronously.
+* **`S mutate(void Function(S state) action)`**: Functional lambda mutation applying in-place changes and notifying listeners synchronously.
 * **`void dispose()`**: Releases listeners and notifies global observer.
 
 #### 3. `ValueGraft<T>`
@@ -855,10 +845,7 @@ GraftProps get props => propsOf(name, email, age);
 // 3. state.update(): Synchronous in-place cascade mutation & leaf dispatch
 state..name = 'Alice'..age = 25..update();
 
-// 4. state.reset(): Restores initial domain values via onReset()
-state.reset();
-
-// 5. GraftModel: Cascaded mutable sub-model with auto-hydration tear-off
+// 4. GraftModel: Cascaded mutable sub-model with auto-hydration tear-off
 class AddressModel extends GraftModel {
   @override
   int get schemaVersion => 1;
@@ -1030,7 +1017,7 @@ flutter analyze
 
 | Domain | Tests | Status | Verification Scope |
 | :--- | :---: | :---: | :--- |
-| **Core State Engine & Zero-Copy Mutation** | 66 | ✅ Pass | In-place baseline mutations (`List`, `Set`, `Map`), nested `GraftState`, 64-bit bitmasks, resets. |
+| **Core State Engine & Zero-Copy Mutation** | 66 | ✅ Pass | In-place baseline mutations (`List`, `Set`, `Map`), nested `GraftState`, 64-bit bitmasks, controller mutations. |
 | **Fine-Grained Slot Engine & Rebuild Firewall** | 70 | ✅ Pass | `ignoredMask` short-circuiting, `NoSubscriptionContext` leak prevention, Depth-$N$ parent rebuild insulation. |
 | **Frame-0 Persistence & Dry State** | 51 | ✅ Pass | Sub-microsecond L1 binary hydration (~1.5µs), 15 worst-case permutations, order scrambling, type safety. |
 | **Dependency Injection (DI) Engine** | 22 | ✅ Pass | Monotonic `TypeId.of<T>()`, reverse DAG teardown, non-blocking `bindAsync`, real SQLite verification. |

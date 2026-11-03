@@ -96,7 +96,6 @@ void main() {
           for (final ctrl in controllers) {
             ctrl.increment();
             ctrl.state.update();
-            ctrl.state.reset();
           }
         }
       }, returnsNormally, reason: 'Disposed controllers must safely ignore notifications without crashing');

@@ -10,11 +10,6 @@ class CounterState extends GraftState {
   GraftProps get props => propsOf(count);
 
   @override
-  void onReset() {
-    count = 0;
-  }
-
-  @override
   bool operator ==(Object other) =>
       identical(this, other) || other is CounterState && count == other.count;
 

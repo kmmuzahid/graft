@@ -10,12 +10,6 @@ class UserState extends GraftState {
 
   @override
   GraftProps get props => propsOf(name, email);
-
-  @override
-  void onReset() {
-    name = 'Alice';
-    email = 'alice@example.com';
-  }
 }
 
 class UserGraft extends Graft<UserState> {
@@ -32,6 +26,13 @@ class UserGraft extends Graft<UserState> {
       ..email = email
       ..update();
   }
+
+  void reset() {
+    state
+      ..name = 'Alice'
+      ..email = 'alice@example.com'
+      ..update();
+  }
 }
 
 class ThemeState extends GraftState {
@@ -42,12 +43,6 @@ class ThemeState extends GraftState {
 
   @override
   GraftProps get props => propsOf(isDark, accent);
-
-  @override
-  void onReset() {
-    isDark = false;
-    accent = 'purple';
-  }
 }
 
 class ThemeGraft extends Graft<ThemeState> {
