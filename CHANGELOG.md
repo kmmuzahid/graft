@@ -3,6 +3,31 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## 1.0.0-alpha.9
+
+### 🛡️ Public Surface Area Pruning, Unified `Graft.config()` & 100% Native Encapsulation
+
+- **Unified Startup Configuration (`Graft.config`) & Default `GraftDebugObserver`**:
+  - Introduced `Graft.config({persistence, observer, debugLogging, di})` as the single, optional centralized entry point for app configuration.
+  - Automatically enables `GraftDebugObserver` (alias for `GraftDevObserver`) when running in `kDebugMode` with zero setup and 0% release overhead.
+  - Streamlines DI bindings via the optional `di: () { bind<...>(); }` block.
+- **Surface Area Pruning & Encapsulation**:
+  - Encapsulated `GraftRegistry` as an `@internal` bridge class and unexported it from `lib/graft.dart`. UI relies on `context.use(MyGraft.new)` and services rely on `bind<T>()`.
+  - Encapsulated `GraftRouteTracker` as `@internal`. Exported `graftRouteObserver` and `GraftRouteObserver` for clean 1-line setup in `MaterialApp(navigatorObservers: [graftRouteObserver])`.
+  - Unexported low-level 64-bit hardware bitset diff classes (`GraftMask`) and widget state machines (`GraftMultiChildDiffEngine`) from the public API.
+  - Unexported test teardown utility `resetAmbientPersistence` from the main public library.
+  - Encapsulated `GraftValue<T>` as `@internal`, keeping public focus strictly on `ValueGraft<T>`.
+  - Marked low-level listener hooks (`addMaskListener`, `removeMaskListener`) and `notify(change)` as `@internal`.
+- **Zero Backward Compatibility & Hard Deletions**:
+  - Completely deleted `GraftRegistry.fallbackLocator` (removing `try/catch` lookup overhead in favor of 100% native DI).
+  - Permanently deleted `Disposable` and `GraftDisposable`.
+  - Introduced `abstract class GraftService implements GraftInitializable` with `onInit()` and `dispose()`.
+  - Maintained universal `bind<T>()` (`T extends Object`), allowing zero-boilerplate registration of 3rd-party singletons (`FirebaseAuth`, `Dio`, etc.) without wrapper classes.
+  - Implemented Dual-Engine Teardown in `scope_teardown.dart`, automatically invoking `dispose()` in topological reverse DAG order on both `GraftService` and `ChangeNotifier`.
+- **Strict Verification & Non-Degradation SLA**:
+  - 100% test pass rate across all 305 unit, widget, and lifecycle tests.
+  - Benchmark SLA verified: sub-50ns diffing performance maintained across all 17 scenarios with zero performance degradation.
+
 ## 1.0.0-alpha.8
 
 ### 🧹 Streamlined State Surface, Hermetic Benchmark Isolation & Clean Consolidated Reporting

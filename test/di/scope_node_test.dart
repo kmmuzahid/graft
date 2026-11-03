@@ -1,9 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:graft/src/di/disposable.dart';
+import 'package:graft/src/di/graft_service.dart';
 import 'package:graft/src/di/scope_node.dart';
 import 'package:graft/src/di/scope_tier.dart';
 
-class Database implements Disposable {
+class Database extends GraftService {
   final void Function()? onDispose;
   Database([this.onDispose]);
   bool isDisposed = false;
@@ -14,7 +15,7 @@ class Database implements Disposable {
   }
 }
 
-class Repo implements Disposable {
+class Repo extends GraftService {
   final Database db;
   final void Function()? onDispose;
   Repo(this.db, [this.onDispose]);
@@ -23,6 +24,19 @@ class Repo implements Disposable {
   void dispose() {
     isDisposed = true;
     onDispose?.call();
+  }
+}
+
+class CustomNotifier extends ChangeNotifier {
+  final Database db;
+  final void Function()? onDispose;
+  CustomNotifier(this.db, [this.onDispose]);
+  bool isDisposed = false;
+  @override
+  void dispose() {
+    isDisposed = true;
+    onDispose?.call();
+    super.dispose();
   }
 }
 
@@ -86,6 +100,26 @@ void main() {
       expect(resolvedRepo.isDisposed, isTrue);
       expect(resolvedDb.isDisposed, isTrue);
       expect(disposeOrder, equals(['repo', 'db']));
+    });
+
+    test('reverse DAG teardown disposes ChangeNotifier before GraftService dependency', () {
+      final root = ScopeNode(tier: ScopeTier.root);
+      final disposeOrder = <String>[];
+
+      root.bind<Database>(() => Database(() => disposeOrder.add('db')));
+      root.bind<CustomNotifier>(() {
+        final d = root.resolve<Database>();
+        return CustomNotifier(d, () => disposeOrder.add('notifier'));
+      });
+
+      final resolvedNotifier = root.resolve<CustomNotifier>();
+      final resolvedDb = root.resolve<Database>();
+
+      root.drop();
+
+      expect(resolvedNotifier.isDisposed, isTrue);
+      expect(resolvedDb.isDisposed, isTrue);
+      expect(disposeOrder, equals(['notifier', 'db']));
     });
 
     test('throws StateError for unregistered type', () {

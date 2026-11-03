@@ -49,6 +49,7 @@ abstract class GraftState extends GraftStateStorage with GraftStateProps {
   void invalidateDry() => DryStateHook.invalidate(this);
 
   /// Current dirty mask for this state.
+  @internal
   GraftMask get dirtyMask => _dirtyMask;
 
   /// Hardware-aligned domain property container.

@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graft/graft.dart';
+import 'package:graft/src/core/graft_mask.dart';
 
 class Large128State extends GraftState {
   final List<int> values = List.generate(128, (i) => i * 10);

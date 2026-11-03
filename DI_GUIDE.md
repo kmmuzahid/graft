@@ -177,7 +177,7 @@ flowchart TD
         PoolLookup{"Matching AmbientEntry<br/>in _ambientPool[key]?"}
         BranchCheck{"Matches Navigator Branch<br/>or isRoot == true?"}
         BorrowRoute["borrowerRoutes.add(route)<br/>refCount++<br/>Attach route.popped release listener"]
-        CreateAbsent["Instantiate T<br/>(factory or GraftRegistry.create)"]
+        CreateAbsent["Instantiate T<br/>(factory or GraftDI.root.resolve)"]
         IsRootCheck{"route == null?"}
         RegisterRoot["Register AmbientEntry<br/>isRoot = true, refCount = 1<br/>(Permanent App-Root Singleton)"]
         RegisterRoute["Register AmbientEntry<br/>isRoot = false, refCount = 1<br/>borrowerRoutes = {route}"]
@@ -299,7 +299,7 @@ tearDown(() {
 
 Here is a complete, production-ready example demonstrating how all parts of Graft DI work harmoniously together: **asynchronous database initialization**, **type-safe enum scoping**, **injected services**, **reactive Graft controllers**, **route-bound Flutter UI**, and **clean topological teardown**.
 
-### 1. Define Enum Scopes & Domain Services with `Disposable`
+### 1. Define Enum Scopes & Domain Services with `GraftService`
 
 ```dart
 import 'package:flutter/material.dart';
@@ -309,7 +309,7 @@ import 'package:graft/graft.dart';
 enum AppScope { auth, checkout }
 
 // 2. Underlying asynchronous database service:
-class DatabaseService implements Disposable {
+class DatabaseService extends GraftService {
   bool isClosed = false;
 
   DatabaseService._();
@@ -332,7 +332,7 @@ class DatabaseService implements Disposable {
 }
 
 // 3. Data Access Object depending directly on DatabaseService:
-class CartDao implements Disposable {
+class CartDao extends GraftService {
   final DatabaseService _db;
   CartDao(this._db);
 
@@ -348,7 +348,7 @@ class CartDao implements Disposable {
 }
 
 // 4. Feature coordinator depending on CartDao:
-class CheckoutCoordinator implements Disposable {
+class CheckoutCoordinator extends GraftService {
   final CartDao _cartDao;
   CheckoutCoordinator(this._cartDao);
 
@@ -369,24 +369,30 @@ class CheckoutCoordinator implements Disposable {
 Register dependencies in `main.dart` or during app bootstrap. Notice how `CheckoutGraft` itself is registered with its dependencies cleanly injected:
 
 ```dart
-void configureAppDependencies() {
-  // Global Singleton: Database starts asynchronously without blocking startup Frame 0:
-  bindAsync<DatabaseService>(() => DatabaseService.open());
+void main() {
+  Graft.config(
+    di: () {
+      // Global Singleton: Database starts asynchronously without blocking startup Frame 0:
+      bindAsync<DatabaseService>(() => DatabaseService.open());
 
-  // Scoped Services: Grouped strictly within AppScope.checkout:
-  scope(AppScope.checkout, () {
-    // 1. Bind DAOs:
-    bind<CartDao>(() => CartDao(use<DatabaseService>()));
+      // Scoped Services: Grouped strictly within AppScope.checkout:
+      scope(AppScope.checkout, () {
+        // 1. Bind DAOs:
+        bind<CartDao>(() => CartDao(use<DatabaseService>()));
 
-    // 2. Bind Coordinators:
-    bind<CheckoutCoordinator>(() => CheckoutCoordinator(use<CartDao>()));
+        // 2. Bind Coordinators:
+        bind<CheckoutCoordinator>(() => CheckoutCoordinator(use<CartDao>()));
 
-    // 🎯 3. BIND THE GRAFT CONTROLLER WITH ITS INJECTED DEPENDENCIES:
-    bind<CheckoutGraft>(() => CheckoutGraft(
-      coordinator: use<CheckoutCoordinator>(),
-      cartDao: use<CartDao>(),
-    ));
-  });
+        // 🎯 3. BIND THE GRAFT CONTROLLER WITH ITS INJECTED DEPENDENCIES:
+        bind<CheckoutGraft>(() => CheckoutGraft(
+          coordinator: use<CheckoutCoordinator>(),
+          cartDao: use<CartDao>(),
+        ));
+      });
+    },
+  );
+
+  runApp(const MyApp());
 }
 ```
 

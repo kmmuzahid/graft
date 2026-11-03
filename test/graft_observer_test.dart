@@ -2,6 +2,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graft/graft.dart';
+import 'package:graft/src/di/graft_registry.dart';
+import 'package:graft/src/route/graft_route_tracker.dart';
+import 'package:graft/src/persistence/ambient_locator.dart';
+import 'package:graft/src/core/value_graft.dart';
 
 class CounterState extends GraftState {
   int count;

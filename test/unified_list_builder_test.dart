@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graft/graft.dart';
+import 'package:graft/src/widgets/child_slot_engine.dart';
 import 'package:graft/src/widgets/slot_metadata.dart';
 
 class TestProfileState extends GraftState {

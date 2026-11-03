@@ -19,9 +19,24 @@ part 'graft_async_task.dart';
 class Graft<S extends GraftState> extends ChangeNotifier {
   static GraftObserver? observer;
 
-  static void init({GraftStateConfig? config, void Function()? setup}) {
-    if (config != null) configurePersistence(config);
-    setup?.call();
+  /// Centralized optional configuration for Graft persistence, diagnostics, and DI.
+  ///
+  /// Calling [Graft.config] is completely optional—Graft works out of the box with zero setup.
+  /// When called, it configures global persistence, attaches observers (automatically enabling
+  /// [GraftDevObserver] in [kDebugMode]), and executes optional dependency setup in [di].
+  static void config({
+    GraftStateConfig? persistence,
+    GraftObserver? observer,
+    bool? debugLogging,
+    void Function()? di,
+  }) {
+    if (persistence != null) configurePersistence(persistence);
+    if (observer != null) {
+      Graft.observer = observer;
+    } else if (debugLogging ?? kDebugMode) {
+      Graft.observer ??= GraftDevObserver();
+    }
+    di?.call();
   }
 
   final S _state;
@@ -107,10 +122,12 @@ class Graft<S extends GraftState> extends ChangeNotifier {
   @nonVirtual
   void removeListener(VoidCallback listener) => _graftRemoveListener(this, listener);
 
+  @internal
   @nonVirtual
   void addMaskListener(void Function(GraftMask dirtyMask) listener) =>
       _graftAddMaskListener(this, listener);
 
+  @internal
   @nonVirtual
   void removeMaskListener(void Function(GraftMask dirtyMask) listener) =>
       _graftRemoveMaskListener(this, listener);
@@ -123,6 +140,7 @@ class Graft<S extends GraftState> extends ChangeNotifier {
   void _notifyMask(GraftMask dirtyMask, {GraftChange<dynamic>? change}) =>
       _graftNotifyMask(this, dirtyMask, change: change);
 
+  @internal
   @nonVirtual
   void notify({GraftChange<dynamic>? change}) =>
       _graftNotify(this, change: change);

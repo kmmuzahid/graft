@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graft/graft.dart';
+import 'package:graft/src/di/graft_registry.dart';
+import 'package:graft/src/route/graft_route_tracker.dart';
 
 class MockGraft extends Graft<MockState> {
   MockGraft() : super(MockState());
@@ -93,12 +95,9 @@ void main() {
       );
     });
 
-    testWidgets('GraftRegistry fallbackLocator resolves unregistered instance if provided', (tester) async {
-      final fallbackInstance = AnotherGraft();
-      GraftRegistry.fallbackLocator = <T extends Object>() {
-        if (T == AnotherGraft) return fallbackInstance as T;
-        throw StateError('Not found');
-      };
+    testWidgets('GraftDI bind resolves instance via context.use if unregistered in GraftRegistry', (tester) async {
+      final bindInstance = AnotherGraft();
+      bind<AnotherGraft>(() => bindInstance);
 
       await tester.pumpWidget(
         MaterialApp(
@@ -106,7 +105,7 @@ void main() {
           home: Builder(
             builder: (context) {
               final resolved = context.use<AnotherGraft>();
-              expect(resolved, equals(fallbackInstance));
+              expect(resolved, equals(bindInstance));
               return const SizedBox();
             },
           ),

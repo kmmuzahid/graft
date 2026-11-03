@@ -28,7 +28,6 @@ class UserState extends GraftState {
 
 class UserGraft extends Graft<UserState> {
   UserGraft() : super(UserState());
-
   void updateName(String newName) {
     state
       ..name = newName
@@ -332,7 +331,7 @@ class PersistentProfileGraft extends Graft<PersistentProfileState> {
 
 enum AppScope { checkout }
 
-class DatabaseService implements Disposable {
+class DatabaseService extends GraftService {
   bool isClosed = false;
   DatabaseService._();
 
@@ -355,7 +354,7 @@ class DatabaseService implements Disposable {
   }
 }
 
-class CartDao implements Disposable {
+class CartDao extends GraftService {
   final DatabaseService db;
   CartDao(this.db);
 
@@ -370,7 +369,7 @@ class CartDao implements Disposable {
   }
 }
 
-class CheckoutCoordinator implements Disposable {
+class CheckoutCoordinator extends GraftService {
   final CartDao cartDao;
   CheckoutCoordinator(this.cartDao);
 
@@ -433,28 +432,24 @@ class CheckoutGraft extends Graft<CheckoutState> {
 // =============================================================================
 
 void main() {
-  // 1. Enable colorized console dev logging:
-  Graft.observer = GraftDevObserver();
+  // 1. Optional centralized Graft configuration:
+  Graft.config(
+    // In kDebugMode, GraftDebugObserver automatically enables ANSI console logging!
+    di: () {
+      // Configure enterprise DI root async database:
+      bindAsync<DatabaseService>(() => DatabaseService.open());
 
-  // 2. Configure enterprise DI root async database:
-  bindAsync<DatabaseService>(() => DatabaseService.open());
-
-  // 3. Configure scoped feature bindings:
-  scope(AppScope.checkout, () {
-    bind<CartDao>(() => CartDao(use<DatabaseService>()));
-    bind<CheckoutCoordinator>(() => CheckoutCoordinator(use<CartDao>()));
-    bind<CheckoutGraft>(() => CheckoutGraft(
-          coordinator: use<CheckoutCoordinator>(),
-          cartDao: use<CartDao>(),
-        ));
-  });
-
-  // 4. Register Graft factories in DI:
-  GraftRegistry.register(UserGraft.new);
-  GraftRegistry.register(TaskListGraft.new);
-  GraftRegistry.register(ProductCatalogGraft.new);
-  GraftRegistry.register(LiveCounterGraft.new);
-  GraftRegistry.register(PersistentProfileGraft.new);
+      // Configure scoped feature bindings:
+      scope(AppScope.checkout, () {
+        bind<CartDao>(() => CartDao(use<DatabaseService>()));
+        bind<CheckoutCoordinator>(() => CheckoutCoordinator(use<CartDao>()));
+        bind<CheckoutGraft>(() => CheckoutGraft(
+              coordinator: use<CheckoutCoordinator>(),
+              cartDao: use<CartDao>(),
+            ));
+      });
+    },
+  );
 
   runApp(const GraftExampleApp());
 }
@@ -474,8 +469,8 @@ class GraftExampleApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      // 3. Attach navigator observer for route stack inheritance & auto-disposal:
-      navigatorObservers: [GraftRouteObserver()],
+      // Attach navigator observer for route stack inheritance & auto-disposal:
+      navigatorObservers: [graftRouteObserver],
       home: const HomeScreen(),
     );
   }
@@ -1552,8 +1547,8 @@ class PersistentModelScreen extends StatelessWidget {
                           title: Text(
                             'Address: ${s.address.street}, ${s.address.city} (${s.address.zipCode})',
                           ),
-                          subtitle:
-                              const Text('Auto-hydrated via AddressModel.new tear-off'),
+                          subtitle: const Text(
+                              'Auto-hydrated via AddressModel.new tear-off'),
                         )),
                     // Slot 4: Transient Syncing Status
                     profile((s) => ListTile(
@@ -1652,101 +1647,99 @@ class EnterpriseDIScreen extends StatelessWidget {
       appBar: AppBar(title: const Text('Enterprise DI & Scopes 💉')),
       body: Builder(
         builder: (innerContext) {
-            // Automatically resolves bound CheckoutGraft with injected dependencies:
-            final checkout = innerContext.use<CheckoutGraft>();
+          // Automatically resolves bound CheckoutGraft with injected dependencies:
+          final checkout = innerContext.use<CheckoutGraft>();
 
-            return Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Card(
-                    color: Colors.teal,
-                    child: Padding(
-                      padding: EdgeInsets.all(14),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '🛡️ In-Degree Reverse DAG Teardown',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
+          return Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Card(
+                  color: Colors.teal,
+                  child: Padding(
+                    padding: EdgeInsets.all(14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '🛡️ In-Degree Reverse DAG Teardown',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
                           ),
-                          SizedBox(height: 4),
-                          Text(
-                            'CheckoutGraft was registered via bind<CheckoutGraft>() '
-                            'with injected CartDao and CheckoutCoordinator. '
-                            'When the order completes or screen pops, Graft automatically '
-                            'disposes instances in topological reverse order: consumers first, '
-                            'database last!',
-                            style:
-                                TextStyle(color: Colors.white70, fontSize: 13),
-                          ),
-                        ],
-                      ),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          'CheckoutGraft was registered via bind<CheckoutGraft>() '
+                          'with injected CartDao and CheckoutCoordinator. '
+                          'When the order completes or screen pops, Graft automatically '
+                          'disposes instances in topological reverse order: consumers first, '
+                          'database last!',
+                          style: TextStyle(color: Colors.white70, fontSize: 13),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Cart Items (Injected via CartDao):',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  Expanded(
-                    child: checkout(
-                      (s) => ListView.builder(
-                        itemCount: s.items.length,
-                        itemBuilder: (ctx, i) => Card(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          child: ListTile(
-                            leading: const Icon(
-                              Icons.coffee,
-                              color: Colors.brown,
-                            ),
-                            title: Text(s.items[i]),
-                            subtitle:
-                                const Text('Injected from DatabaseService'),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Cart Items (Injected via CartDao):',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: checkout(
+                    (s) => ListView.builder(
+                      itemCount: s.items.length,
+                      itemBuilder: (ctx, i) => Card(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        child: ListTile(
+                          leading: const Icon(
+                            Icons.coffee,
+                            color: Colors.brown,
                           ),
+                          title: Text(s.items[i]),
+                          subtitle: const Text('Injected from DatabaseService'),
                         ),
                       ),
                     ),
                   ),
-                  checkout(
-                    (s) => ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green.shade800,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                      ),
-                      icon: s.isSubmitting
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Icon(Icons.check_circle),
-                      label: Text(
-                        s.isSubmitting
-                            ? 'Processing & Dropping Scope...'
-                            : 'Place Order & Drop AppScope.checkout',
-                        style: const TextStyle(fontSize: 16),
-                      ),
-                      onPressed: s.isSubmitting
-                          ? null
-                          : () => checkout.placeOrder(innerContext),
+                ),
+                checkout(
+                  (s) => ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green.shade800,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
+                    icon: s.isSubmitting
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.check_circle),
+                    label: Text(
+                      s.isSubmitting
+                          ? 'Processing & Dropping Scope...'
+                          : 'Place Order & Drop AppScope.checkout',
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                    onPressed: s.isSubmitting
+                        ? null
+                        : () => checkout.placeOrder(innerContext),
                   ),
-                ],
-              ),
-            );
-          },
-        ),
-      );
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graft/graft.dart';
+import 'package:graft/src/core/graft_mask.dart';
 import 'package:graft/src/core/graft_state.dart';
 
 class AddressState extends GraftState {

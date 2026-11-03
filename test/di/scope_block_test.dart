@@ -3,7 +3,7 @@ import 'package:graft/graft.dart';
 
 enum TestScope { orders, session }
 
-class OrderRepo implements Disposable {
+class OrderRepo extends GraftService {
   bool isDisposed = false;
   @override
   void dispose() => isDisposed = true;

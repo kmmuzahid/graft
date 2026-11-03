@@ -2,7 +2,8 @@ import 'package:flutter/foundation.dart';
 import '../core/graft.dart';
 import 'graft_di.dart';
 
-/// Type-safe factory registry for resolving, instantiating, and scoping [Graft] instances.
+/// Internal type-safe factory registry bridging ambient route pooling and [GraftDI].
+@internal
 class GraftRegistry {
   GraftRegistry._();
 
@@ -13,9 +14,6 @@ class GraftRegistry {
   static final Map<Type, Object Function()> _factories = {};
   static final Map<Type, Graft> _singletons = {};
   static final Set<Type> _isNewCreateDisabled = {};
-
-  /// Optional fallback resolver (e.g. `GetIt.I<T>`).
-  static T Function<T extends Object>()? fallbackLocator;
 
   /// Registers a factory for a given [Graft] type [T].
   /// When [allowNew] is `true` (default), the Graft is Route-Scoped.
@@ -94,7 +92,7 @@ class GraftRegistry {
     return _factories.containsKey(T) || GraftDI.root.isRegistered<T>();
   }
 
-  /// Creates a new instance of [T] using its registered factory or [fallbackLocator].
+  /// Creates a new instance of [T] using its registered factory or [GraftDI].
   ///
   /// Throws a clear [StateError] if [T] has not been registered and cannot be resolved.
   ///
@@ -112,18 +110,10 @@ class GraftRegistry {
       return GraftDI.root.resolve<T>();
     }
 
-    if (fallbackLocator != null) {
-      try {
-        return fallbackLocator!<T>();
-      } catch (_) {
-        // Fall through to descriptive StateError
-      }
-    }
-
     throw StateError(
-      'Graft of type $T is not registered in GraftRegistry.\n'
-      'Please register it at app startup:\n'
-      '  GraftRegistry.register<$T>($T.new);\n'
+      'Graft of type $T is not registered in GraftRegistry or GraftDI.\n'
+      'Please register it with:\n'
+      '  bind<$T>($T.new);\n'
       'Then in your screen simply call:\n'
       '  context.use<$T>();',
     );
@@ -149,6 +139,6 @@ class GraftRegistry {
     }
     _singletons.clear();
     _isNewCreateDisabled.clear();
-    fallbackLocator = null;
+    GraftDI.reset();
   }
 }

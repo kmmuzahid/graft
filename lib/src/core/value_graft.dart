@@ -6,6 +6,7 @@ import '../persistence/dry/dry_value_graft.dart';
 
 /// Single-value state container that adapts primitive types (`int`, `bool`, `String`)
 /// or enums into [GraftState].
+@internal
 class GraftValue<T> extends GraftState {
   /// The underlying value.
   T value;

@@ -2,13 +2,13 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graft/graft.dart';
-import 'package:graft/src/di/disposable.dart';
+import 'package:graft/src/persistence/ambient_locator.dart';
 import 'package:sqlite3/sqlite3.dart';
 
 // ============================================================================
-// REAL SQLITE DATABASE WRAPPER IMPLEMENTING Graft Disposable
+// REAL SQLITE DATABASE WRAPPER EXTENDING GraftService
 // ============================================================================
-class SqliteDatabase implements Disposable {
+class SqliteDatabase extends GraftService {
   final Database rawDb;
   bool isDisposed = false;
 
@@ -42,7 +42,7 @@ class SqliteDatabase implements Disposable {
 // ============================================================================
 // REAL DATA ACCESS OBJECTS (DAO)
 // ============================================================================
-class UserDao implements Disposable {
+class UserDao extends GraftService {
   final SqliteDatabase db;
   bool isDisposed = false;
 
@@ -74,7 +74,7 @@ class UserDao implements Disposable {
   }
 }
 
-class OrderDao implements Disposable {
+class OrderDao extends GraftService {
   final SqliteDatabase db;
   bool isDisposed = false;
 
@@ -109,7 +109,7 @@ class OrderDao implements Disposable {
 // ============================================================================
 // REPOSITORY LAYER (Depends on multiple DAOs)
 // ============================================================================
-class UserRepository implements Disposable {
+class UserRepository extends GraftService {
   final UserDao userDao;
   final OrderDao orderDao;
   final void Function(String event)? onLifecycleEvent;
@@ -171,7 +171,7 @@ class UserGraft extends Graft<UserProfileState> {
 
 enum TestDbScope { checkout, reporting }
 
-class CheckoutAuditDao implements Disposable {
+class CheckoutAuditDao extends GraftService {
   final SqliteDatabase db;
   bool isDisposed = false;
 
@@ -544,6 +544,9 @@ void main() {
 
 class _MockUserRepository implements UserRepository {
   int calledCount = 0;
+
+  @override
+  void onInit() {}
 
   @override
   int registerUserWithOrder(String name, String email, String item, double amount) {

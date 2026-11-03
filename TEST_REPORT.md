@@ -9,8 +9,8 @@
 | Metric | Status / Value | Description |
 | :--- | :---: | :--- |
 | **Overall Test Status** | ✅ **100% PASSED** | All unit, widget, lifecycle, and stress tests |
-| **Total Tests Executed** | **304** | Distinct unit & widget test scenarios |
-| **Passing Tests** | **304** | Zero assertion failures |
+| **Total Tests Executed** | **305** | Distinct unit & widget test scenarios |
+| **Passing Tests** | **305** | Zero assertion failures |
 | **Failing Tests** | **0** | Zero unexpected exceptions |
 | **Skipped Tests** | **0** | 100% active test execution |
 | **Pass Rate** | **100.0%** | Full green regression suite |
@@ -330,7 +330,7 @@ _Core Graft reactive controller, state access, and notifier semantics_
 | 5 | Graft Core Tests dispose marks isDisposed and prevents subsequent emissions | ✅ Pass | 7ms |
 | 6 | Graft Core Tests reentrant notify() during listener notification batches via microtask safely | ✅ Pass | 3ms |
 | 7 | GraftRegistry Tests create throws descriptive StateError when unregistered | ✅ Pass | 7ms |
-| 8 | GraftRegistry Tests create resolves via fallbackLocator when configured | ✅ Pass | 4ms |
+| 8 | GraftRegistry Tests create resolves via GraftDI when registered in root scope | ✅ Pass | 4ms |
 | 9 | GraftRegistry Tests reset clears all registered factories and singletons | ✅ Pass | 3ms |
 
 #### ✅ `test/graft_v1_features_test.dart`
@@ -743,7 +743,7 @@ _Comprehensive unit and widget validation for Graft architecture_
 | 2 | GraftRouteTracker & GraftRouteObserver Extended Tests GraftRouteTracker didReplace disposes oldRoute grafts and adds newRoute | ✅ Pass | 8ms |
 | 3 | GraftRouteTracker & GraftRouteObserver Extended Tests GraftRouteObserver forwards didRemove and didReplace | ✅ Pass | 9ms |
 | 4 | GraftRouteTracker & GraftRouteObserver Extended Tests context.use throws StateError when type is unregistered and no fallback | ✅ Pass | 164ms |
-| 5 | GraftRouteTracker & GraftRouteObserver Extended Tests GraftRegistry fallbackLocator resolves unregistered instance if provided | ✅ Pass | 13ms |
+| 5 | GraftRouteTracker & GraftRouteObserver Extended Tests GraftDI bind resolves instance via context.use if unregistered in GraftRegistry | ✅ Pass | 13ms |
 | 6 | GraftRouteTracker & GraftRouteObserver Extended Tests Private constructor test helpers | ✅ Pass | 2ms |
 | 7 | GraftRouteTracker & GraftRouteObserver Extended Tests GraftRouteTracker handles ownerRoute.popped future and adds unstacked route | ✅ Pass | 5ms |
 | 8 | GraftRouteTracker & GraftRouteObserver Extended Tests GraftRouteTracker tombstones oldRoute and prevents duplicate controller creation on replaced route | ✅ Pass | 7ms |

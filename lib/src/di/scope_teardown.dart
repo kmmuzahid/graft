@@ -22,8 +22,7 @@ extension ScopeTeardown on ScopeNode {
 
     while (queue.isNotEmpty) {
       final current = queue.removeAt(0);
-      final instance = _instances[current];
-      if (instance is Disposable) instance.dispose();
+      _teardownInstance(_instances[current]);
       _instances[current] = null;
 
       final dependencies = _dependenciesOf[current];
@@ -41,22 +40,38 @@ extension ScopeTeardown on ScopeNode {
     }
 
     for (int i = 0; i < _instances.length; i++) {
-      final instance = _instances[i];
-      if (instance is Disposable) instance.dispose();
+      _teardownInstance(_instances[i]);
       _instances[i] = null;
     }
 
     for (final binding in _asyncBindings.values) {
-      final inst = binding.resolvedInstance;
-      if (inst is Disposable) inst.dispose();
+      _teardownInstance(binding.resolvedInstance);
       binding.reset();
     }
 
+    _factories.clear();
+    _asyncBindings.clear();
+    _singletons.clear();
     _instances.clear();
     _dependents.clear();
     _dependenciesOf.clear();
     _activeLeases.clear();
     parent?.children.remove(this);
+  }
+
+  void _teardownInstance(Object? instance) {
+    if (instance == null) return;
+    if (instance is Graft) {
+      if (!instance.isDisposed) {
+        instance.dispose();
+      }
+    } else if (instance is GraftService) {
+      instance.dispose();
+    } else if (instance is ChangeNotifier) {
+      try {
+        instance.dispose();
+      } catch (_) {}
+    }
   }
 }
 

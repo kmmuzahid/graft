@@ -9,8 +9,12 @@ part 'ambient_lifecycle_engine.dart';
 part 'ambient_pool_engine.dart';
 part 'ambient_search_engine.dart';
 
+/// Convenience navigator observer instance for MaterialApp(navigatorObservers: [graftRouteObserver]).
+final GraftRouteObserver graftRouteObserver = GraftRouteTracker.observer;
+
 /// Manages route-stack scoping, ambient dependency borrowing, and ref-counted automatic disposal
 /// for [Graft] instances.
+@internal
 class GraftRouteTracker {
   GraftRouteTracker._();
 

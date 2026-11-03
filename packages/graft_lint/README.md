@@ -17,7 +17,7 @@ The official analyzer plugin and lint rules for **[Graft](https://pub.dev/packag
 |---|:---:|:---:|---|
 | [`avoid_nested_graft_slot`](#1-avoid_nested_graft_slot) | **Error** | 🔴 `error` | Flags illegal nesting of slots (`slot`, `slots`, `async`, `builder`) within the same `Graft` instance. |
 | [`prefer_props_in_graft_state`](#2-prefer_props_in_graft_state) | **Info** | 🔴 `error` | Enforces overriding `GraftProps get props => propsOf(...)` in `GraftState` and `GraftModel` for CPU register diffing. |
-| [`require_graft_route_observer`](#3-require_graft_route_observer) | **Info** | 🔴 `error` | Ensures `GraftRouteTracker.observer` is registered in `MaterialApp` to prevent controller memory leaks. |
+| [`require_graft_route_observer`](#3-require_graft_route_observer) | **Info** | 🔴 `error` | Ensures `graftRouteObserver` is registered in `MaterialApp` to prevent controller memory leaks. |
 | [`require_dry_contracts`](#4-require_dry_contracts) | **Error** | 🔴 `error` | Enforces mandatory `schemaVersion`, constructor hydration defaults, and `factory` tear-offs for Frame-0 persistent states (`Graft.dry`). |
 
 ---

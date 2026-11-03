@@ -1,6 +1,7 @@
 /// Ambient locator for the global StorageCoordinator instance.
 library;
 
+import 'package:flutter/foundation.dart';
 import 'lifecycle_observer.dart';
 import 'memory_state_config.dart';
 import 'state_config.dart';
@@ -20,6 +21,7 @@ void configurePersistence(GraftStateConfig config) {
 }
 
 /// Resets ambient persistence coordinator (used during testing).
+@visibleForTesting
 void resetAmbientPersistence() {
   _ambientCoordinator?.close();
   _ambientCoordinator = null;

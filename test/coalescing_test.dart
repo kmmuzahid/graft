@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graft/graft.dart';
+import 'package:graft/src/core/graft_mask.dart';
 
 class CoalesceState extends GraftState {
   int count;

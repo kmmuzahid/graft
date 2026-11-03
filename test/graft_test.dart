@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graft/graft.dart';
+import 'package:graft/src/di/graft_registry.dart';
 
 class TestState extends GraftState {
   int count;
@@ -198,17 +199,13 @@ void main() {
       );
     });
 
-    test('create resolves via fallbackLocator when configured', () {
-      final mockLocatorInstances = <Type, Object>{
-        TestGraft: TestGraft(),
-      };
-
-      GraftRegistry.fallbackLocator = <T extends Object>() =>
-          mockLocatorInstances[T] as T;
+    test('create resolves via GraftDI when registered in root scope', () {
+      final testInstance = TestGraft();
+      bind<TestGraft>(() => testInstance);
 
       final instance = GraftRegistry.create<TestGraft>();
       expect(instance, isA<TestGraft>());
-      expect(identical(instance, mockLocatorInstances[TestGraft]), isTrue);
+      expect(identical(instance, testInstance), isTrue);
     });
 
     test('reset clears all registered factories and singletons', () {

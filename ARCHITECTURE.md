@@ -244,7 +244,7 @@ flowchart TD
         PoolLookup{"Matching AmbientEntry<br/>in _ambientPool[key]?"}
         BranchCheck{"Matches Navigator Branch<br/>or isRoot == true?"}
         BorrowRoute["borrowerRoutes.add(route)<br/>refCount++<br/>Attach route.popped release listener"]
-        CreateAbsent["Instantiate T<br/>(factory or GraftRegistry.create)"]
+        CreateAbsent["Instantiate T<br/>(factory or GraftDI.root.resolve)"]
         IsRootCheck{"route == null?"}
         RegisterRoot["Register AmbientEntry<br/>isRoot = true, refCount = 1<br/>(Permanent App-Root Singleton)"]
         RegisterRoute["Register AmbientEntry<br/>isRoot = false, refCount = 1<br/>borrowerRoutes = {route}"]
@@ -335,7 +335,7 @@ All core subsystems are cleanly decomposed into focused modules strictly $\le 16
 - **`src/core/state/` (19 files):** Partitioned into `graft_state_props.dart`, `graft_props_types.dart`, `graft_state_storage.dart`, `graft_state_baseline.dart`, `graft_state_snapshot.dart`, `graft_state_fast_scalar.dart`, `graft_state_fast_buffer.dart`, `graft_state_fast_nested.dart`, `graft_state_diff_single.dart`, `graft_state_diff_dual.dart`, `graft_state_diff_triple.dart`, `graft_state_diff_quad.dart`, `graft_state_diff_penta.dart`, `graft_state_diff_general.dart`, `graft_state_diff_helper.dart`, `graft_state_diff_engine.dart`, `graft_state_collection_diff.dart`, `graft_state_dispatch.dart`, and `graft_state_engine.dart`.
 - **`src/widgets/slots/` (16 files):** Partitioned into reconcilers, layout resolvers, diff matchers, dirty dispatchers, and scope guards.
 - **`src/route/` (6 files):** Partitioned into `graft_route_tracker.dart`, `graft_route_observer.dart`, `ambient_key.dart`, `ambient_lifecycle_engine.dart`, `ambient_pool_engine.dart`, and `ambient_search_engine.dart`.
-- **`src/di/` (10 files):** Partitioned into `graft_di.dart`, `graft_registry.dart`, `type_id.dart`, `disposable.dart`, `scope_node.dart`, `scope_tier.dart`, `scope_block.dart`, `scope_resolution.dart`, `scope_teardown.dart`, and `async_binding.dart`.
+- **`src/di/` (10 files):** Partitioned into `graft_di.dart`, `graft_registry.dart`, `type_id.dart`, `graft_service.dart`, `scope_node.dart`, `scope_tier.dart`, `scope_block.dart`, `scope_resolution.dart`, `scope_teardown.dart`, and `async_binding.dart`.
 - **`src/persistence/` (16 files):** Partitioned into `state_config.dart`, `l1_cache.dart`, `debounce_queue.dart`, `lifecycle_observer.dart`, `file_state_config.dart`, `memory_state_config.dart`, `storage_coordinator.dart`, `ambient_locator.dart`, dry hooks, and binary serializers.
 
 ---

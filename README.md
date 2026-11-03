@@ -5,7 +5,7 @@
 [![pub package](https://img.shields.io/pub/v/graft.svg?include_prereleases&color=blue)](https://pub.dev/packages/graft)
 [![graft_lint](https://img.shields.io/pub/v/graft_lint.svg?label=graft_lint&color=blue)](https://pub.dev/packages/graft_lint)
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/kmmuzahid/graft/blob/main/LICENSE)
-[![tests](https://img.shields.io/badge/tests-304%20passed-brightgreen.svg)](https://github.com/kmmuzahid/graft)
+[![tests](https://img.shields.io/badge/tests-305%20passed-brightgreen.svg)](https://github.com/kmmuzahid/graft)
 [![coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](https://github.com/kmmuzahid/graft)
 [![Flutter 3.10+](https://img.shields.io/badge/Flutter-3.10+-02569B.svg?logo=flutter)](https://flutter.dev)
 
@@ -24,7 +24,7 @@ For deep dives into specific subsystems, architecture philosophy, empirical benc
 - 💉 **[DI_GUIDE.md](https://github.com/kmmuzahid/graft/blob/main/DI_GUIDE.md):** Major dedicated guide for the DI engine (developer enum scopes, zero-scope boot, singleton lock, non-blocking async DB/network, route leasing).
 - 💾 **[GRAFT_GUIDE.md](https://github.com/kmmuzahid/graft/blob/main/GRAFT_GUIDE.md):** Major dedicated guide for State Management & Frame-0 Persistence (propsOf, surgical slots, zero-controller forms, Option B GraftModel, Frame-0 dry state).
 - 📊 **[BENCHMARK_REPORT.md](https://github.com/kmmuzahid/graft/blob/main/BENCHMARK_REPORT.md):** Empirical benchmark methodology, hardware specs, and full logs across all 21 benchmark scenarios.
-- 🧪 **[TEST_REPORT.md](https://github.com/kmmuzahid/graft/blob/main/TEST_REPORT.md):** Comprehensive test verification report across 304 passing tests.
+- 🧪 **[TEST_REPORT.md](https://github.com/kmmuzahid/graft/blob/main/TEST_REPORT.md):** Comprehensive test verification report across 305 passing tests.
 
 ---
 
@@ -461,7 +461,6 @@ class CartState extends GraftState {
 
 * **`GraftProps get props`**: Mandatory abstract contract declaring properties for diffing via `propsOf(...)` or `propsOfMany(...)`.
 * **`state.update()`**: Computes dirty bitmask against in-place baseline snapshot and triggers UI notification.
-* **`GraftMask get dirtyMask`**: Read-only bitmask from the last diff evaluation.
 
 #### 2. `Graft<S extends GraftState>`
 The business logic controller managing domain state of type `S`:
@@ -865,8 +864,11 @@ class UserGraft extends Graft<UserState> {
   UserGraft() : super(UserState());
 }
 
-// 7. Graft.init(): Optional main() bootstrap for custom persistence / setup
-Graft.init(config: FileStateConfig(dir), setup: () => bind<Api>(() => Api()));
+// 7. Graft.config(): Optional centralized main() bootstrap for persistence, debug logging, and DI
+Graft.config(
+  persistence: FileStateConfig(dir),
+  di: () => bind<Api>(() => Api()),
+);
 
 // 8. graft.mutate(): Functional lambda mutation with automatic update
 graft.mutate((s) => s.points += 10);
@@ -1003,11 +1005,11 @@ Graft achieves sub-microsecond diffing, zero wasted rebuilds, and a 100% wrapper
 
 > 🧪 For the complete test matrix and verification logs across all 71 test files, see **[`TEST_REPORT.md`](https://github.com/kmmuzahid/graft/blob/main/TEST_REPORT.md)**.
 
-Graft is verified against **304 passing tests** with zero static analysis warnings and zero rebuild leakage:
+Graft is verified against **305 passing tests** with zero static analysis warnings and zero rebuild leakage:
 
 ```bash
 flutter test
-# 00:45 +304: All tests passed!
+# 00:45 +305: All tests passed!
 ```
 
 ```bash

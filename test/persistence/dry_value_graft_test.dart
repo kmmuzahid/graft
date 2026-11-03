@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graft/graft.dart';
+import 'package:graft/src/core/value_graft.dart';
 import 'package:graft/src/persistence/ambient_locator.dart';
 import 'package:graft/src/persistence/model/binary_serializer.dart';
 import 'package:graft/src/persistence/model/schema_fingerprint.dart';

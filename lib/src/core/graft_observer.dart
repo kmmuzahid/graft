@@ -61,3 +61,6 @@ abstract class GraftObserver {
     bool isScopePurge = false,
   }) {}
 }
+
+/// Out-of-the-box debug observer alias featuring ANSI colorized terminal logs.
+typedef GraftDebugObserver = GraftDevObserver;
