@@ -22,9 +22,9 @@ class RequireDryContractsRule extends DartLintRule {
   static const _modelFactoryCode = LintCode(
     name: 'require_model_factory_in_dry_state',
     problemMessage:
-        'Nested GraftModel "{0}" in "{1}" must override "factory" tear-off.',
+        'Nested GraftModel "{0}" in "{1}" must pass its constructor tear-off to super.',
     correctionMessage:
-        'Override "@override Function get factory => {0}.new;" to enable automatic Frame-0 constructor hydration.',
+        'Pass constructor tear-off to super: "{0}(...) : super({0}.new);" to enable automatic Frame-0 constructor hydration.',
     errorSeverity: ErrorSeverity.ERROR,
   );
 
@@ -157,11 +157,16 @@ class RequireDryContractsRule extends DartLintRule {
             declaration.name.lexeme == typeName) {
           final superclass = declaration.extendsClause?.superclass.name2.lexeme;
           if (superclass == 'GraftModel') {
-            final hasFactory = declaration.members
+            final hasSuperFactory = declaration.members
+                .whereType<ConstructorDeclaration>()
+                .any((c) => c.initializers.any((init) =>
+                    init is SuperConstructorInvocation &&
+                    init.argumentList.arguments.isNotEmpty));
+            final hasFactoryGetter = declaration.members
                 .whereType<MethodDeclaration>()
                 .any((m) => m.isGetter && m.name.lexeme == 'factory');
 
-            if (!hasFactory) {
+            if (!hasSuperFactory && !hasFactoryGetter) {
               reporter.atNode(
                 reportTarget,
                 _modelFactoryCode,

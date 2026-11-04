@@ -39,7 +39,7 @@ Object? _snapshotValue(Object? value) {
     return Map<Object?, Object?>.of(value);
   }
   if (value is GraftModel) {
-    final p = value.props;
+    final p = GraftModelEngine.props(value);
     return List<Object?>.generate(
       p.length,
       (i) => _snapshotValue(p[i]),
@@ -66,7 +66,7 @@ bool _deepEquals(Object? a, Object? b) {
     return true;
   }
   if (a is List && b is GraftModel) {
-    final bp = b.props;
+    final bp = GraftModelEngine.props(b);
     final len = a.length;
     if (len != bp.length) return false;
     for (int i = 0; i < len; i++) {
@@ -75,7 +75,7 @@ bool _deepEquals(Object? a, Object? b) {
     return true;
   }
   if (a is GraftModel && b is List) {
-    final ap = a.props;
+    final ap = GraftModelEngine.props(a);
     final len = ap.length;
     if (len != b.length) return false;
     for (int i = 0; i < len; i++) {
@@ -84,8 +84,8 @@ bool _deepEquals(Object? a, Object? b) {
     return true;
   }
   if (a is GraftModel && b is GraftModel) {
-    final ap = a.props;
-    final bp = b.props;
+    final ap = GraftModelEngine.props(a);
+    final bp = GraftModelEngine.props(b);
     final len = ap.length;
     if (len != bp.length) return false;
     for (int i = 0; i < len; i++) {

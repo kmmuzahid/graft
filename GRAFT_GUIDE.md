@@ -268,23 +268,19 @@ class AddressModel extends GraftModel {
     this.street = '221B Baker Street',
     this.city = 'London',
     this.zipCode = 10001,
-  ]);
+  ]) : super(AddressModel.new); // 👈 Pass constructor tear-off to super for Frame-0 hydration!
 
   // 1. Declare properties for recursive slot diffing:
   @override
   GraftProps get props => propsOf(street, city, zipCode);
-
-  // 2. 1-line constructor tear-off for auto-hydration on Frame 0:
-  @override
-  Function get factory => AddressModel.new;
 }
 ```
 
 > [!NOTE]
-> ### 💡 When does a `GraftModel` need `factory`?
-> A `GraftModel` implements `@override Function get factory => Model.new;` so that Frame-0 hydration can instantiate restored models automatically into constructor arguments without any manual index casting.
+> ### 💡 When does a `GraftModel` need to pass its constructor to `super`?
+> A `GraftModel` passes `: super(Model.new)` so that Frame-0 hydration can instantiate restored models automatically into constructor arguments without any manual index casting or public interface pollution.
 >
-> If your domain sub-model is used purely in-memory (or belongs to a transient state), no `factory` or `schemaVersion` is needed. Simply declare `props => propsOf(...)`.
+> If your domain sub-model is used purely in-memory (or belongs to a transient state), you don't even need `: super(Model.new)` or `schemaVersion`. Simply declare `props => propsOf(...)`.
 
 ---
 

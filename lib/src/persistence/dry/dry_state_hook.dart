@@ -35,7 +35,7 @@ final class DryStateHook {
     }
 
     // Tier 2 Runtime Guard: Require schemaVersion on State
-    if (probe.schemaVersion <= 0) {
+    if (GraftStateEngine.schemaVersion(probe) <= 0) {
       throw StateError(
         'Graft.dry Error: Class "${probe.runtimeType}" must override '
         '"@override int get schemaVersion => 1;" to guarantee deterministic persistence '
@@ -46,16 +46,17 @@ final class DryStateHook {
     // Tier 2 Runtime Guard: Require schemaVersion and factory on nested GraftModels
     for (final prop in GraftStateEngine.props(probe)) {
       if (prop is GraftModel) {
-        if (prop.schemaVersion <= 0) {
+        if (GraftModelEngine.schemaVersion(prop) <= 0) {
           throw StateError(
             'Graft.dry Error: Nested model "${prop.runtimeType}" in "${probe.runtimeType}" '
             'must override "@override int get schemaVersion => 1;".',
           );
         }
-        if (prop.factory == null) {
+        if (GraftModelEngine.factory(prop) == null) {
           throw StateError(
             'Graft.dry Error: Nested model "${prop.runtimeType}" in "${probe.runtimeType}" '
-            'must override "@override Function get factory => ${prop.runtimeType}.new;" '
+            'must pass its constructor tear-off to super: '
+            '"${prop.runtimeType}(...) : super(${prop.runtimeType}.new);" '
             'to enable Frame-0 constructor hydration.',
           );
         }
@@ -64,7 +65,7 @@ final class DryStateHook {
 
     final currentFp = SchemaFingerprint.compute(
       GraftStateEngine.props(probe),
-      schemaVersion: probe.schemaVersion,
+      schemaVersion: GraftStateEngine.schemaVersion(probe),
     );
 
     final cached = ambientStorageCoordinator.readSync(key);
@@ -100,9 +101,10 @@ final class DryStateHook {
     GraftStateEngine.setDryEnabled(state, true);
     DryExpando.setHydrated(state);
     if (DryExpando.getFingerprint(state) == null) {
+      final v = GraftStateEngine.schemaVersion(state);
       final fp = SchemaFingerprint.compute(
         GraftStateEngine.props(state),
-        schemaVersion: state.schemaVersion > 0 ? state.schemaVersion : 1,
+        schemaVersion: v > 0 ? v : 1,
       );
       DryExpando.setFingerprint(state, fp);
     }
@@ -126,9 +128,10 @@ final class DryStateHook {
 
     int? fp = DryExpando.getFingerprint(state);
     if (fp == null) {
+      final v = GraftStateEngine.schemaVersion(state);
       fp = SchemaFingerprint.compute(
         persistentProps,
-        schemaVersion: state.schemaVersion > 0 ? state.schemaVersion : 1,
+        schemaVersion: v > 0 ? v : 1,
       );
       DryExpando.setFingerprint(state, fp);
     }

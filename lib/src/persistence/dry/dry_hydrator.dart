@@ -2,13 +2,14 @@ part of 'dry_state_hook.dart';
 
 Object? _hydrateValue(Object? defaultVal, Object? cachedVal) {
   if (defaultVal is GraftModel && cachedVal is List) {
-    if (defaultVal.factory != null) {
-      final subProps = defaultVal.props;
+    final factory = GraftModelEngine.factory(defaultVal);
+    if (factory != null) {
+      final subProps = GraftModelEngine.props(defaultVal);
       final subArgs = <Object?>[];
       for (int j = 0; j < subProps.length && j < cachedVal.length; j++) {
         subArgs.add(_hydrateValue(subProps[j], cachedVal[j]));
       }
-      return Function.apply(defaultVal.factory!, subArgs);
+      return Function.apply(factory, subArgs);
     }
     return defaultVal;
   }

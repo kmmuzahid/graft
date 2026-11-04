@@ -43,7 +43,7 @@ export 'src/di/graft_service.dart';
 export 'src/di/graft_di.dart';
 export 'src/di/scope_block.dart';
 export 'src/persistence/memory_state_config.dart';
-export 'src/persistence/model/graft_model.dart';
+export 'src/persistence/model/graft_model.dart' hide GraftModelEngine;
 export 'src/persistence/state_config.dart';
 export 'src/route/graft_route_tracker.dart'
     show GraftRouteObserver, graftRouteObserver;

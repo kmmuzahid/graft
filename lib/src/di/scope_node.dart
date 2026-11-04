@@ -17,8 +17,11 @@ final class ScopeNode {
   static final List<int> _activeResolutionStack = [];
 
   final Object? scopeId;
+  @internal
   final ScopeTier tier;
+  @internal
   final ScopeNode? parent;
+  @internal
   final List<ScopeNode> children = [];
 
   final Map<int, Type> _registeredTypes = {};
@@ -36,6 +39,7 @@ final class ScopeNode {
   }
 
   /// Returns the runtime types of all currently instantiated members in this scope.
+  @internal
   List<Type> get activeMemberTypes {
     final types = <Type>[];
     for (int i = 0; i < _instances.length; i++) {
@@ -97,6 +101,7 @@ final class ScopeNode {
     return parent?.isRegistered<T>() ?? false;
   }
 
+  @internal
   bool isSingleton(int id) => _singletons.contains(id);
 
   T resolve<T>() {
@@ -131,8 +136,10 @@ final class ScopeNode {
         'Graft DI: Type $T is not registered in active scope hierarchy.');
   }
 
+  @internal
   void acquireLease(RouteLeaseToken token) => _activeLeases.add(token);
 
+  @internal
   bool releaseLease(RouteLeaseToken token) {
     _activeLeases.remove(token);
     if (_activeLeases.isEmpty && tier == ScopeTier.transient) {

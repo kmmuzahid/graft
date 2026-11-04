@@ -2,6 +2,8 @@ part of '../graft_state.dart';
 
 @internal
 mixin GraftStateProps on GraftStateStorage {
+  @protected
+  @nonVirtual
   @pragma('vm:prefer-inline')
   GraftProps propsOf([
     Object? p0 = _undefined,

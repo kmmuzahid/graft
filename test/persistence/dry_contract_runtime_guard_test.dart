@@ -35,10 +35,9 @@ class StateWithModelNoFactory extends GraftState {
 
 class ModelWithoutVersion extends GraftModel {
   String street = 'Main';
+  ModelWithoutVersion() : super(ModelWithoutVersion.new);
   @override
   GraftProps get props => propsOf(street);
-  @override
-  Function get factory => ModelWithoutVersion.new;
 }
 
 class StateWithModelNoVersion extends GraftState {
@@ -79,7 +78,8 @@ void main() {
           isA<StateError>().having(
             (e) => e.message,
             'message',
-            contains('must override "@override Function get factory => ModelWithoutFactory.new;"'),
+            contains(
+                'must pass its constructor tear-off to super: "ModelWithoutFactory(...) : super(ModelWithoutFactory.new);"'),
           ),
         ),
       );

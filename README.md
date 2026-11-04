@@ -23,6 +23,7 @@ For deep dives into specific subsystems, architecture philosophy, empirical benc
 - 🏛️ **[ARCHITECTURE.md](https://github.com/kmmuzahid/graft/blob/main/ARCHITECTURE.md):** Deep dive into the 7 Core Engineering Pillars, bitmask diffing, native `ComponentElement` slots, monotonic TypeId, DAG teardowns, automated async gates, and dry persistence.
 - 💉 **[DI_GUIDE.md](https://github.com/kmmuzahid/graft/blob/main/DI_GUIDE.md):** Major dedicated guide for the DI engine (developer enum scopes, zero-scope boot, singleton lock, non-blocking async DB/network, route leasing).
 - 💾 **[GRAFT_GUIDE.md](https://github.com/kmmuzahid/graft/blob/main/GRAFT_GUIDE.md):** Major dedicated guide for State Management & Frame-0 Persistence (propsOf, surgical slots, zero-controller forms, Option B GraftModel, Frame-0 dry state).
+- 🧪 **[GRAFT_TESTING.md](https://github.com/kmmuzahid/graft/blob/main/GRAFT_TESTING.md):** Complete guide to testing Graft apps: declarative `graftTest` unit tests, mock DI overrides, widget test controller injection, error testing, dirty bitmask assertions, and hermetic resets.
 - 📊 **[BENCHMARK_REPORT.md](https://github.com/kmmuzahid/graft/blob/main/BENCHMARK_REPORT.md):** Empirical benchmark methodology, hardware specs, and full logs across all 21 benchmark scenarios.
 - 🧪 **[TEST_REPORT.md](https://github.com/kmmuzahid/graft/blob/main/TEST_REPORT.md):** Comprehensive test verification report across 305 passing tests.
 
@@ -36,7 +37,7 @@ For deep dives into specific subsystems, architecture philosophy, empirical benc
 - [📚 Complete Public API Reference](#-complete-public-api-reference)
 - [📋 Complete Public API Cheat Sheet](#-complete-public-api-cheat-sheet)
 - [🏗️ High-Performance Architecture](#️-high-performance-architecture)
-- [🧪 Test Verification Summary](#-test-verification--quality-assurance)
+- [🧪 Testing & Test Verification](#-testing--test-verification)
 - [📄 License](#-license)
 
 ---
@@ -753,13 +754,10 @@ class AddressModel extends GraftModel {
   String street;
   String city;
 
-  AddressModel([this.street = '', this.city = '']);
+  AddressModel([this.street = '', this.city = '']) : super(AddressModel.new);
 
   @override
   GraftProps get props => propsOf(street, city);
-
-  @override
-  Function get factory => AddressModel.new; // ✨ 1-line constructor tear-off!
 }
 ```
 
@@ -848,11 +846,9 @@ class AddressModel extends GraftModel {
   @override
   int get schemaVersion => 1;
   String street;
-  AddressModel([this.street = '']);
+  AddressModel([this.street = '']) : super(AddressModel.new);
   @override
   GraftProps get props => propsOf(street);
-  @override
-  Function get factory => AddressModel.new;
 }
 ```
 
@@ -954,9 +950,8 @@ class UserGraft extends Graft<UserState> {
 @override
 int get schemaVersion => 1;
 
-// 31. factory: 1-line constructor tear-off for auto-hydrating nested GraftModels
-@override
-Function get factory => AddressModel.new;
+// 31. super(Model.new): Constructor tear-off passed to super for auto-hydrating nested GraftModels
+AddressModel(...) : super(AddressModel.new);
 
 // 32. dryKey: Optional storage key (defaults to class name runtimeType.toString())
 @override
@@ -994,9 +989,11 @@ Graft achieves sub-microsecond diffing, zero wasted rebuilds, and a 100% wrapper
 
 ---
 
-## 🧪 Test Verification & Quality Assurance
+## 🧪 Testing & Test Verification
 
 > 🧪 For the complete test matrix and verification logs across all 71 test files, see **[`TEST_REPORT.md`](https://github.com/kmmuzahid/graft/blob/main/TEST_REPORT.md)**.
+>
+> 📖 **Testing Guide:** For declarative unit testing, mock dependency injection, error assertions, and widget testing with `package:graft/testing.dart`, consult the **[`GRAFT_TESTING.md`](https://github.com/kmmuzahid/graft/blob/main/GRAFT_TESTING.md)** guide.
 
 Graft is verified against **305 passing tests** with zero static analysis warnings and zero rebuild leakage:
 

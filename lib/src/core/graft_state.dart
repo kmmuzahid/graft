@@ -40,9 +40,11 @@ abstract class GraftState extends GraftStateStorage with GraftStateProps {
   bool operator ==(Object other) => identical(this, other);
 
   /// Unique domain state persistence identifier used by DRY storage engines.
+  @internal
   String get dryKey => _customDryKey ?? runtimeType.toString();
 
   /// Schema version for DRY schema migration. Defaults to 0.
+  @protected
   int get schemaVersion => 0;
 
   /// Invalidates this state in the active DRY storage cache.

@@ -48,7 +48,7 @@ final class BinarySerializer {
       builder.add(bd.buffer.asUint8List());
       builder.add(utf8Bytes);
     } else if (val is GraftModel) {
-      _writeProps(builder, val.props);
+      _writeProps(builder, GraftModelEngine.props(val));
     } else if (val is GraftProps) {
       _writeProps(builder, val);
     } else if (val is List) {

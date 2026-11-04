@@ -251,13 +251,10 @@ class AddressModel extends GraftModel {
     this.street = '221B Baker Street',
     this.city = 'London',
     this.zipCode = 10001,
-  ]);
+  ]) : super(AddressModel.new);
 
   @override
   GraftProps get props => propsOf(street, city, zipCode);
-
-  @override
-  Function get factory => AddressModel.new;
 }
 
 class PersistentProfileState extends GraftState {

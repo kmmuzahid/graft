@@ -2,6 +2,7 @@
 library;
 
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import '../core/graft.dart';
 import 'scope_node.dart';
 import 'scope_tier.dart';
@@ -11,12 +12,14 @@ final class GraftDI {
   GraftDI._();
 
   /// Immortal root scope node containing global singletons.
+  @internal
   static final ScopeNode root = ScopeNode(
     scopeId: 'root',
     tier: ScopeTier.root,
   );
 
   /// Key used by [graftTest] to provide isolated mock overrides.
+  @internal
   static final Object testZoneKey = Object();
 
   static final Map<Object, ScopeNode> _scopes = {};

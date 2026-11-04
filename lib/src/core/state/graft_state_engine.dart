@@ -7,6 +7,9 @@ abstract final class GraftStateEngine {
   /// Returns the hardware-aligned domain property container for [state].
   static GraftProps props(GraftState state) => state.props;
 
+  /// Returns the schema version for [state].
+  static int schemaVersion(GraftState state) => state.schemaVersion;
+
   /// Binds [state] to [graft] and initializes baseline snapshot.
   static void bind(GraftState state, Graft graft) => state._bindGraft(graft);
 

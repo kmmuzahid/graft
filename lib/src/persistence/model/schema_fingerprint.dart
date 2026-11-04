@@ -84,10 +84,11 @@ final class SchemaFingerprint {
       } else if (val is GraftModel) {
         hash = _fnv1aByte(hash, 10);
         hash = _fnv1aString(hash, val.runtimeType.toString());
-        hash = _fnv1aInt32(hash, val.schemaVersion);
+        final vVersion = GraftModelEngine.schemaVersion(val);
+        hash = _fnv1aInt32(hash, vVersion);
         hash = _fnv1aInt32(
           hash,
-          compute(val.props, schemaVersion: val.schemaVersion),
+          compute(GraftModelEngine.props(val), schemaVersion: vVersion),
         );
       } else if (val is GraftProps) {
         hash = _fnv1aByte(hash, 11);

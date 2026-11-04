@@ -84,13 +84,10 @@ class TestAddressModel extends GraftModel {
   TestAddressModel([
     this.street = 'Main',
     this.city = 'NYC',
-  ]);
+  ]) : super(TestAddressModel.new);
 
   @override
   GraftProps get props => propsOf(street, city);
-
-  @override
-  Function get factory => TestAddressModel.new;
 }
 
 class MixedNestedState extends GraftState {
@@ -165,13 +162,10 @@ class OfficeModel extends GraftModel {
   OfficeModel([
     this.building = 'HQ',
     this.floor = 1,
-  ]);
+  ]) : super(OfficeModel.new);
 
   @override
   GraftProps get props => propsOf(building, floor);
-
-  @override
-  Function get factory => OfficeModel.new;
 }
 
 class DepartmentModel extends GraftModel {
@@ -184,13 +178,11 @@ class DepartmentModel extends GraftModel {
   DepartmentModel([
     this.deptName = 'General',
     OfficeModel? office,
-  ]) : office = office ?? OfficeModel();
+  ])  : office = office ?? OfficeModel(),
+        super(DepartmentModel.new);
 
   @override
   GraftProps get props => propsOf(deptName, office);
-
-  @override
-  Function get factory => DepartmentModel.new;
 }
 
 class CompanyState extends GraftState {

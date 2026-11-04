@@ -23,7 +23,7 @@ final class TupleSerializer {
       return value;
     }
     if (value is GraftModel) {
-      return toTuple(value.props);
+      return toTuple(GraftModelEngine.props(value));
     }
     if (value is GraftProps) {
       return toTuple(value);

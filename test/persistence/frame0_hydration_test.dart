@@ -11,13 +11,10 @@ class AddressModel extends GraftModel {
   String street;
   String city;
 
-  AddressModel([this.street = '', this.city = '']);
+  AddressModel([this.street = '', this.city = '']) : super(AddressModel.new);
 
   @override
   GraftProps get props => propsOf(street, city);
-
-  @override
-  Function get factory => AddressModel.new;
 }
 
 class HydratedCheckoutState extends GraftState {
@@ -72,13 +69,11 @@ class TearOffAddressModel extends GraftModel {
   String street;
   String city;
 
-  TearOffAddressModel([this.street = '123 Main', this.city = 'Springfield']);
+  TearOffAddressModel([this.street = '123 Main', this.city = 'Springfield'])
+      : super(TearOffAddressModel.new);
 
   @override
   GraftProps get props => propsOf(street, city);
-
-  @override
-  Function get factory => TearOffAddressModel.new;
 }
 
 class TearOffCheckoutState extends GraftState {

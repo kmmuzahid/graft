@@ -19,6 +19,19 @@ import '../../core/graft_state.dart';
 /// }
 /// ```
 abstract class GraftModel {
+  final Function? _factory;
+
+  /// Creates a domain model.
+  ///
+  /// When embedded in a state used with Frame-0 dry persistence ([Graft.dry]),
+  /// pass its constructor tear-off to super:
+  /// ```dart
+  /// class AddressModel extends GraftModel {
+  ///   AddressModel([this.street = '', this.city = '']) : super(AddressModel.new);
+  /// }
+  /// ```
+  const GraftModel([Function? factory]) : _factory = factory;
+
   @override
   @nonVirtual
   bool operator ==(Object other) => identical(this, other);
@@ -28,6 +41,7 @@ abstract class GraftModel {
   int get hashCode => identityHashCode(this);
 
   /// Defines domain properties for serialization and diffing.
+  @protected
   GraftProps get props;
 
   /// Schema version for deterministic persistence and safe evolution across app restarts.
@@ -38,16 +52,8 @@ abstract class GraftModel {
   /// @override
   /// int get schemaVersion => 1;
   /// ```
+  @protected
   int get schemaVersion => 0;
-
-  /// Constructor tear-off for automatic Frame-0 hydration.
-  ///
-  /// When embedded in a persistent state, override this with the class constructor tear-off:
-  /// ```dart
-  /// @override
-  /// Function get factory => AddressModel.new;
-  /// ```
-  Function? get factory => null;
 
   /// Convenience helper to create [GraftProps].
   @protected
@@ -73,6 +79,20 @@ abstract class GraftModel {
     if (p7 is! _Sentinel) list.add(p7);
     return GraftProps.fromList(list);
   }
+}
+
+/// Internal engine accessor for [GraftModel].
+/// Internal to package:graft; never exported in public API.
+@internal
+abstract final class GraftModelEngine {
+  /// Returns domain properties of [model] for serialization and diffing.
+  static GraftProps props(GraftModel model) => model.props;
+
+  /// Returns schema version of [model] for persistence migrations.
+  static int schemaVersion(GraftModel model) => model.schemaVersion;
+
+  /// Returns constructor tear-off for Frame-0 hydration.
+  static Function? factory(GraftModel model) => model._factory;
 }
 
 class _Sentinel {

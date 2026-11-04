@@ -29,8 +29,10 @@ class DryValueGraft<T> extends ValueGraft<T> {
   static DryGraftValue<T> _hydrateDryValue<T>(T initialValue,
       {required String key}) {
     final state = DryGraftValue<T>(initialValue, key: key);
-    final fp = SchemaFingerprint.compute(state.props,
-        schemaVersion: state.schemaVersion);
+    final fp = SchemaFingerprint.compute(
+      GraftStateEngine.props(state),
+      schemaVersion: GraftStateEngine.schemaVersion(state),
+    );
     final cached = ambientStorageCoordinator.readSync(key);
     if (cached != null && cached.isNotEmpty) {
       final decoded = BinarySerializer.decode(cached);
