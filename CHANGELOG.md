@@ -5,8 +5,25 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 
 ## 1.0.0-alpha.10
 
-### 🧹 Direct Hard API Pruning, 100% Lazy Uniform DI, Listenable Interop & Encapsulated Test Suite
+### 🧹 Streamlined Public API, Unified `dryConfig`, Flat Logging & Encapsulated Route Lifecycle
 
+- **Public Surface Area Streamlining & Encapsulation**:
+  - Pruned redundant tuple extensions `context.use2()`, `use3()`, and `use4()` from `lib/graft.dart` in favor of standard sequential `context.use()`.
+  - Completely unexported `graftRouteObserver` and `GraftRouteObserver` from `package:graft/graft.dart`. Route observation is strictly internal engine plumbing for ambient borrowing and auto-disposal. Developers never need to configure route observers; full test utilities remain accessible via `package:graft/testing.dart`.
+  - Unexported `MemoryStateConfig` and `GraftChange` from root `package:graft/graft.dart` (available in `package:graft/testing.dart`).
+  - Hard-deleted all `@Deprecated` shims to keep Alpha 10 lean with zero deprecation overhead.
+- **Observer Consolidation & Direct Logging Parameters**:
+  - Consolidated observer terminology: hard-deleted `GraftDevObserver` and standardized on `GraftObserver` as the single public observer contract.
+  - Flattened logging configuration directly into `Graft.config()` as named parameters:
+    - Non-nullable defaults: `debugLogging = kDebugMode`, `logChanges = false`.
+    - Fine-grained flags: `logRebuilds`, `logState`, `logDI`, `logDry`, `logBindings`, `logErrors`, `enableTimeline`.
+  - Implemented `@internal` `CompositeGraftObserver` to seamlessly multicast events when a custom `GraftObserver` (e.g. Firebase, Sentry) is registered alongside console debugging.
+- **Persistence Contract Renaming (`GraftDryConfig` & `dryConfig`)**:
+  - Renamed `GraftStateConfig` to `GraftDryConfig` and `Graft.config(persistence:)` to `Graft.config(dryConfig:)` for self-documenting alignment with Frame-0 `dry` state persistence.
+  - Added runtime deduplicated warning `[⚠️ GRAFT DRY WARNING]` when `super.dry(...)` is invoked without a configured `dryConfig`.
+- **Tooling & Linter Updates (`graft_lint 1.0.0-alpha.10`)**:
+  - Added `require_dry_config` rule to flag `super.dry(...)` controllers when `Graft.config()` lacks a `dryConfig`.
+  - Removed `require_graft_route_observer` rule from `graft_lint` since route tracking is entirely internal.
 - **Direct Hard Deletions (Zero Deprecation)**:
   - Hard-deleted `GraftAsync<T>`, `runAsync`, `graft.async(...)`, `graft_async.dart`, and `graft_async_task.dart`. Plain Dart `async/await` and native cascades (`state..update()`) provide sufficient, idiomatic async handling without framework bloat.
   - Hard-deleted `bindAsync<T>()`, `useAsync<T>()`, and `async_binding.dart`. The DI container is now 100% uniform and synchronous.
@@ -26,15 +43,15 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
   - Asynchronous services safely encapsulate their own internal `Future` instances (e.g. `_dbFuture`), allowing consumers to await the service's member without DI container complexity or boot crashes.
   - Universal synchronous `use<T>()` provides $< 0.8\text{ ns}$ hot lookup.
 - **State & Props Simplification**:
-  - Introduced `propsOfCollection(Iterable<Object?> items)` for large collections and bitmask stress benchmarks (>16 properties).
-  - Preserved zero-copy handling for domain collections in `propsOf(...)` (e.g. `List<String> tags` treated as single property).
+  - Maintained `propsOf(...)` as the exclusive public property contract with zero-copy handling for domain collections (e.g. `List<String> tags`).
+  - Internalized `propsOfCollection` exclusively for deep stress benchmarks (>16 properties).
   - Added `bool isDirty(int propertyIndex)` on `GraftChange` for ergonomic bitmask inspection.
 - **Dedicated Testing Suite (`package:graft/testing.dart`)**:
   - Introduced `abstract final class GraftTesting` (`resetAll`, `resetDI`, `resetRoutes`, `resetPersistence`, `override`, `overrideController`, `runWithOverrides`, `flushPersistence`, `recordChanges`).
   - Upgraded `graftTest` harness with `seed`, `overrides`, `expectChanges`, and `errors`.
   - Marked testing reset hooks (`GraftDI.reset`, `GraftRegistry.reset`, `GraftRouteTracker.reset`, `resetAmbientPersistence`) as `@internal` to prevent accidental production leakage.
 - **Strict Verification & Quality Gates**:
-  - 100% pass rate across all 313 unit, widget, and lifecycle tests (6 new test suites added).
+  - 100% pass rate across all 315 unit, widget, and lifecycle tests.
   - Zero analyzer warnings across `lib/`, `test/`, and `example/` via `flutter analyze`.
 
 ## 1.0.0-alpha.9

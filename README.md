@@ -3,8 +3,9 @@
 A self-optimizing state management and dependency injection library for Flutter that combines structured domain models with fine-grained UI rebuilds — with zero code generation.
 
 [![pub package](https://img.shields.io/pub/v/graft.svg?include_prereleases&color=blue)](https://pub.dev/packages/graft)
+[![graft_lint](https://img.shields.io/pub/v/graft_lint.svg?include_prereleases&label=graft_lint&color=blue)](https://pub.dev/packages/graft_lint)
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/kmmuzahid/graft/blob/main/LICENSE)
-[![tests](https://img.shields.io/badge/tests-313%20passed-brightgreen.svg)](https://github.com/kmmuzahid/graft)
+[![tests](https://img.shields.io/badge/tests-315%20passed-brightgreen.svg)](https://github.com/kmmuzahid/graft)
 [![Flutter 3.10+](https://img.shields.io/badge/Flutter-3.10+-02569B.svg?logo=flutter)](https://flutter.dev)
 
 ---
@@ -37,10 +38,21 @@ Parent layouts, sibling widgets, and unaccessed fields never rebuild—without c
 
 ## Quick Start
 
-### 1. Add Dependency
+### 1. Add Dependencies & Linter
+
+Add `graft` to your app, along with the official analyzer linter `graft_lint`:
 
 ```bash
 flutter pub add graft
+flutter pub add dev:custom_lint dev:graft_lint
+```
+
+Enable `custom_lint` in your `analysis_options.yaml` to receive real-time IDE diagnostics and error squiggles:
+
+```yaml
+analyzer:
+  plugins:
+    - custom_lint
 ```
 
 ### 2. Define State & Controller
@@ -135,8 +147,7 @@ class CartState extends GraftState {
 }
 ```
 
-- **`propsOf(...)`**: Accepts up to 16 positional fields. Collections like `List<String> items` are treated as individual properties and diffed efficiently.
-- **`propsOfCollection(...)`**: For large state models or dynamically generated property lists (> 16 fields).
+- **`propsOf(...)`**: Accepts up to 16 positional fields. Collections like `List<String> items` are treated as individual domain properties and diffed efficiently.
 
 ### 2. Controller & Cascade Mutations (`Graft<S>`)
 
@@ -297,6 +308,110 @@ class ProfileGraft extends Graft<ProfileState> {
 
 ---
 
+## 📚 Complete Public API Reference
+
+Graft exports a strictly curated, minimal public API surface from `package:graft/graft.dart`. Every element has a dedicated purpose:
+
+### 1. Core State & Controllers
+
+| API | Type | What It's Used For |
+|---|:---:|---|
+| **`Graft<S>`** | `class` | Base controller class (`implements Listenable`). Holds business logic, manages `state`, triggers notifications via `..update()`, dispatches errors via `addError()`, and handles Frame-0 persistence via `super.dry()`. |
+| **`GraftState`** | `class` | Base class for domain state models. Holds fields, declares `GraftProps get props => propsOf(...)` for 64-bit bitmask diffing, and specifies `schemaVersion` for migrations. |
+| **`propsOf(...)`** | `method` | Packs up to 16 state fields into an allocation-free 64-bit diffing representation. Domain collections (`List`, `Set`, `Map`) are handled zero-copy without flattening. |
+| **`ValueGraft<T>`** | `class` | Lightweight reactive controller for simple primitive values (`int`, `String`, `bool`) without needing a dedicated `GraftState` subclass. Mutate via `.value = ...`. |
+
+### 2. UI Slots & Selective Rebuilds
+
+| API | Type | What It's Used For |
+|---|:---:|---|
+| **`graft((s) => Widget)`** | `callable` | Callable syntax shortcut on `Graft` instances. Creates an isolated leaf slot that rebuilds *only* when properties accessed inside its builder change. |
+| **`graft.slot((s) => Widget)`** | `method` | Explicit isolated single-child slot. Traps rebuilds strictly inside its element boundary; parent layouts never rebuild. |
+| **`graft.slots(...)`** | `method` | Multi-child layout engine. Insulates children inside layouts (`Column`, `Row`, `Wrap`, etc.) using the `slots` sentinel. Only modified children rebuild; static children remain untouched. |
+| **`graft.builder<T>(...)`** | `method` | Virtualized list builder. Diffs collections and updates only items whose fields have actually changed. |
+| **`graft.item<T>(...)`** | `method` | Isolated single-item slot within a custom list or collection. |
+| **`graft.compute<T>(...)`** | `method` | Synchronously derives and caches computed state values from the controller, rebuilding only when the derived output changes. |
+| **`GraftBoundary`** | `widget` | Rebuild firewall for multi-controller widgets. Automatically discovers and subscribes to all `Graft` instances accessed inside its builder. |
+| **`slots`** | `const` | Sentinel identifier passed to layout widgets in `graft.slots(layout: Column(children: slots))` to designate slot insertion positions. |
+| **`GraftEquivalent`** | `interface` | Interface for custom widgets to implement structural equality checks, allowing the slot engine to bypass unnecessary widget instantiation. |
+
+### 3. Context Lifecycle & Navigation
+
+| API | Type | What It's Used For |
+|---|:---:|---|
+| **`context.use<T>([factory, key])`** | `extension` | Resolves or borrows an ambient `Graft` across navigation flows (`Navigator`, dialogs, bottom sheets). Auto-promotes to permanent singleton at app root (`route == null`), and auto-disposes when the owning screen pops. |
+| **`context.create<T>([factory, key])`** | `extension` | Force-creates a brand-new, private `Graft` controller owned exclusively by the current screen, bypassing the ambient borrowing pool. |
+
+### 4. Dependency Injection & Scopes
+
+| API | Type | What It's Used For |
+|---|:---:|---|
+| **`bind<T>(factory)`** | `function` | Registers a 100% lazy dependency in the DI container. Stores a function pointer; instantiation occurs strictly on first access via `use<T>()`. |
+| **`use<T>()`** | `function` | Synchronously resolves a dependency from the DI container with $< 0.8\text{ ns}$ hot lookup speed. |
+| **`scope(GraftScope, () => ...)`** | `function` | Groups related dependency registrations under a type-safe enum scope. |
+| **`GraftScope`** | `mixin` | Applied to user-defined enums (`enum AppScope with GraftScope { auth, cart }`). Provides `.drop()` (reverse topological disposal) and `.invalidateDry()`. |
+| **`GraftService`** | `class` | Base class for injectable application services with automated DI lifecycle hooks (`onInit()` and `onDispose()`). |
+
+### 5. Frame-0 Persistence & Models
+
+| API | Type | What It's Used For |
+|---|:---:|---|
+| **`super.dry(State.new, ...)`** | `constructor` | Constructor on `Graft` enabling Frame-0 persistence. Synchronously restores state from L1 RAM cache before the first frame mounts, with debounced (300ms) background disk writes. |
+| **`GraftDryConfig`** | `interface` | Pure storage contract defining 5 storage I/O methods (`readAllSync`, `read`, `write`, `delete`, `close`). Pass to `Graft.config(dryConfig: ...)` to back persistence with any engine (e.g. SQLite, SharedPreferences). |
+| **`GraftModel`** | `class` | Base class for nested domain sub-models inside a `GraftState`. Supports `propsOf(...)` diffing and binary serialization. |
+
+### 6. App Configuration & Telemetry
+
+| API | Type | What It's Used For |
+|---|:---:|---|
+| **`Graft.config(...)`** | `static method` | Centralized startup configuration. Configures `dryConfig`, `observer`, initial `di: () => ...` bindings, and direct logging flags (`debugLogging`, `logChanges`, `logRebuilds`, `logState`, `logDI`, `logDry`, `logBindings`, `logErrors`, `enableTimeline`). |
+| **`GraftObserver`** | `class` | Base observer class for monitoring global lifecycle events (`onCreate`, `onDispose`), state mutations (`onStateChanged`), and dispatched errors (`onError`). |
+
+### 7. Declarative Testing Suite (`package:graft/testing.dart`)
+
+For hermetic unit and widget testing, import `package:graft/testing.dart`:
+
+| API | Type | What It's Used For |
+|---|:---:|---|
+| **`graftTest(...)`** | `function` | Declarative controller test runner with structured phases (`overrides`, `build`, `setUp`, `seed`, `act`, `wait`, `expect`, `errors`, `verify`). |
+| **`GraftTesting.resetAll()`** | `static method` | 1-line hermetic isolation for test `setUp()`. Wipes all active DI scopes, ambient route caches, persistence queues, and observers. |
+| **`GraftTesting.override<T>(mock)`** | `static method` | Injects mock DI dependencies into the ambient container. |
+| **`GraftTesting.overrideController<G>(mock)`** | `static method` | Pre-seeds mock controllers for `context.use<G>()` in widget tests with zero widget tree wrappers. |
+| **`GraftTesting.flushPersistence()`** | `static method` | Synchronously flushes debounced Frame-0 persistence disk writes without wall-clock delays. |
+| **`GraftTesting.recordChanges(graft, fn)`** | `static method` | Captures controller transition history and dirty bitmasks (`change.isDirty(i)`). |
+| **`MemoryStateConfig`** | `class` | In-memory `GraftDryConfig` driver for testing Frame-0 persistence with zero disk I/O. |
+
+---
+
+## 🛡️ Official Linter (`graft_lint`)
+
+Graft provides an official analyzer plugin, **[`graft_lint`](https://pub.dev/packages/graft_lint)**, that runs directly in your IDE to catch architectural anti-patterns, guarantee slot safety, and enforce zero-allocation 64-bit diffing contracts in real time.
+
+### Rules Included:
+
+| Rule | Severity | What It Catches & Enforces |
+|---|:---:|---|
+| **`avoid_nested_graft_slot`** | 🔴 `error` | Flags illegal nesting of slots (`slot`, `slots`, `builder`) within the same controller, preventing duplicate evaluation overhead. |
+| **`prefer_props_in_graft_state`** | 🔴 `error` | Enforces overriding `GraftProps get props => propsOf(...)` in `GraftState` and `GraftModel` classes for hardware CPU bitmask diffing. |
+| **`require_dry_config`** | 🔴 `error` | Warns when a controller declares `super.dry(...)` persistence but `Graft.config()` is missing a configured `dryConfig`. |
+| **`require_dry_contracts`** | 🔴 `error` | Enforces mandatory `schemaVersion`, constructor hydration defaults, and `factory` tear-offs for persistent Frame-0 states. |
+
+### Setup:
+
+```yaml
+# pubspec.yaml
+dev_dependencies:
+  custom_lint: ^0.8.1
+  graft_lint: ^1.0.0-alpha.10
+
+# analysis_options.yaml
+analyzer:
+  plugins:
+    - custom_lint
+```
+
+---
+
 ## When to Use Graft
 
 ### Graft is a great fit for:
@@ -315,7 +430,7 @@ class ProfileGraft extends Graft<ProfileState> {
 
 Graft is currently in **public alpha (`1.0.0-alpha.10`)**.
 
-The core reactive engine, slot diffing, ambient route tracking, dependency injection, and persistence systems are fully implemented and verified against **313 tests** covering unit, widget, and stress scenarios.
+The core reactive engine, slot diffing, ambient route tracking, dependency injection, and persistence systems are fully implemented and verified against **315 tests** covering unit, widget, and stress scenarios.
 
 We actively welcome community feedback, issue reports, and suggestions on [GitHub Issues](https://github.com/kmmuzahid/graft/issues) as we progress toward a stable 1.0 release.
 
@@ -329,7 +444,8 @@ For in-depth architectural guides, benchmarks, and API documentation, explore th
 - 🏛️ **[ARCHITECTURE.md](https://github.com/kmmuzahid/graft/blob/main/ARCHITECTURE.md):** Deep technical dive into the runtime architecture, memory model, bitmask diffing, and dependency graph.
 - 💾 **[GRAFT_GUIDE.md](https://github.com/kmmuzahid/graft/blob/main/GRAFT_GUIDE.md):** Comprehensive guide to state management, UI slots, and Frame-0 persistence.
 - 💉 **[DI_GUIDE.md](https://github.com/kmmuzahid/graft/blob/main/DI_GUIDE.md):** Guide to the dependency injection engine, enum scoping, reverse DAG teardown, and route leasing.
-- 🧪 **[GRAFT_TESTING_GUIED.md](https://github.com/kmmuzahid/graft/blob/main/GRAFT_TESTING_GUIED.md):** Complete guide to testing Graft apps: declarative `graftTest` unit tests, mock DI overrides, widget test controller injection, and transition verification.
+- 🧪 **[GRAFT_TESTING_GUIDE.md](https://github.com/kmmuzahid/graft/blob/main/GRAFT_TESTING_GUIDE.md):** Complete guide to testing Graft apps: declarative `graftTest` unit tests, mock DI overrides, widget test controller injection, and transition verification.
+- 🛡️ **[packages/graft_lint](https://github.com/kmmuzahid/graft/tree/main/packages/graft_lint):** Official analyzer plugin and linter rules enforcing bitmask contracts, slot safety, and dry persistence at edit time.
 - 📊 **[BENCHMARK_REPORT.md](https://github.com/kmmuzahid/graft/blob/main/BENCHMARK_REPORT.md):** Empirical benchmark comparisons and methodology across native and web platforms.
 - 📋 **[TEST_REPORT.md](https://github.com/kmmuzahid/graft/blob/main/TEST_REPORT.md):** Full test suite verification matrix across all test files.
 

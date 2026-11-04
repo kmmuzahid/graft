@@ -2,6 +2,15 @@
 
 All notable changes to `graft_lint` will be documented in this file.
 
+## 1.0.0-alpha.10
+
+* **Version Alignment with Graft Core (`1.0.0-alpha.10`)**:
+  * Synchronized versioning directly with the `graft` core package.
+* **New Lint Rule (`RequireDryConfigRule`)**:
+  * Added `require_dry_config` rule to flag `super.dry(...)` controller usage when `Graft.config()` is missing a configured `dryConfig`.
+* **Removed Rule (`require_graft_route_observer`)**:
+  * Removed `require_graft_route_observer`. Route tracking is strictly internal engine plumbing; developers no longer need to configure route observers in `MaterialApp`.
+
 ## 1.0.0-alpha.5
 
 * **Version Alignment with Graft Core (`1.0.0-alpha.5`)**:

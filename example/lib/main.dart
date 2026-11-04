@@ -460,8 +460,6 @@ class GraftExampleApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      // Attach navigator observer for route stack inheritance & auto-disposal:
-      navigatorObservers: [graftRouteObserver],
       home: const HomeScreen(),
     );
   }

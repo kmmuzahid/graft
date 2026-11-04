@@ -4,7 +4,7 @@ library;
 import 'dart:typed_data';
 import 'dry_config.dart';
 
-/// Pure in-memory implementation of [GraftStateConfig].
+/// Pure in-memory implementation of [GraftDryConfig].
 ///
 /// Ideal for headless unit tests, fast benchmarks, and environments
 /// where disk file I/O is disabled or unnecessary.

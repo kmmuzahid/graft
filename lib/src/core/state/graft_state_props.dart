@@ -114,6 +114,7 @@ mixin GraftStateProps on GraftStateStorage {
   }
 
   /// Declares domain properties from an [Iterable] or large collection (>16 properties).
+  @internal
   @protected
   @nonVirtual
   @pragma('vm:prefer-inline')

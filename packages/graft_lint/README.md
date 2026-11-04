@@ -17,7 +17,7 @@ The official analyzer plugin and lint rules for **[Graft](https://pub.dev/packag
 |---|:---:|:---:|---|
 | [`avoid_nested_graft_slot`](#1-avoid_nested_graft_slot) | **Error** | 🔴 `error` | Flags illegal nesting of slots (`slot`, `slots`, `async`, `builder`) within the same `Graft` instance. |
 | [`prefer_props_in_graft_state`](#2-prefer_props_in_graft_state) | **Info** | 🔴 `error` | Enforces overriding `GraftProps get props => propsOf(...)` in `GraftState` and `GraftModel` for CPU register diffing. |
-| [`require_graft_route_observer`](#3-require_graft_route_observer) | **Info** | 🔴 `error` | Ensures `graftRouteObserver` is registered in `MaterialApp` to prevent controller memory leaks. |
+| [`require_dry_config`](#3-require_dry_config) | **Info** | 🔴 `error` | Flags `super.dry(...)` usage when `Graft.config()` has no `dryConfig` configured. |
 | [`require_dry_contracts`](#4-require_dry_contracts) | **Error** | 🔴 `error` | Enforces mandatory `schemaVersion`, constructor hydration defaults, and `factory` tear-offs for Frame-0 persistent states (`Graft.dry`). |
 
 ---
@@ -143,23 +143,32 @@ class UserState extends GraftState {
 
 ---
 
-### 3. `require_graft_route_observer`
+### 3. `require_dry_config`
 * **Default Severity:** `Info` (Promotable to `Error` via `analysis_options.yaml`)
-* **Rationale:** Graft's zero-setup route injection (`context.use<T>()`) relies on route navigation hooks to track screen lifecycles. Registering the route observer ensures route-scoped controllers cleanly self-dispose when their owning screen pops from the Navigator stack.
+* **Rationale:** When a controller declares persistent Frame-0 state via `super.dry(...)`, an ambient `dryConfig` must be supplied to `Graft.config(dryConfig: ...)` so state can be saved permanently across application restarts.
 
 #### ❌ Bad
 ```dart
-MaterialApp(
-  home: const HomeScreen(), // 🔴 require_graft_route_observer warning
-);
+// main.dart:
+Graft.config(); // missing dryConfig!
+
+// Controller:
+class CounterGraft extends Graft<CounterState> {
+  CounterGraft() : super.dry(CounterState.new); // 🔴 require_dry_config warning
+}
 ```
 
 #### ✅ Good
 ```dart
-MaterialApp(
-  navigatorObservers: [GraftRouteTracker.observer], // or GraftRouteObserver()
-  home: const HomeScreen(),
+// main.dart:
+Graft.config(
+  dryConfig: FileDryConfig(directory: appDir),
 );
+
+// Controller:
+class CounterGraft extends Graft<CounterState> {
+  CounterGraft() : super.dry(CounterState.new); // ✅ Safely persisted!
+}
 ```
 
 ---

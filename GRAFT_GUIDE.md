@@ -87,7 +87,7 @@ class UserState extends GraftState {
 > ### 🧠 State vs. Controller Lifecycle: `GraftState` Has No `init()`
 > - **`GraftState` (Domain Data):** Holds data fields and `props`. It has **no `init()` or `onInit()` method**. Initial values are assigned directly at declaration (`String name = 'Alice';`) or via standard Dart constructor formals (`UserState({this.name = 'Alice'});`).
 > - **`Graft` (Controller):** Owns UI coordination and lifecycle hooks (`onInit()` & `onDispose()`). When `context.use(...)` or `context.create(...)` resolves or creates a controller, Frame-0 hydration completes synchronously *before* `onInit()` runs.
-> - **`GraftStateConfig` (Storage Contract):** Defines 5 pure storage I/O methods. It has **no `init()` method**; dependencies (database handles, directories) are passed into its constructor.
+> - **`GraftDryConfig` (Storage Contract):** Defines 5 pure storage I/O methods. It has **no `init()` method**; dependencies (database handles, directories) are passed into its constructor.
 
 ### Mutating State In-Place
 Use standard Dart cascade syntax:
@@ -551,16 +551,16 @@ When using `GraftDebugObserver`, Frame-0 dry state creation, updates, hydrations
 
 > [!IMPORTANT]
 > ### ⚠️ Permanent Disk Persistence Requires Storage Configuration
-> By default, if unconfigured, Graft operates purely in RAM using an internal `MemoryStateConfig()`. While state changes remain reactive during the current session, **state will NOT survive app restarts unless a permanent storage abstraction is configured**.
+> By default, if unconfigured, Graft operates purely in RAM using an internal fallback. While state changes remain reactive during the current session, **state will NOT survive app restarts unless a permanent storage abstraction is configured via `Graft.config(dryConfig: ...)`**.
 >
-> To persist state permanently to disk or a database across app restarts, configure your custom storage driver in your `main()` function via `Graft.config(persistence: ...)`.
+> If a controller uses `super.dry(...)` without a configured `dryConfig`, Graft outputs a deduplicated console warning (`[⚠️ GRAFT DRY WARNING]`) to inform the developer.
 
-Graft provides an extensible storage contract (`GraftStateConfig`) allowing teams to connect any storage engine (SharedPreferences, Encrypted Storage, SQLite, or Cloud Sync) directly through `Graft.config()`.
+Graft provides an extensible storage contract (`GraftDryConfig`) allowing teams to connect any storage engine (SharedPreferences, Encrypted Storage, SQLite, or Cloud Sync) directly through `Graft.config()`.
 
 ---
 
-### 2. Implementing a Custom Storage Abstraction (`GraftStateConfig`)
-`GraftStateConfig` defines 5 contract methods (`readAllSync`, `read`, `write`, `delete`, and `close`). It does **not** mandate any `init()` method—you simply pass any pre-opened storage instance (such as `SharedPreferences`, encrypted storage, or native box) directly into your class constructor:
+### 2. Implementing a Custom Storage Abstraction (`GraftDryConfig`)
+`GraftDryConfig` defines 5 contract methods (`readAllSync`, `read`, `write`, `delete`, and `close`). It does **not** mandate any `init()` method—you simply pass any pre-opened storage instance (such as `SharedPreferences`, encrypted storage, or native box) directly into your class constructor:
 
 ```dart
 import 'dart:convert';
@@ -568,9 +568,9 @@ import 'dart:typed_data';
 import 'package:graft/graft.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class SharedPrefsStateConfig implements GraftStateConfig {
+class SharedPrefsDryConfig implements GraftDryConfig {
   final SharedPreferences prefs;
-  SharedPrefsStateConfig(this.prefs);
+  SharedPrefsDryConfig(this.prefs);
 
   static const String _prefix = 'graft_';
 
@@ -619,7 +619,7 @@ void main() async {
 
   // Configure SharedPreferences persistence via Graft.config:
   final prefs = await SharedPreferences.getInstance();
-  Graft.config(persistence: SharedPrefsStateConfig(prefs));
+  Graft.config(dryConfig: SharedPrefsDryConfig(prefs));
 
   runApp(const MyApp());
 }
@@ -628,15 +628,18 @@ void main() async {
 ---
 
 ### 2. In-Memory Driver for Testing (`MemoryStateConfig`)
-For unit tests, widget tests, and CI pipelines, use `MemoryStateConfig` for 100% in-memory isolation without disk I/O:
+For unit tests, widget tests, and CI pipelines, import `package:graft/testing.dart` and use `MemoryStateConfig` for 100% in-memory isolation without disk I/O:
 ```dart
+import 'package:graft/graft.dart';
+import 'package:graft/testing.dart';
+
 void main() {
   setUp(() {
-    Graft.config(persistence: MemoryStateConfig());
+    Graft.config(dryConfig: MemoryStateConfig());
   });
 
   tearDown(() {
-    GraftDI.reset();
+    GraftTesting.resetAll();
   });
 
   test('Frame-0 dry persistence unit test', () {

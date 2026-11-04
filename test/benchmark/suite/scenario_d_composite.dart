@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graft/graft.dart';
+import 'package:graft/testing.dart';
 import 'package:flutter_bloc/flutter_bloc.dart' as bloc_pkg;
 import 'package:signals_flutter/signals_flutter.dart' as signals_pkg;
 import 'benchmark_models.dart';
