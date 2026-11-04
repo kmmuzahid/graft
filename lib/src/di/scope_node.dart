@@ -1,10 +1,8 @@
 /// Flat array resolution, in-degree reverse DAG tracking, and teardown for a scope.
 library;
 
-import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../core/graft.dart';
-import 'async_binding.dart';
 import 'graft_service.dart';
 import 'scope_tier.dart';
 import 'type_id.dart';
@@ -26,7 +24,6 @@ final class ScopeNode {
 
   final Map<int, Type> _registeredTypes = {};
   final Map<int, Object? Function()> _factories = {};
-  final Map<int, AsyncBinding<Object?>> _asyncBindings = {};
   final List<Object?> _instances = [];
   final Set<int> _singletons = {};
   final Set<int> _preserved = {};
@@ -48,12 +45,6 @@ final class ScopeNode {
         types.add(_registeredTypes[i] ?? inst.runtimeType);
       }
     }
-    for (final e in _asyncBindings.entries) {
-      final inst = e.value.resolvedInstance;
-      if (inst != null) {
-        types.add(_registeredTypes[e.key] ?? inst.runtimeType);
-      }
-    }
     return types;
   }
 
@@ -72,30 +63,9 @@ final class ScopeNode {
     );
   }
 
-  void bindAsync<T>(Future<T> Function() factory,
-      {bool singleton = true, bool preserved = false, bool eager = false}) {
-    final id = TypeId.of<T>();
-    _registeredTypes[id] = T;
-    final binding = AsyncBinding<Object?>(factory,
-        singleton: singleton, preserved: preserved);
-    _asyncBindings[id] = binding;
-    if (singleton) _singletons.add(id);
-    if (preserved) _preserved.add(id);
-    Graft.observer?.onDependencyBound(
-      T,
-      scopeId: scopeId,
-      singleton: singleton,
-      preserved: preserved,
-      isAsync: true,
-    );
-    if (eager) {
-      binding.resolve();
-    }
-  }
-
   bool isRegistered<T>() {
     final id = TypeId.of<T>();
-    if (_factories.containsKey(id) || _asyncBindings.containsKey(id)) {
+    if (_factories.containsKey(id)) {
       return true;
     }
     return parent?.isRegistered<T>() ?? false;
@@ -123,14 +93,6 @@ final class ScopeNode {
       return _instantiate<T>(id);
     }
 
-    if (_asyncBindings.containsKey(id)) {
-      final binding = _asyncBindings[id]!;
-      if (binding.isCompleted) return binding.resolvedInstance as T;
-      throw StateError(
-        'Graft DI: Type $T was registered with bindAsync and is not completed. '
-        'Use "await useAsync<$T>()" on Frame 0.',
-      );
-    }
     if (parent != null) return parent!.resolve<T>();
     throw StateError(
         'Graft DI: Type $T is not registered in active scope hierarchy.');

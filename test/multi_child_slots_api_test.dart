@@ -66,7 +66,9 @@ void main() {
       expect(slotTable[4].rebuildCount, 0);
 
       // Mutate ONLY name
-      userGraft.mutate((s) => s.name = 'Bob');
+      userGraft.state
+        ..name = 'Bob'
+        ..update();
       await tester.pump();
 
       expect(find.text('Bob'), findsOneWidget);
@@ -82,7 +84,9 @@ void main() {
           reason: 'Untouched sibling slot 4 must have 0 rebuilds');
 
       // Mutate ONLY email
-      userGraft.mutate((s) => s.email = 'bob@example.com');
+      userGraft.state
+        ..email = 'bob@example.com'
+        ..update();
       await tester.pump();
 
       expect(find.text('Bob'), findsOneWidget);
@@ -96,7 +100,9 @@ void main() {
           reason: 'Untouched sibling slot 4 must have 0 rebuilds');
 
       // Mutate ONLY phone
-      userGraft.mutate((s) => s.phone = '987-654-3210');
+      userGraft.state
+        ..phone = '987-654-3210'
+        ..update();
       await tester.pump();
 
       expect(find.text('987-654-3210'), findsOneWidget);
@@ -182,7 +188,9 @@ void main() {
       expect(find.text('Dana'), findsOneWidget);
       expect(find.text('Footer'), findsOneWidget);
 
-      userGraft.mutate((s) => s.name = 'Dana Updated');
+      userGraft.state
+        ..name = 'Dana Updated'
+        ..update();
       await tester.pump();
 
       expect(find.text('Dana Updated'), findsOneWidget);

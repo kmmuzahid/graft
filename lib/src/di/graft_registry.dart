@@ -129,7 +129,7 @@ class GraftRegistry {
   ///   GraftRegistry.reset();
   /// });
   /// ```
-  @visibleForTesting
+  @internal
   static void reset() {
     _factories.clear();
     for (final singleton in _singletons.values) {

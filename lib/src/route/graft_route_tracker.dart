@@ -141,6 +141,6 @@ class GraftRouteTracker {
   @visibleForTesting
   static bool hasOwner(Graft graft) => _owners.containsKey(graft);
 
-  @visibleForTesting
+  @internal
   static void reset() => _trackerReset();
 }

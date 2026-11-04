@@ -44,13 +44,7 @@ extension ScopeTeardown on ScopeNode {
       _instances[i] = null;
     }
 
-    for (final binding in _asyncBindings.values) {
-      _teardownInstance(binding.resolvedInstance);
-      binding.reset();
-    }
-
     _factories.clear();
-    _asyncBindings.clear();
     _singletons.clear();
     _instances.clear();
     _dependents.clear();

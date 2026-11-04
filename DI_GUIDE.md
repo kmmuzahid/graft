@@ -7,8 +7,8 @@
 Graft includes a specialized, high-performance Dependency Injection engine engineered specifically for Flutter:
 - **Sub-Nanosecond Lookups:** Monotonic 32-bit integer indexing (`TypeId.of<T>()`) eliminates string hashing and runtime reflection ($\le 12\text{ ns}$ cold lookup, $< 0.8\text{ ns}$ hot lookup).
 - **In-Degree Topological Reverse DAG Teardown:** Dependent consumers are guaranteed to be disposed **before** their underlying dependencies, preventing dangling pointer crashes and connection leaks.
-- **Self-Healing Non-Blocking Async Gates:** `bindAsync<T>()` and `useAsync<T>()` allow lazy database, network, and storage services to initialize in the background without blocking application startup on Frame 0 or forcing developers to write boilerplate method wrappers.
-- **Developer Enum Scopes:** Group dependencies under type-safe enums (`enum AppScope { auth, checkout }`) with declarative `scope(...)` blocks and flow-wide `AppScope.checkout.drop()`.
+- **100% Lazy Universal Resolution:** All dependencies are registered synchronously via `bind<T>()` storing function pointers, and instantiated only upon first `use<T>()`. Asynchronous services encapsulate their own internal `Future` cleanly without DI container complexity.
+- **Developer Enum Scopes:** Group dependencies under type-safe enums (`enum AppScope with GraftScope { auth, checkout }`) with declarative `scope(...)` blocks, flow-wide `AppScope.checkout.drop()`, and `AppScope.checkout.invalidateDry()`.
 - **Route Leasing:** Automatically bind services to navigation routes and release them when the route pops.
 
 > [!TIP]
@@ -18,11 +18,11 @@ Graft includes a specialized, high-performance Dependency Injection engine engin
 
 ## 📖 Table of Contents
 1. [Core DI Principles & Performance](#core-di-principles--performance)
-2. [Registering Dependencies (`bind` & `bindAsync`)](#registering-dependencies-bind--bindasync)
-3. [Resolving Dependencies (`use` & `useAsync`)](#resolving-dependencies-use--useasync)
+2. [Registering Dependencies (`bind`)](#registering-dependencies-bind)
+3. [Resolving Dependencies (`use`)](#resolving-dependencies-use)
 4. [Developer Enum Scopes & Flow Management](#developer-enum-scopes--flow-management)
 5. [Route Leasing & Automatic Route Disposal](#route-leasing--automatic-route-disposal)
-6. [Non-Blocking Async Database & Network Services](#non-blocking-async-database--network-services)
+6. [Asynchronous Services & Connection Management](#asynchronous-services--connection-management)
 7. [In-Degree Reverse DAG Teardown](#in-degree-reverse-dag-teardown)
 8. [Testing, Zone Mock Overrides & Real Database Verification](#testing-zone-mock-overrides--real-database-verification)
 9. [Complete Real-World Example (Production Architecture)](#complete-real-world-example-production-architecture)
@@ -39,16 +39,16 @@ Graft includes a specialized, high-performance Dependency Injection engine engin
 | **Cold Lookup Latency** | **$\le 12\text{ ns}$** | $\sim 150\text{ ns} - 400\text{ ns}$ |
 | **Teardown Ordering** | Topological Reverse DAG | LIFO / Arbitrary Unordered |
 | **Circular Dependency Check** | Automatic cycle detection with DAG path | Stack Overflow Crash / None |
-| **Async Frame-0 Protection** | Automated non-blocking gate (`useAsync`) | Manual `await` in `main()` or custom wrappers |
+| **Resolution Model** | 100% Lazy function-pointer execution | Eager or ad-hoc wrappers |
 | **Route Stack Integration** | Automatic route leasing via Ref-Counted Ambient Engine | Manual registration & manual unregister |
 
 ---
 
-## Registering Dependencies (`bind` & `bindAsync`)
+## Registering Dependencies (`bind`)
 
-Graft provides two primary registration functions: `bind<T>()` for synchronous factories, and `bindAsync<T>()` for asynchronous operations.
+Graft provides a universal registration function: `bind<T>()`. Registration is 100% lazy by default: the factory closure is stored as a lightweight function pointer and executed only when `use<T>()` is called.
 
-### Synchronous Registration (`bind`)
+### Synchronous & Lazy Registration
 ```dart
 // Singleton by default (cached in active scope, instantiated on first access)
 bind<ApiClient>(() => ApiClient(baseUrl: 'https://api.example.com'));
@@ -60,49 +60,45 @@ bind<TransientHelper>(() => TransientHelper(), singleton: false);
 bind<AuthTokenManager>(() => AuthTokenManager(), preserved: true);
 ```
 
-### Asynchronous Registration (`bindAsync`)
+### Asynchronous Services
+In Graft, asynchronous services encapsulate their initialization internally (e.g. database opening, secure storage decryption) using standard Dart `Future` patterns:
 ```dart
-// Lazy by default: starts on first useAsync<Database>() call
-bindAsync<Database>(() async {
-  return await openDatabase('app.db', version: 1);
-});
+class DatabaseService extends GraftService {
+  late final Future<Database> db = _initDb();
 
-// Eager: starts immediately in the background without blocking startup
-bindAsync<SharedPreferences>(() async {
-  return await SharedPreferences.getInstance();
-}, eager: true);
+  Future<Database> _initDb() async {
+    return await openDatabase('app.db', version: 1);
+  }
+}
+
+// Bind service synchronously (100% lazy):
+bind<DatabaseService>(() => DatabaseService());
 ```
 
 ---
 
-## Resolving Dependencies (`use` & `useAsync`)
+## Resolving Dependencies (`use`)
 
-### Synchronous Resolution (`use<T>()`)
 Call `use<T>()` from anywhere in your codebase or Flutter build methods:
 ```dart
-// Ambient global resolution
+// Ambient global resolution (< 0.8 ns hot lookup)
 final api = use<ApiClient>();
+
+// Asynchronous service access (direct and type-safe):
+final db = await use<DatabaseService>().db;
 
 // In Flutter BuildContext:
 final userGraft = context.use(UserGraft.new);
-```
-
-### Asynchronous Resolution (`useAsync<T>()`)
-Call `useAsync<T>()` to automatically await in-flight asynchronous initialization on Frame 0 without blocking:
-```dart
-// Frame 0: awaits initialization if in-flight, returns immediately if completed
-final db = await useAsync<Database>();
-final results = await db.query('SELECT * FROM users');
 ```
 
 ---
 
 ## Developer Enum Scopes & Flow Management
 
-Group related services into type-safe scope blocks bound to your own domain `enum`:
+Group related services into type-safe scope blocks bound to your own domain `enum` mixed with `GraftScope`:
 
 ```dart
-enum AppScope { auth, checkout, profile }
+enum AppScope with GraftScope { auth, checkout, profile }
 
 // Declare cohesive scope blocks:
 scope(AppScope.checkout, () {
@@ -116,6 +112,15 @@ When an order is submitted or cancelled, drop the entire scope and dispose all s
 ```dart
 void onOrderCompleted() {
   AppScope.checkout.drop(); // Disposes CheckoutCoordinator THEN CartRepository!
+}
+```
+
+### Purging Scope-Prefixed Dry Persistence
+To invalidate all Frame-0 dry persistence data associated with a scope:
+```dart
+void onUserLoggedOut() {
+  AppScope.auth.drop();           // Disposes in-memory services
+  AppScope.auth.invalidateDry();   // Purges L1 RAM and disk persistence
 }
 ```
 
@@ -200,30 +205,30 @@ flowchart TD
 
 ---
 
-## Non-Blocking Async Database & Network Services
+## Asynchronous Services & Connection Management
 
-Developers write 100% standard Dart classes with zero wrappers:
+Developers write 100% standard Dart classes where asynchronous connections or initializations are safely encapsulated inside standard Dart `Future` variables:
 
 ```dart
-class AppDatabase {
-  final Database _db;
-  AppDatabase(this._db);
+class AppDatabase extends GraftService {
+  late final Future<Database> _dbFuture = _init();
 
-  static Future<AppDatabase> open() async {
-    final rawDb = await openDatabase('app.db');
-    return AppDatabase(rawDb);
+  Future<Database> _init() async {
+    return await openDatabase('app.db');
   }
 
-  Future<List<Map<String, Object?>>> queryOrders() => _db.query('orders');
+  Future<List<Map<String, Object?>>> queryOrders() async {
+    final db = await _dbFuture;
+    return db.query('orders');
+  }
 }
 
-// In setup / main:
-bindAsync<AppDatabase>(() => AppDatabase.open());
+// In setup / main (100% synchronous registration, 100% lazy instantiation):
+bind<AppDatabase>(() => AppDatabase());
 
 // In your controller / screen:
 Future<void> loadOrders() async {
-  final db = await useAsync<AppDatabase>(); // Frame 0 safe!
-  final orders = await db.queryOrders();
+  final orders = await use<AppDatabase>().queryOrders();
 }
 ```
 
@@ -306,19 +311,11 @@ import 'package:flutter/material.dart';
 import 'package:graft/graft.dart';
 
 // 1. Type-safe scope enum for feature flows:
-enum AppScope { auth, checkout }
+enum AppScope with GraftScope { auth, checkout }
 
-// 2. Underlying asynchronous database service:
+// 2. Underlying database service:
 class DatabaseService extends GraftService {
   bool isClosed = false;
-
-  DatabaseService._();
-
-  static Future<DatabaseService> open() async {
-    // Simulates opening SQLite / native local database asynchronously:
-    await Future.delayed(const Duration(milliseconds: 50));
-    return DatabaseService._();
-  }
 
   void execute(String sql) {
     if (isClosed) throw StateError('Cannot operate on closed database!');
@@ -372,8 +369,8 @@ Register dependencies in `main.dart` or during app bootstrap. Notice how `Checko
 void main() {
   Graft.config(
     di: () {
-      // Global Singleton: Database starts asynchronously without blocking startup Frame 0:
-      bindAsync<DatabaseService>(() => DatabaseService.open());
+      // Global Singleton: Database instantiated 100% lazily on first use:
+      bind<DatabaseService>(DatabaseService.new);
 
       // Scoped Services: Grouped strictly within AppScope.checkout:
       scope(AppScope.checkout, () {

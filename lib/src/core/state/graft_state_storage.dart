@@ -10,7 +10,6 @@ abstract class GraftStateStorage {
   Object? _singleBaseline = _undefined;
   bool _baselineNeedsSync = false;
   int _prevListLength = -1;
-  bool _hasAsyncProps = false;
   bool _isDryEnabled = false;
   String? _customDryKey;
 

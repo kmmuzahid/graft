@@ -9,6 +9,9 @@ ScopeNode _currentScope = GraftDI.root;
 
 /// Registers a synchronous dependency factory into the active scope.
 ///
+/// Execution is 100% lazy by default: the [factory] is only executed when
+/// the dependency is first accessed via `use<T>()`.
+///
 /// Defaults to `singleton: true` (cached in scope, never duplicated).
 /// Set `preserved: true` to keep this binding alive across route pops.
 void bind<T>(
@@ -23,36 +26,17 @@ void bind<T>(
   );
 }
 
-/// Registers an asynchronous dependency factory into the active scope.
+/// Defines a cohesive scope block bound to a developer-defined [GraftScope] enum.
 ///
-/// Execution is non-blocking and lazy by default. Callers accessing [T]
-/// via `useAsync<T>()` on Frame 0 will automatically await initialization.
-/// Set `eager: true` to trigger initialization immediately in background.
-void bindAsync<T>(
-  Future<T> Function() factory, {
-  bool singleton = true,
-  bool preserved = false,
-  bool eager = false,
-}) {
-  _currentScope.bindAsync<T>(
-    factory,
-    singleton: singleton,
-    preserved: preserved,
-    eager: eager,
-  );
-}
-
-/// Defines a cohesive scope block bound to a developer-defined [Enum].
-///
-/// Any [bind] or [bindAsync] calls inside [block] are registered into
-/// this scope. If `preserved: true` is set, the scope survives route pops.
+/// Any [bind] calls inside [block] are registered into this scope.
+/// If `preserved: true` is set, the scope survives route pops.
 void scope(
-  Enum scopeEnum,
+  GraftScope scope,
   void Function() block, {
   bool preserved = false,
 }) {
   final previous = _currentScope;
-  _currentScope = GraftDI.getScope(scopeEnum, preserved: preserved);
+  _currentScope = GraftDI.getScope(scope, preserved: preserved);
   try {
     block();
   } finally {
@@ -60,8 +44,19 @@ void scope(
   }
 }
 
-/// Type-safe operational actions on developer-defined scope enums.
-extension GraftScopeEnumActions on Enum {
+/// Mixin for developer-defined scope enums, granting direct access to [drop] and [invalidateDry].
+///
+/// ### Example:
+/// ```dart
+/// enum AppScope with GraftScope {
+///   auth,
+///   checkout,
+/// }
+///
+/// AppScope.checkout.drop();
+/// AppScope.checkout.invalidateDry();
+/// ```
+mixin GraftScope on Enum {
   /// Manually drops this entire scope and disposes all members in reverse DAG order.
   void drop() => GraftDI.dropScope(this);
 

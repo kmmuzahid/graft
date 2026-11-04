@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graft/graft.dart';
+import 'package:graft/testing.dart';
+import 'package:graft/src/core/graft_observer.dart';
 import 'package:graft/src/di/graft_registry.dart';
 import 'package:graft/src/route/graft_route_tracker.dart';
 import 'package:graft/src/persistence/ambient_locator.dart';
@@ -129,8 +131,8 @@ void main() {
       final graft = CounterGraft();
 
       // listenable
-      expect(graft.listenable, isA<ValueListenable<CounterState>>());
-      expect(graft.listenable.value.count, 0);
+      expect(graft, isA<Listenable>());
+      expect(graft.state.count, 0);
 
       // state update
       graft.setCount(10);
@@ -186,7 +188,7 @@ void main() {
 
       scope(TestScope.auth, () {
         bind(CounterGraft.new);
-        bindAsync(() async => 'async_val');
+        bind(() => 'async_val');
       });
 
       expect(scopeCreatedLogs, contains('${TestScope.auth} (preserved: false)'));
@@ -301,7 +303,7 @@ void main() {
   });
 }
 
-enum TestScope { auth, cart }
+enum TestScope with GraftScope { auth, cart }
 
 class AuthState extends GraftState {
   @override

@@ -150,3 +150,26 @@ void _graftDispose(Graft graft) {
   graft._receiverDirectory = null;
   Graft.observer?.onDispose(graft);
 }
+
+(S, String, bool) _initDryState<S extends GraftState>(
+    Function stateFactory, String? key) {
+  final dryKey = key ?? (Function.apply(stateFactory, const []) as S).dryKey;
+  final (state, fromCache) =
+      DryStateHook.hydrateFactoryWithStatus<S>(stateFactory, dryKey);
+  return (state, dryKey, fromCache);
+}
+
+void _graftBindInitial(Graft graft, GraftState initialState) {
+  GraftStateEngine.bind(initialState, graft);
+  graft.onInit();
+  Graft.observer?.onCreate(graft);
+}
+
+void _graftBindDry(Graft graft, String dryKey, bool fromCache, String? customKey) {
+  GraftStateEngine.setCustomDryKey(graft._state, customKey);
+  GraftStateEngine.bind(graft._state, graft);
+  DryStateHook.enableDryForState(graft._state, dryKey);
+  Graft.observer?.onDryHydrated(graft._state, key: dryKey, fromCache: fromCache);
+  graft.onInit();
+  Graft.observer?.onCreate(graft);
+}

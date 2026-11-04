@@ -3,6 +3,40 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## 1.0.0-alpha.10
+
+### 🧹 Direct Hard API Pruning, 100% Lazy Uniform DI, Listenable Interop & Encapsulated Test Suite
+
+- **Direct Hard Deletions (Zero Deprecation)**:
+  - Hard-deleted `GraftAsync<T>`, `runAsync`, `graft.async(...)`, `graft_async.dart`, and `graft_async_task.dart`. Plain Dart `async/await` and native cascades (`state..update()`) provide sufficient, idiomatic async handling without framework bloat.
+  - Hard-deleted `bindAsync<T>()`, `useAsync<T>()`, and `async_binding.dart`. The DI container is now 100% uniform and synchronous.
+  - Hard-deleted `mutate(...)`, enforcing a single, consistent in-place cascade mutation pattern (`state..field = val..update()`).
+  - Hard-deleted `graft.listenable`, `_GraftListenable`, `select(...)`, `propsOfMany(...)`, `GraftPersistenceX`, and `extension GraftScopeEnumActions on Enum`.
+- **`Graft<S> implements Listenable`**:
+  - Converted `Graft<S>` from `extends ChangeNotifier` to `implements Listenable`.
+  - Eliminates Flutter SDK `ChangeNotifier` internal listener allocation overhead per controller.
+  - Enables zero-wrapper interoperability directly with Flutter's standard `ListenableBuilder` and `AnimatedBuilder`.
+  - Relocated `invalidateDry()` directly onto `Graft<S>`.
+- **Type-Safe `mixin GraftScope on Enum`**:
+  - Replaced global `extension on Enum` with `mixin GraftScope on Enum` (`enum AppScope with GraftScope { auth, checkout }`).
+  - Provides direct access to `AppScope.x.drop()` and `AppScope.x.invalidateDry()`.
+  - Compile-time type-safe with `scope(GraftScope, ...)` and eliminates method pollution across unrelated Dart/Flutter enums.
+- **100% Lazy Uniform Dependency Injection**:
+  - All bindings registered via `bind<T>()` store lightweight function pointers and instantiate strictly on first access via `use<T>()`.
+  - Asynchronous services safely encapsulate their own internal `Future` instances (e.g. `_dbFuture`), allowing consumers to await the service's member without DI container complexity or boot crashes.
+  - Universal synchronous `use<T>()` provides $< 0.8\text{ ns}$ hot lookup.
+- **State & Props Simplification**:
+  - Introduced `propsOfCollection(Iterable<Object?> items)` for large collections and bitmask stress benchmarks (>16 properties).
+  - Preserved zero-copy handling for domain collections in `propsOf(...)` (e.g. `List<String> tags` treated as single property).
+  - Added `bool isDirty(int propertyIndex)` on `GraftChange` for ergonomic bitmask inspection.
+- **Dedicated Testing Suite (`package:graft/testing.dart`)**:
+  - Introduced `abstract final class GraftTesting` (`resetAll`, `resetDI`, `resetRoutes`, `resetPersistence`, `override`, `overrideController`, `runWithOverrides`, `flushPersistence`, `recordChanges`).
+  - Upgraded `graftTest` harness with `seed`, `overrides`, `expectChanges`, and `errors`.
+  - Marked testing reset hooks (`GraftDI.reset`, `GraftRegistry.reset`, `GraftRouteTracker.reset`, `resetAmbientPersistence`) as `@internal` to prevent accidental production leakage.
+- **Strict Verification & Quality Gates**:
+  - 100% pass rate across all 313 unit, widget, and lifecycle tests (6 new test suites added).
+  - Zero analyzer warnings across `lib/`, `test/`, and `example/` via `flutter analyze`.
+
 ## 1.0.0-alpha.9
 
 ### 🛡️ Public Surface Area Pruning, Unified `Graft.config()` & 100% Native Encapsulation

@@ -25,6 +25,7 @@ final class GraftDI {
   static final Map<Object, ScopeNode> _scopes = {};
 
   /// Retrieves or lazily creates a [ScopeNode] for [scopeId].
+  @internal
   static ScopeNode getScope(Object scopeId, {bool preserved = false}) {
     return _scopes.putIfAbsent(
       scopeId,
@@ -41,12 +42,14 @@ final class GraftDI {
   }
 
   /// Drops and disposes an existing scope by its [scopeId].
+  @internal
   static void dropScope(Object scopeId) {
     final scope = _scopes.remove(scopeId);
     scope?.drop();
   }
 
-  /// Resets all DI scopes and root dependencies (used in unit testing).
+  /// Resets all DI scopes and root dependencies (used exclusively during testing).
+  @internal
   static void reset() {
     for (final s in _scopes.values) {
       s.drop();
@@ -67,16 +70,4 @@ T use<T>() {
     return overrides[T] as T;
   }
   return GraftDI.root.resolve<T>();
-}
-
-/// Resolves an ambient asynchronous dependency of type [T].
-///
-/// If called on Frame 0 before background initialization completes,
-/// safely pauses and returns the instance the moment it is ready.
-Future<T> useAsync<T>() {
-  final overrides = Zone.current[GraftDI.testZoneKey];
-  if (overrides is Map<Type, Object?> && overrides.containsKey(T)) {
-    return Future<T>.value(overrides[T] as T);
-  }
-  return GraftDI.root.resolveAsync<T>();
 }

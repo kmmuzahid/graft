@@ -31,7 +31,7 @@ class Graft50State extends GraftState {
   void set(int i, int val) => values[i] = val;
 
   @override
-  GraftProps get props => propsOfMany(values);
+  GraftProps get props => propsOfCollection(values);
 }
 
 class Graft50Controller extends Graft<Graft50State> {

@@ -27,9 +27,6 @@ mixin GraftStateProps on GraftStateStorage {
       _pendingSingle = p0;
       final sv = _singleView;
       if (sv != null) return sv;
-      if (p0 is List && p0.isNotEmpty && p0[0] is GraftState) {
-        return _GraftPropsListView(p0);
-      }
       if (identical(p0, _undefined)) return const _EmptyGraftProps();
       return _singleView = _GraftPropsSingle(this);
     }
@@ -116,10 +113,11 @@ mixin GraftStateProps on GraftStateStorage {
     return view;
   }
 
+  /// Declares domain properties from an [Iterable] or large collection (>16 properties).
   @protected
   @nonVirtual
   @pragma('vm:prefer-inline')
-  GraftProps propsOfMany(Iterable<Object?> items) {
+  GraftProps propsOfCollection(Iterable<Object?> items) {
     if (items.isEmpty) return const _EmptyGraftProps();
     if (items is List<Object?>) return _GraftPropsListView(items);
     return _GraftPropsListView(List<Object?>.of(items, growable: false));

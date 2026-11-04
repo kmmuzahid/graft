@@ -4,7 +4,7 @@ import 'package:graft/src/persistence/ambient_locator.dart';
 import 'package:graft/src/persistence/model/binary_serializer.dart';
 import 'package:graft/src/persistence/model/schema_fingerprint.dart';
 
-enum AppScope { checkout, profile }
+enum AppScope with GraftScope { checkout, profile }
 
 class CheckoutFormState extends GraftState {
   @override

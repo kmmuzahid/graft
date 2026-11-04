@@ -22,7 +22,7 @@ void configurePersistence(GraftStateConfig config) {
 }
 
 /// Resets ambient persistence coordinator (used during testing).
-@visibleForTesting
+@internal
 void resetAmbientPersistence() {
   _ambientCoordinator?.close();
   _ambientCoordinator = null;

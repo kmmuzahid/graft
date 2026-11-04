@@ -37,9 +37,6 @@ abstract final class GraftStateEngine {
   /// Executes property diffing pass on [state] and returns the dirty bitmask.
   static GraftMask diff(GraftState state) => state._diffChanges();
 
-  /// Whether [state] contains any [GraftAsync] properties.
-  static bool hasAsyncProps(GraftState state) => state._hasAsyncProps;
-
   /// Returns the number of scalar properties cached on [state].
   static int scalarCount(GraftState state) => state._scalarCount;
 

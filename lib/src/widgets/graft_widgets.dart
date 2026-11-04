@@ -1,6 +1,5 @@
 import 'package:flutter/widgets.dart';
 import '../core/graft.dart';
-import '../core/graft_async.dart';
 import '../core/graft_state.dart';
 import '../core/value_graft.dart';
 import 'child_slot_engine.dart';
@@ -15,44 +14,19 @@ extension GraftWidgetsX<S extends GraftState> on Graft<S> {
   Widget slot({
     required Widget Function(S state) builder,
     Key? key,
-    String caller = 'graft.slot',
   }) {
-    GraftScopeGuard.verifyNotActive(this, caller);
+    GraftScopeGuard.verifyNotActive(this, 'graft.slot');
     return GraftSingleSlotScope<S>(
       key: key,
       graft: this,
       builder: builder,
-      caller: caller,
+      caller: 'graft.slot',
     );
   }
 
   /// Callable syntax shortcut allowing `graft((s) => Text(s.name))` as the ultra-clean reactive entry point!
   Widget call(Widget Function(S state) builder, {Key? key}) =>
       slot(builder: builder, key: key);
-
-  /// Creates an isolated reactive slot that declaratively pattern-matches on a [GraftAsync] state.
-  Widget async<T>({
-    required GraftAsync<T> Function(S state) selector,
-    required Widget Function(T data) data,
-    required Widget Function() loading,
-    required Widget Function(Object error, StackTrace? stackTrace) error,
-    Widget Function()? idle,
-    Key? key,
-  }) {
-    return slot(
-      key: key,
-      caller: 'graft.async',
-      builder: (s) {
-        final asyncVal = selector(s);
-        return asyncVal.when(
-          idle: idle,
-          loading: loading,
-          data: data,
-          error: error,
-        );
-      },
-    );
-  }
 
   /// Creates a reactive multi-child container whose child slots diff independently.
   Widget slots({

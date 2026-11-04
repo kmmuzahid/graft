@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graft/graft.dart';
 
@@ -9,16 +8,16 @@ import 'package:graft/graft.dart';
 class ProfileTestState extends GraftState {
   String name;
   int score;
-  GraftAsync<String> bioAsync;
+  String bio;
 
   ProfileTestState({
     this.name = 'Alice',
     this.score = 50,
-    this.bioAsync = const GraftAsync.idle(),
+    this.bio = 'Flutter Engineer & OSS Enthusiast',
   });
 
   @override
-  GraftProps get props => propsOf(name, score, bioAsync);
+  GraftProps get props => propsOf(name, score, bio);
 }
 
 class ProfileTestGraft extends Graft<ProfileTestState> {
@@ -31,18 +30,12 @@ class ProfileTestGraft extends Graft<ProfileTestState> {
       ..update();
   }
 
-  Future<void> fetchBio({bool shouldFail = false}) async {
-    await runAsync<String>(
-      task: () async {
-        if (shouldFail) throw Exception('Network timeout');
-        return 'Flutter Engineer & OSS Enthusiast';
-      },
-      onUpdate: (asyncBio) {
-        state
-          ..bioAsync = asyncBio
-          ..update();
-      },
-    );
+  Future<void> fetchBioAsync({bool shouldFail = false}) async {
+    await Future.delayed(const Duration(milliseconds: 10));
+    if (shouldFail) throw Exception('Network timeout');
+    state
+      ..bio = 'Updated bio'
+      ..update();
   }
 }
 
@@ -80,66 +73,23 @@ void main() {
       final change = observer.changes.first;
 
       // Automated zero-boilerplate property tracking verification:
-      expect(change.previousProps, ['Alice', 50, const GraftAsync<String>.idle()]);
-      expect(change.nextProps, ['Bob', 100, const GraftAsync<String>.idle()]);
+      expect(change.previousProps, ['Alice', 50, 'Flutter Engineer & OSS Enthusiast']);
+      expect(change.nextProps, ['Bob', 100, 'Flutter Engineer & OSS Enthusiast']);
       expect(change.dirtyMask.isBitSet(0), isTrue); // bit 0 modified (name)
       expect(change.dirtyMask.isBitSet(1), isTrue); // bit 1 modified (score)
-      expect(change.dirtyMask.isBitSet(2), isFalse); // bit 2 unchanged (bioAsync)
+      expect(change.dirtyMask.isBitSet(2), isFalse); // bit 2 unchanged (bio)
+      expect(change.isDirty(0), isTrue);
+      expect(change.isDirty(1), isTrue);
+      expect(change.isDirty(2), isFalse);
 
       graft.dispose();
       Graft.observer = null;
     });
-  });
 
-  group('Phase 4: GraftAsync & runAsync First-Class Async State Engine', () {
-    test('GraftAsync pattern matching and convenience getters', () {
-      const idle = GraftAsync<int>.idle();
-      const loading = GraftAsync<int>.loading();
-      const data = GraftAsync<int>.data(42);
-      final error = GraftAsync<int>.error('Failed');
-
-      expect(idle.isIdle, isTrue);
-      expect(loading.isLoading, isTrue);
-      expect(data.hasData, isTrue);
-      expect(data.dataOrNull, 42);
-      expect(error.hasError, isTrue);
-      expect(error.errorOrNull, 'Failed');
-
-      final description = switch (data) {
-        AsyncData(:final data) => 'Resolved: $data',
-        AsyncLoading() => 'In flight',
-        AsyncError(:final error) => 'Failed: $error',
-        AsyncIdle() => 'Idle',
-      };
-      expect(description, 'Resolved: 42');
-    });
-
-    test('runAsync successfully transitions through loading and data',
-        () async {
+    test('Standard async method updates state and notifies cleanly', () async {
       final graft = ProfileTestGraft();
-      expect(graft.state.bioAsync.isIdle, isTrue);
-
-      final future = graft.fetchBio();
-      // Synchronously, runAsync has set state to loading
-      expect(graft.state.bioAsync.isLoading, isTrue);
-
-      await future;
-
-      expect(graft.state.bioAsync.hasData, isTrue);
-      expect(
-          graft.state.bioAsync.dataOrNull, 'Flutter Engineer & OSS Enthusiast');
-
-      graft.dispose();
-    });
-
-    test('runAsync captures errors gracefully without crashing', () async {
-      final graft = ProfileTestGraft();
-      await graft.fetchBio(shouldFail: true);
-
-      expect(graft.state.bioAsync.hasError, isTrue);
-      expect(graft.state.bioAsync.errorOrNull.toString(),
-          contains('Network timeout'));
-
+      await graft.fetchBioAsync();
+      expect(graft.state.bio, 'Updated bio');
       graft.dispose();
     });
   });

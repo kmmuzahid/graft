@@ -326,17 +326,11 @@ class PersistentProfileGraft extends Graft<PersistentProfileState> {
 // Pattern D Models: Enterprise Dependency Injection (DI) & Scoping
 // -----------------------------------------------------------------------------
 
-enum AppScope { checkout }
+enum AppScope with GraftScope { checkout }
 
 class DatabaseService extends GraftService {
   bool isClosed = false;
-  DatabaseService._();
-
-  static Future<DatabaseService> open() async {
-    // Non-blocking asynchronous opening (never blocks Frame 0):
-    await Future.delayed(const Duration(milliseconds: 30));
-    return DatabaseService._();
-  }
+  DatabaseService();
 
   void execute(String sql) {
     if (isClosed) {
@@ -433,8 +427,8 @@ void main() {
   Graft.config(
     // In kDebugMode, GraftDebugObserver automatically enables ANSI console logging!
     di: () {
-      // Configure enterprise DI root async database:
-      bindAsync<DatabaseService>(() => DatabaseService.open());
+      // Configure enterprise DI root database:
+      bind<DatabaseService>(DatabaseService.new);
 
       // Configure scoped feature bindings:
       scope(AppScope.checkout, () {

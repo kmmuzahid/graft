@@ -310,8 +310,8 @@ class ScenarioCLargeListRunner {
               itemCount: itemCount,
               itemExtent: 50.0,
               itemBuilder: (context, index) {
-                return warmGraft.select(
-                  (s) => s.items[index],
+                return warmGraft.item(
+                  selector: (s) => s.items[index],
                   index: index,
                   builder: (item) => TrackedListTile(
                     key: ValueKey(item.id),
@@ -351,8 +351,8 @@ class ScenarioCLargeListRunner {
                 itemCount: itemCount,
                 itemExtent: 50.0,
                 itemBuilder: (context, index) {
-                  return ctrl.select(
-                    (s) => s.items[index],
+                  return ctrl.item(
+                    selector: (s) => s.items[index],
                     index: index,
                     builder: (item) {
                       return TrackedListTile(

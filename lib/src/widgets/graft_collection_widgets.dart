@@ -52,14 +52,5 @@ extension GraftCollectionWidgetsX<S extends GraftState> on Graft<S> {
       valueBuilder: builder,
     );
   }
-
-  /// Universal fine-grained selector slot adapter.
-  Widget select<T>(
-    T Function(S state) selector, {
-    required Widget Function(T value) builder,
-    int? index,
-    Key? key,
-  }) =>
-      item<T>(selector: selector, builder: builder, index: index, key: key);
 }
 

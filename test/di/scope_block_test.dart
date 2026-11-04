@@ -1,7 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graft/graft.dart';
+import 'package:graft/testing.dart';
 
-enum TestScope { orders, session }
+enum TestScope with GraftScope { orders, session }
 
 class OrderRepo extends GraftService {
   bool isDisposed = false;
@@ -13,7 +14,7 @@ class SessionService {}
 
 void main() {
   setUp(() {
-    GraftDI.reset();
+    GraftTesting.resetAll();
   });
 
   group('Scope Block & Enum Tests', () {
@@ -34,7 +35,7 @@ void main() {
       final repo = orderScope.resolve<OrderRepo>();
       expect(repo, isA<OrderRepo>());
 
-      // Dropping via enum extension
+      // Dropping via enum mixin
       TestScope.orders.drop();
       expect(repo.isDisposed, isTrue);
     });

@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'graft_async.dart';
 import 'graft_change.dart';
 import 'graft_mask.dart';
 import 'graft_observer.dart';
@@ -13,10 +12,9 @@ import '../persistence/state_config.dart';
 part 'graft_receivers.dart';
 part 'graft_dispatch.dart';
 part 'graft_lifecycle.dart';
-part 'graft_async_task.dart';
 
 /// Base class for reactive state management with fine-grained slot isolation.
-class Graft<S extends GraftState> extends ChangeNotifier {
+class Graft<S extends GraftState> implements Listenable {
   static GraftObserver? _observer;
 
   /// Active observer for monitoring lifecycles, state diffs, and errors.
@@ -25,7 +23,7 @@ class Graft<S extends GraftState> extends ChangeNotifier {
   @internal
   static GraftObserver? get observer => _observer;
 
-  @visibleForTesting
+  @internal
   static set observer(GraftObserver? value) => _observer = value;
 
   /// Centralized optional configuration for Graft persistence, diagnostics, and DI.
@@ -54,7 +52,6 @@ class Graft<S extends GraftState> extends ChangeNotifier {
   bool _isDisposed = false;
   bool _pendingNotify = false;
   bool _isNotifying = false;
-  ValueListenable<S>? _listenableCache;
 
   GraftFastReceiver? _fastDirectReceiver;
   GraftMask _fastDirectMask = GraftMask.empty;
@@ -66,7 +63,6 @@ class Graft<S extends GraftState> extends ChangeNotifier {
   bool _hasOnlySingleListener = false;
   bool _hasOnlyFastDirectReceiver = false;
   bool _hasAnyListeners = false;
-  int _currentAsyncTaskId = 0;
 
   @nonVirtual
   void updateItem(int index, [void Function()? mutate]) {
@@ -99,10 +95,6 @@ class Graft<S extends GraftState> extends ChangeNotifier {
     return _state;
   }
 
-  @nonVirtual
-  ValueListenable<S> get listenable =>
-      _listenableCache ??= _GraftListenable<S>(this);
-
   void _recomputeSingleListenerFlag() => _graftRecomputeSingleListenerFlag(this);
 
   @override
@@ -113,12 +105,10 @@ class Graft<S extends GraftState> extends ChangeNotifier {
   @nonVirtual
   int get hashCode => identityHashCode(this);
 
-  @override
   @nonVirtual
   bool get hasListeners =>
       _singleListener != null ||
-      (_extraListeners != null && _extraListeners!.isNotEmpty) ||
-      super.hasListeners;
+      (_extraListeners != null && _extraListeners!.isNotEmpty);
 
   @nonVirtual
   bool get isDisposed => _isDisposed;
@@ -141,7 +131,6 @@ class Graft<S extends GraftState> extends ChangeNotifier {
   void removeMaskListener(void Function(GraftMask dirtyMask) listener) =>
       _graftRemoveMaskListener(this, listener);
 
-  @override
   @nonVirtual
   void notifyListeners() => _graftNotifyListeners(this);
 
@@ -154,29 +143,17 @@ class Graft<S extends GraftState> extends ChangeNotifier {
   void notify({GraftChange<dynamic>? change}) =>
       _graftNotify(this, change: change);
 
+  /// Purges this controller's persisted Frame-0 dry state from L1 RAM and disk.
   @nonVirtual
-  S mutate(void Function(S state) action) {
-    action(_state);
-    _state.update();
-    return _state;
-  }
+  void invalidateDry() => state.invalidateDry();
 
   @protected
   @nonVirtual
   void addError(Object error, [StackTrace? stackTrace]) =>
       observer?.onError(this, error, stackTrace ?? StackTrace.current);
 
-  @nonVirtual
-  Future<T?> runAsync<T>({
-    required Future<T> Function() task,
-    required void Function(GraftAsync<T> result) onUpdate,
-  }) =>
-      _graftRunAsync<T>(this, task: task, onUpdate: onUpdate);
-
   @mustCallSuper
-  @override
   void dispose() {
     _graftDispose(this);
-    super.dispose();
   }
 }

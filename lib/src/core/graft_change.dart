@@ -37,6 +37,10 @@ class GraftChange<S> {
     this.dirtyMask = GraftMask.allDirty,
   });
 
+  /// Returns `true` if property at [propertyIndex] was dirtied in this transition.
+  bool isDirty(int propertyIndex) =>
+      dirtyMask.isAllDirty || dirtyMask.isBitSet(propertyIndex);
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||

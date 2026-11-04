@@ -102,16 +102,16 @@ class UserState extends GraftState {
 class UserGraft extends Graft<UserState> {
   UserGraft() : super(UserState());
 
-  // Option A: Fluent cascade mutation
   void updateName(String newName) {
     state
       ..name = newName
       ..update(); // Synchronous 1-cycle bitmask diff & surgical UI dispatch
   }
 
-  // Option B: Functional lambda mutation
   void addPoints(int amount) {
-    mutate((s) => s.points += amount);
+    state
+      ..points += amount
+      ..update();
   }
 
   void reset() {
@@ -397,20 +397,7 @@ graft.builder<TaskItem>(
 )
 ```
 
-#### 6. `graft.async<T>({required selector, required data, required loading, required error, idle, key})`
-Declarative, pattern-matched reactive slot for asynchronous domain states:
-
-```dart
-graft.async<UserProfile>(
-  selector: (s) => s.profileState,
-  data: (profile) => ProfileCard(profile),
-  loading: () => const ShimmerCard(),
-  error: (err, st) => ErrorBanner(error: err),
-  idle: () => const PlaceholderCard(),
-)
-```
-
-#### 7. Zero-Wrapper Ambient Lifecycle (`context.use` vs `context.create`)
+#### 6. Zero-Wrapper Ambient Lifecycle (`context.use` vs `context.create`)
 100% wrapper-free state management across screens, tabs, and modals:
 
 - **`context.use<T>([factory, key])`**: Borrows an existing ambient instance across the navigation flow, or creates one if absent. Automatically promoted to an app-wide permanent singleton when called at the App Root (`route == null`). Auto-disposes when all borrower screens pop.
@@ -462,11 +449,11 @@ class CartState extends GraftState {
 }
 ```
 
-* **`GraftProps get props`**: Mandatory abstract contract declaring properties for diffing via `propsOf(...)` or `propsOfMany(...)`.
+* **`GraftProps get props`**: Mandatory abstract contract declaring properties for diffing via `propsOf(...)` (or `propsOfCollection(...)` for large lists).
 * **`state.update()`**: Computes dirty bitmask against in-place baseline snapshot and triggers UI notification.
 
 #### 2. `Graft<S extends GraftState>`
-The business logic controller managing domain state of type `S`:
+The business logic controller managing domain state of type `S` (`implements Listenable` for zero-wrapper Flutter interoperability):
 
 ```dart
 class CartGraft extends Graft<CartState> {
@@ -479,19 +466,29 @@ class CartGraft extends Graft<CartState> {
   }
 
   Future<void> checkout() async {
-    await runAsync<OrderConfirmation>(
-      task: () => api.checkout(state.items),
-      onUpdate: (asyncState) => state..confirmation = asyncState..update(),
-    );
+    state
+      ..isLoading = true
+      ..update();
+    try {
+      final confirmation = await api.checkout(state.items);
+      state
+        ..confirmation = confirmation
+        ..isLoading = false
+        ..update();
+    } catch (e) {
+      state
+        ..error = e.toString()
+        ..isLoading = false
+        ..update();
+    }
   }
 }
 ```
 
 * **`S get state`**: The current state snapshot. Automatically records dependency inside `GraftBoundary`.
-* **`ValueListenable<S> get listenable`**: Direct interop with standard Flutter `ValueListenableBuilder`.
-* **`Future<T?> runAsync<T>({required task, required onUpdate})`**: Executes an asynchronous task with an internal monotonically increasing task token guard that **automatically discards out-of-order stale responses**.
+* **`implements Listenable`**: Direct interop with standard Flutter `ListenableBuilder` and `AnimatedBuilder` with 0 adapter allocations.
 * **`void addError(Object error, [StackTrace? stackTrace])`**: Dispatches unhandled errors to `GraftObserver`.
-* **`S mutate(void Function(S state) action)`**: Functional lambda mutation applying in-place changes and notifying listeners synchronously.
+* **`void invalidateDry()`**: Permanently invalidates and purges cached Frame-0 dry persistence data for this controller.
 * **`void dispose()`**: Releases listeners and notifies global observer.
 
 #### 3. `ValueGraft<T>`
@@ -541,27 +538,27 @@ asyncValue.when(
 
 > 📘 For the comprehensive DI deep dive, see **[`DI_GUIDE.md`](https://github.com/kmmuzahid/graft/blob/main/DI_GUIDE.md)**.
 
-#### 1. `bind<T>()` & `bindAsync<T>()`
-Registers synchronous and non-blocking asynchronous dependencies into the active scope:
+#### 1. `bind<T>()`
+Registers a 100% lazy dependency factory into the active scope:
 ```dart
-// Singleton by default (cached in scope, instantiated on first access)
+// Singleton by default (cached in scope, instantiated ONLY on first access)
 bind<ApiClient>(() => ApiClient(baseUrl: 'https://api.example.com'));
 
-// Non-blocking async: Frame-0 safe, auto-awaits without blocking app startup
-bindAsync<Database>(() async => await openDatabase('app.db'));
+// Async services encapsulate their own internal Future (zero wrapper boilerplate)
+bind<DatabaseService>(() => DatabaseService());
 ```
 
-#### 2. `use<T>()` & `useAsync<T>()`
+#### 2. `use<T>()`
 Resolves dependencies ambiently with $< 0.8\text{ ns}$ hot lookup:
 ```dart
 final client = use<ApiClient>();
-final db = await useAsync<Database>(); // Self-healing Frame-0 gate!
+final db = await use<DatabaseService>().db; // Synchronously resolves service, awaits internal connection
 ```
 
-#### 3. `scope(Enum, () { ... })` & `Enum.drop()`
-Declaratively binds dependencies to developer-defined enums, and drops them in reverse topological DAG order:
+#### 3. `scope(GraftScope, () { ... })` & `AppScope.checkout.drop()`
+Declaratively binds dependencies to developer-defined enums (`enum AppScope with GraftScope`), and drops them in reverse topological DAG order:
 ```dart
-enum AppScope { auth, checkout }
+enum AppScope with GraftScope { auth, checkout }
 
 scope(AppScope.checkout, () {
   bind<CartRepo>(() => CartRepo());
@@ -570,6 +567,9 @@ scope(AppScope.checkout, () {
 
 // Drop flow-wide on order completion:
 AppScope.checkout.drop(); // Disposes CheckoutCoordinator THEN CartRepo!
+
+// Permanently invalidate Frame-0 dry persistence associated with this scope:
+AppScope.checkout.invalidateDry();
 ```
 
 #### 4. `context.use<T extends Graft>([factory])`
@@ -865,74 +865,65 @@ Graft.config(
   di: () => bind<Api>(() => Api()),
 );
 
-// 8. graft.mutate(): Functional lambda mutation with automatic update
-graft.mutate((s) => s.points += 10);
-
-// 9. onInit(): Lifecycle hook executed after Frame-0 hydration
+// 8. onInit(): Lifecycle hook executed after Frame-0 hydration
 @override
 void onInit() => myController.text = state.name;
 
-// 10. onDispose(): Lifecycle hook executed when controller unmounts
+// 9. onDispose(): Lifecycle hook executed when controller unmounts
 @override
 void onDispose() => myController.dispose();
 
-// 11. ValueGraft<T>: Lightweight controller for single values
+// 10. ValueGraft<T>: Lightweight controller for single values
 final count = ValueGraft<int>(0);
 count.value++;
-
-// 12. GraftAsync<T>: Algebraic asynchronous state container
-state.user = const GraftAsync.loading();
-state.user = GraftAsync.data(loadedUser);
 ```
 
 ### 🎯 3. UI Slots & Layouts
 ```dart
-// 13. graft((s) => ...): Signature callable leaf slot (0 parent rebuilds)
+// 11. graft((s) => ...): Signature callable leaf slot (0 parent rebuilds)
 graft((s) => Text(s.name))
 
-// 14. graft.slot(): Named isolated leaf slot
+// 12. graft.slot(): Named isolated leaf slot
 graft.slot((s) => Text(s.name))
 
-// 15. graft.slots(): Multi-child layout diffing engine (Column, Row, Wrap)
+// 13. graft.slots(): Multi-child layout diffing engine (Column, Row, Wrap)
 graft.slots(layout: Column(children: slots), slots: (s) => [Text(s.name), Text(s.email)])
 
-// 16. graft.builder(): Virtualized lazy list with per-item slot isolation
+// 14. graft.builder(): Virtualized lazy list with per-item slot isolation
 graft.builder(items: (s) => s.items, itemBuilder: (item, idx) => ItemTile(item))
 
-// 17. graft.async(): Declarative async pattern-matching slot
-graft.async(selector: (s) => s.user, data: (u) => Text(u.name), loading: () => Spinner(), error: (e, s) => Text('Err'))
+// 15. graft.item(): Universal lazy item slot for custom lists
+graft.item(selector: (s) => s.items[index], index: index, builder: (item) => ItemTile(item))
 
-// 18. GraftBoundary: Multi-controller rebuild barrier with auto-discovery
+// 16. GraftBoundary: Multi-controller rebuild barrier with auto-discovery
 GraftBoundary(builder: (context) => Row(children: [Text(u.state.name), Text(t.state.theme)]))
 
-// 19. context.create<T>(): Isolated controller owned exclusively by current route
+// 17. context.create<T>(): Isolated controller owned exclusively by current route
 final form = context.create(TempFormGraft.new);
 ```
 
 ### 💉 4. Dependency Injection Engine
 ```dart
-// 20. bind<T>(): Synchronous dependency factory (singleton by default)
+// 18. bind<T>(): Synchronous 100% lazy dependency factory (singleton by default)
 bind<ApiClient>(() => ApiClient());
 
-// 21. bindAsync<T>(): Non-blocking async dependency (Frame-0 safe)
-bindAsync<Database>(() async => await openDatabase('app.db'));
-
-// 22. use<T>(): Ambient dependency lookup (< 0.8 ns hot lookup)
+// 19. use<T>(): Ambient dependency lookup (< 0.8 ns hot lookup)
 final api = use<ApiClient>();
 
-// 23. useAsync<T>(): Self-healing Frame-0 async lookup
-final db = await useAsync<Database>();
-
-// 24. scope(Enum, () { ... }): Declarative enum scope block
+// 20. scope(GraftScope, () { ... }): Declarative enum scope block
 scope(AppScope.checkout, () => bind<CartRepo>(() => CartRepo()));
 
-// 25. context.use(): Borrow or create route-inherited controller in build()
+// 21. context.use(): Borrow or create route-inherited controller in build()
 final graft = context.use(UserGraft.new);
 
-// 26. Enum.drop(): Drops scope and disposes in reverse topological DAG order
+// 22. AppScope.checkout.drop(): Drops scope and disposes in reverse topological DAG order
 AppScope.checkout.drop();
 
-// 27. GraftDI.withOverrides(): Zone-isolated mock overrides for unit testing
+// 23. AppScope.checkout.invalidateDry(): Purges dry persistence associated with scope
+AppScope.checkout.invalidateDry();
+
+// 24. GraftTesting.runWithOverrides(): Isolated mock overrides for unit testing
+GraftTesting.runWithOverrides({ApiClient: MockApiClient()}, () { ... });
 await GraftDI.withOverrides(overrides: {TypeId.of<Api>(): () => MockApi()}, body: () async {});
 
 // 28. GraftDI.reset(): Complete teardown and reset of ambient DI hierarchy
@@ -981,7 +972,7 @@ Graft achieves sub-microsecond diffing, zero wasted rebuilds, and a 100% wrapper
 2. **Surgical Leaf Slot Isolation**: Direct C-level Element pointer dispatch (`ChildSlotEngine`) marks only specific leaf elements dirty, insulating layout parents in 0 rebuilds.
 3. **Monotonic Integer Type Identification (`TypeId`)**: Direct index array lookup ($\le 12\text{ ns}$ cold, $< 0.8\text{ ns}$ hot) bypassing runtime string hashing.
 4. **In-Degree Topological Reverse DAG Teardown**: Dynamic dependency recording guarantees consumers dispose before base dependencies with zero cycle hazards.
-5. **Self-Healing Non-Blocking Async Gate**: `bindAsync<T>()` and `useAsync<T>()` prevent boot delays and eliminate manual service wrappers.
+5. **100% Lazy Dependency Injection & Topological DAG Teardown**: Universal `bind<T>()` and `use<T>()` eliminate container bloat while `enum AppScope with GraftScope` provides type-safe scoped teardown and dry invalidation.
 6. **Frame-0 Dry State & Coalescing Persistence**: Synchronous L1 RAM cache eliminates blank-frame flicker, while disk writes coalesce into a 300ms debounced queue.
 7. **Ref-Counted Ambient Engine**: 100% zero-wrapper architecture. `context.use<T>()` borrows ambient instances across navigation flows with App-Root auto-promotion and tombstone-deferred exit transition teardown.
 
@@ -995,11 +986,11 @@ Graft achieves sub-microsecond diffing, zero wasted rebuilds, and a 100% wrapper
 >
 > 📖 **Testing Guide:** For declarative unit testing, mock dependency injection, error assertions, and widget testing with `package:graft/testing.dart`, consult the **[`GRAFT_TESTING.md`](https://github.com/kmmuzahid/graft/blob/main/GRAFT_TESTING.md)** guide.
 
-Graft is verified against **305 passing tests** with zero static analysis warnings and zero rebuild leakage:
+Graft is verified against **313 passing tests** with zero static analysis warnings and zero rebuild leakage:
 
 ```bash
 flutter test
-# 00:45 +305: All tests passed!
+# 00:40 +313: All tests passed!
 ```
 
 ```bash
@@ -1012,12 +1003,13 @@ flutter analyze
 | **Core State Engine & Zero-Copy Mutation** | 66 | ✅ Pass | In-place baseline mutations (`List`, `Set`, `Map`), nested `GraftState`, 64-bit bitmasks, controller mutations. |
 | **Fine-Grained Slot Engine & Rebuild Firewall** | 70 | ✅ Pass | `ignoredMask` short-circuiting, `NoSubscriptionContext` leak prevention, Depth-$N$ parent rebuild insulation. |
 | **Frame-0 Persistence & Dry State** | 51 | ✅ Pass | Sub-microsecond L1 binary hydration (~1.5µs), 15 worst-case permutations, order scrambling, type safety. |
-| **Dependency Injection (DI) Engine** | 22 | ✅ Pass | Monotonic `TypeId.of<T>()`, reverse DAG teardown, non-blocking `bindAsync`, real SQLite verification. |
+| **Dependency Injection (DI) Engine** | 24 | ✅ Pass | Monotonic `TypeId.of<T>()`, reverse DAG teardown, uniform lazy `bind`/`use`, `GraftScope` mixin, real SQLite verification. |
 | **Route Isolation & Context Lifecycle** | 20 | ✅ Pass | `context.use<T>()` route-stack borrowing, transient `PopupRoute` protection, auto-disposal. |
 | **DevTools, Observers & Diagnosibility** | 18 | ✅ Pass | Multi-controller ambient auto-discovery, colorized terminal output, Flutter timeline profiling. |
 | **Empirical Benchmark Integration** | 18 | ✅ Pass | Comparative benchmarks against Riverpod, Bloc, Signals, GetX, and Provider. |
-| **Async State & Error Boundaries** | 11 | ✅ Pass | Monotonic task tokens, stale response dropping, declarative `graft.async`. |
+| **Async Concurrency & Stale Guard** | 11 | ✅ Pass | Monotonic sequence counters, stale response dropping, standard Dart async/await safety. |
 | **High-Concurrency & Chaos Stress** | 9 | ✅ Pass | Glitch-free reactive diamond DAG, deep computed chains, 50k item list throughput. |
+| **Testing Suite & graftTest Harness** | 26 | ✅ Pass | `GraftTesting.runWithOverrides`, `recordChanges`, `flushPersistence`, and `graftTest` with `seed`/`expectChanges`/`errors`. |
 
 ---
 

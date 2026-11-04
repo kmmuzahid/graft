@@ -27,10 +27,10 @@ Graft eliminates these trade-offs through a unified, 100% zero-wrapper runtime b
 │  - 64-bit SIMD word registers  │  - Direct markNeedsBuild()     │  - ≤ 12 ns cold / < 0.8 ns hot             │
 │  - Zero heap allocation diffs  │  - Zero ValueNotifier wrapper  │  - Pure Dart AOT specialization            │
 ├────────────────────────────────┼────────────────────────────────┼────────────────────────────────────────────┤
-│  🛡️ Pillar 4: Reverse DAG Drop │  ⏳ Pillar 5: Async Gate DI    │  💾 Pillar 6: Frame-0 Dry State            │
-│  - In-degree topological sort  │  - Non-blocking bindAsync<T>   │  - Synchronous L1 RAM cache                │
-│  - Consumers dispose first     │  - Frame-0 zero-crash auto-wait│  - 300ms coalescing debounce               │
-│  - Circular dependency check   │  - Zero manual query wrappers  │  - Structural schema hash                  │
+│  🛡️ Pillar 4: Reverse DAG Drop │  ⏳ Pillar 5: 100% Lazy Uniform DI│  💾 Pillar 6: Frame-0 Dry State            │
+│  - In-degree topological sort  │  - Universal bind<T> & use<T>  │  - Synchronous L1 RAM cache                │
+│  - Consumers dispose first     │  - Type-safe GraftScope mixin  │  - 300ms coalescing debounce               │
+│  - Circular dependency check   │  - Zero container overhead     │  - Structural schema hash                  │
 ├────────────────────────────────┴────────────────────────────────┴────────────────────────────────────────────┤
 │  🌐 Pillar 7: Ref-Counted Ambient Engine (Zero-Wrapper Architecture)                                         │
 │  - 100% wrapper-free: No GraftScope or MultiProvider                                                         │
@@ -179,17 +179,12 @@ flowchart LR
 
 ---
 
-### Pillar 5: Self-Healing Non-Blocking Async Execution Gate
+### Pillar 5: 100% Lazy Uniform Dependency Injection & GraftScope Mixin
 
-Async services (databases, key-value stores, secure storage, network clients) previously forced developers to either:
-1. Block application boot with `await db.open()` in `main()`, delaying the first frame.
-2. Manually subclass custom service wrappers and wrap every method in `guard(() => ...)`.
-
-Graft introduces `bindAsync<T>()` and `useAsync<T>()`:
-- Execution is lazy and non-blocking by default.
-- If accessed on Frame 0 before initialization completes, `useAsync<T>()` transparently awaits the in-flight initialization.
-- Once completed, subsequent accesses return the cached singleton in $0\text{ ns}$.
-- Devs write 100% standard Dart classes with zero boilerplate wrappers.
+Graft eliminates the artificial split between synchronous and asynchronous DI containers:
+- **100% Lazy Function-Pointer Storage:** `bind<T>()` stores dependency factories as lightweight function pointers. Factory execution occurs strictly on the first `use<T>()` invocation, consuming 0 CPU cycles at startup.
+- **Direct Async Service Encapsulation:** Asynchronous dependencies (SQLite databases, secure storage, network clients) maintain standard Dart `Future` variables (e.g. `_dbFuture`). Consumers await the service's internal future directly without complex container wrappers.
+- **Type-Safe `GraftScope` Enum Mixin:** Feature scopes are typed using `enum AppScope with GraftScope { auth, checkout }`. Scoped teardown via `AppScope.checkout.drop()` and dry state invalidation via `AppScope.checkout.invalidateDry()` are exposed directly on the enum without polluting other Flutter enums or introducing global loose functions.
 
 ---
 

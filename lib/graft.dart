@@ -6,13 +6,13 @@
 ///
 /// ### Just 3 Core Concepts:
 ///
-/// 1. **Atomic Mutation ([Graft.mutate]):**
-///    Mutate domain state cleanly using native Dart cascades with automatic snapshotting:
+/// 1. **Atomic Cascade Mutation:**
+///    Mutate domain state cleanly using native Dart cascades with single-pass bitmask diffing:
 ///    ```dart
-///    graft.mutate((s) => s
+///    state
 ///      ..name = 'Alice'
 ///      ..email = 'alice@example.com'
-///    ); // Batched 64-bit bitmask diffing: notifies listeners once!
+///      ..update(); // Batched 64-bit bitmask diffing: notifies listeners once!
 ///    ```
 ///
 /// 2. **Zero-Setup Dependency Injection ([GraftContextX.use]):**
@@ -27,15 +27,15 @@
 ///    - `graft((s) => Text(s.name))`: Callable syntax shortcut for single-child slots.
 ///    - `graft.slot(...)`: Isolated slot for any widget with automatic content equivalence.
 ///    - `graft.slots(...)`: Multi-child layouts with 0-rebuild slot diffing.
-///    - `GraftAsync<T>`: First-class pattern-matching for asynchronous operations.
+///    - `graft.compute(...)`: Synchronous derived state computation.
 library;
 
 export 'src/context/graft_context.dart';
 export 'src/core/graft.dart'
     hide GraftFastReceiver, GraftItemReceiver, GraftEngine;
-export 'src/core/graft_async.dart';
 export 'src/core/graft_change.dart';
-export 'src/core/graft_observer.dart';
+export 'src/core/graft_observer.dart'
+    hide GraftDevObserver, GraftDebugObserver;
 export 'src/core/graft_state.dart'
     hide GraftStateEngine, GraftStateStorage, GraftStateProps;
 export 'src/core/value_graft.dart' hide GraftValue;

@@ -2,48 +2,64 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:graft/graft.dart';
 
 class SearchState extends GraftState {
-  GraftAsync<String> searchResult;
-  SearchState({this.searchResult = const GraftAsync.idle()});
+  String? searchResult;
+  bool isLoading;
+  String? error;
+
+  SearchState({
+    this.searchResult,
+    this.isLoading = false,
+    this.error,
+  });
 
   @override
-  GraftProps get props => propsOf(searchResult);
+  GraftProps get props => propsOf(searchResult, isLoading, error);
 }
 
 class SearchGraft extends Graft<SearchState> {
+  int _requestId = 0;
+
   SearchGraft() : super(SearchState());
 
   Future<void> search(String query, Duration delay) async {
-    await runAsync<String>(
-      task: () async {
-        await Future.delayed(delay);
-        return 'Result for: $query';
-      },
-      onUpdate: (res) {
-        state
-          ..searchResult = res
-          ..update();
-      },
-    );
+    final currentId = ++_requestId;
+    state
+      ..isLoading = true
+      ..error = null
+      ..update();
+
+    await Future.delayed(delay);
+
+    // Stale guard: only apply if this request is still the latest one
+    if (currentId != _requestId) return;
+
+    state
+      ..searchResult = 'Result for: $query'
+      ..isLoading = false
+      ..update();
   }
 
   Future<void> failingSearch(Duration delay) async {
-    await runAsync<String>(
-      task: () async {
-        await Future.delayed(delay);
-        throw Exception('Search failed');
-      },
-      onUpdate: (res) {
-        state
-          ..searchResult = res
-          ..update();
-      },
-    );
+    final currentId = ++_requestId;
+    state
+      ..isLoading = true
+      ..error = null
+      ..update();
+
+    await Future.delayed(delay);
+
+    if (currentId != _requestId) return;
+
+    state
+      ..error = 'Search failed'
+      ..isLoading = false
+      ..update();
   }
 }
 
 void main() {
-  group('Pillar 5: Async Concurrency & Stale Response Guard Tests', () {
-    test('runAsync drops stale response when newer task is launched before first completes', () async {
+  group('Standard Dart Async Concurrency & Stale Response Guard Tests', () {
+    test('drops stale response when newer task is launched before first completes', () async {
       final graft = SearchGraft();
 
       // Launch Task 1: Slow (100ms)
@@ -57,15 +73,14 @@ void main() {
       await Future.wait([future1, future2]);
 
       // State MUST contain Task 2's result ('Result for: fast')
-      // Task 1's late response must have been dropped!
-      expect(graft.state.searchResult, isA<AsyncData<String>>());
-      final data = graft.state.searchResult as AsyncData<String>;
-      expect(data.data, 'Result for: fast');
+      // Task 1's late response was dropped
+      expect(graft.state.searchResult, 'Result for: fast');
+      expect(graft.state.isLoading, false);
 
       graft.dispose();
     });
 
-    test('runAsync captures errors from latest task only', () async {
+    test('captures errors from latest task only', () async {
       final graft = SearchGraft();
 
       // Launch Task 1: Slow failure (100ms)
@@ -78,21 +93,21 @@ void main() {
       await Future.wait([future1, future2]);
 
       // State must be successful Task 2, NOT overwritten by Task 1's error!
-      expect(graft.state.searchResult, isA<AsyncData<String>>());
-      final data = graft.state.searchResult as AsyncData<String>;
-      expect(data.data, 'Result for: fast_success');
+      expect(graft.state.searchResult, 'Result for: fast_success');
+      expect(graft.state.error, isNull);
+      expect(graft.state.isLoading, false);
 
       graft.dispose();
     });
 
-    test('Sequential runAsync calls execute and update state cleanly when no overlap occurs', () async {
+    test('Sequential async calls execute and update state cleanly when no overlap occurs', () async {
       final graft = SearchGraft();
 
       await graft.search('first', const Duration(milliseconds: 10));
-      expect(graft.state.searchResult.dataOrNull, 'Result for: first');
+      expect(graft.state.searchResult, 'Result for: first');
 
       await graft.search('second', const Duration(milliseconds: 10));
-      expect(graft.state.searchResult.dataOrNull, 'Result for: second');
+      expect(graft.state.searchResult, 'Result for: second');
 
       graft.dispose();
     });

@@ -60,6 +60,7 @@ class ValueGraft<T> extends Graft<GraftValue<T>> {
   ValueGraft(T initialValue) : super(GraftValue<T>(initialValue));
 
   /// Constructor for custom or persistent [GraftValue] states.
+  @internal
   ValueGraft.fromState(super.state);
 
   /// Creates a persistent [ValueGraft] initialized with [initialValue] and persisted under [key].

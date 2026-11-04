@@ -58,7 +58,9 @@ void main() {
       expect(slotTable[2].rebuildCount, 0);
 
       // Mutate ONLY name
-      profileGraft.mutate((s) => s.name = 'Bob');
+      profileGraft.state
+        ..name = 'Bob'
+        ..update();
       await tester.pump();
 
       expect(find.text('Bob'), findsOneWidget);
@@ -70,7 +72,9 @@ void main() {
           reason: 'Static SizedBox must have 0 rebuilds');
 
       // Mutate ONLY email
-      profileGraft.mutate((s) => s.email = 'bob@example.com');
+      profileGraft.state
+        ..email = 'bob@example.com'
+        ..update();
       await tester.pump();
 
       expect(find.text('Bob'), findsOneWidget);
@@ -108,7 +112,9 @@ void main() {
       expect(find.byType(Chip), findsNothing);
 
       // Toggle isVerified to true
-      profileGraft.mutate((s) => s.isVerified = true);
+      profileGraft.state
+        ..isVerified = true
+        ..update();
       await tester.pump();
 
       expect(find.text('Alice'), findsOneWidget);
@@ -117,7 +123,9 @@ void main() {
       expect(find.text('Verified: Alice'), findsOneWidget);
 
       // Toggle isVerified back to false
-      profileGraft.mutate((s) => s.isVerified = false);
+      profileGraft.state
+        ..isVerified = false
+        ..update();
       await tester.pump();
 
       expect(find.text('Alice'), findsOneWidget);
@@ -151,7 +159,9 @@ void main() {
       expect(find.text('Role: Member'), findsNothing);
 
       // Switch role to member
-      profileGraft.mutate((s) => s.isAdmin = false);
+      profileGraft.state
+        ..isAdmin = false
+        ..update();
       await tester.pump();
 
       expect(find.text('Role: Administrator'), findsNothing);
@@ -181,7 +191,9 @@ void main() {
       expect(find.text('dart'), findsOneWidget);
 
       // Add a third tag
-      profileGraft.mutate((s) => s.tags = ['flutter', 'dart', 'graft']);
+      profileGraft.state
+        ..tags = ['flutter', 'dart', 'graft']
+        ..update();
       await tester.pump();
 
       expect(find.text('flutter'), findsOneWidget);

@@ -50,23 +50,6 @@ void _singleSlotOnMaskDirty<S extends GraftState>(
     }
   }
 
-  if (element.widget.caller != 'graft.async' &&
-      !dirtyMask.isAllDirty &&
-      dirtyMask.isNotEmpty &&
-      GraftStateEngine.hasAsyncProps(element._state)) {
-    final props = GraftStateEngine.props(element._state);
-    bool allAsync = true;
-    for (int i = 0; i < props.length; i++) {
-      if (dirtyMask.isBitSet(i)) {
-        if (props[i] is! GraftAsync) {
-          allAsync = false;
-          break;
-        }
-      }
-    }
-    if (allAsync) return;
-  }
-
   element._pendingMask = dirtyMask;
   element._isDirty = true;
   element.markNeedsBuild();

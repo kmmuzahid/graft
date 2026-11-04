@@ -200,15 +200,13 @@ taskGraft.builder<TaskItem>(
 );
 ```
 
-### 6. Declarative Async Pattern Matching (`graft.async<T>(...)`)
-Type-safe algebraic pattern matching for `GraftAsync` states (`idle`, `loading`, `data`, `error`):
+### 6. Universal Lazy Item Slot (`graft.item<T>(...)`)
+Connects any custom list or grid item to a fine-grained slot without rebuilding sibling items:
 ```dart
-orderGraft.async<List<Order>>(
-  selector: (s) => s.ordersState,
-  data: (orders) => OrderListView(orders: orders),
-  loading: () => const Center(child: CircularProgressIndicator.adaptive()),
-  error: (err, st) => Text('Failed to load orders: $err'),
-  idle: () => const Text('Tap to load orders'),
+orderGraft.item<OrderItem>(
+  selector: (s) => s.orders[index],
+  index: index,
+  builder: (order) => OrderTile(order: order),
 );
 ```
 

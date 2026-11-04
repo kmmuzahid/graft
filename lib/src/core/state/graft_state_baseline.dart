@@ -10,7 +10,6 @@ void _initBaselineImpl(GraftState state) {
     state._prevListLength = c is List ? c.length : -1;
     state._allScalarProps = c is num || c is String || c is bool || c is Enum;
     if (state._allScalarProps) state._scalarCount = 1;
-    state._hasAsyncProps = c is GraftAsync;
     state._singleNestedVersion = c is GraftState ? c._version : -1;
     if (c is GraftState) {
       c._initBaseline();
@@ -85,16 +84,13 @@ void _initBaselineImpl(GraftState state) {
     }
     state._nestedVersions = nestedVers;
     bool allScalar = true;
-    bool hasAsync = false;
     for (int i = 0; i < len; i++) {
       final v = current[i];
-      if (v is GraftAsync) hasAsync = true;
       if (v is! num && v is! String && v is! bool && v is! Enum) {
         allScalar = false;
       }
     }
     state._allScalarProps = allScalar;
-    state._hasAsyncProps = hasAsync;
     if (allScalar && len >= 2 && len <= 5) {
       state._scalarCount = len;
       state._s0 = state._b0 = current[0];

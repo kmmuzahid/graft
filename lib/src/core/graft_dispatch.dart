@@ -101,23 +101,3 @@ void _graftNotifyMask(Graft graft, GraftMask dirtyMask, {GraftChange<dynamic>? c
     Graft.observer?.onChange(graft, effectiveChange);
   }
 }
-
-class _GraftListenable<S extends GraftState> implements ValueListenable<S> {
-  final Graft<S> _graft;
-  const _GraftListenable(this._graft);
-
-  @override
-  S get value => _graft.state;
-
-  @override
-  void addListener(VoidCallback listener) => _graft.addListener(listener);
-
-  @override
-  void removeListener(VoidCallback listener) => _graft.removeListener(listener);
-}
-
-/// Persistence extensions on [Graft].
-extension GraftPersistenceX<S extends GraftState> on Graft<S> {
-  /// Permanently deactivates and invalidates dry state persistence for this session.
-  void invalidateDry() => state.invalidateDry();
-}
