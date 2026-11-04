@@ -17,7 +17,16 @@ part 'graft_async_task.dart';
 
 /// Base class for reactive state management with fine-grained slot isolation.
 class Graft<S extends GraftState> extends ChangeNotifier {
-  static GraftObserver? observer;
+  static GraftObserver? _observer;
+
+  /// Active observer for monitoring lifecycles, state diffs, and errors.
+  ///
+  /// To configure an observer in application code, use [Graft.config].
+  @internal
+  static GraftObserver? get observer => _observer;
+
+  @visibleForTesting
+  static set observer(GraftObserver? value) => _observer = value;
 
   /// Centralized optional configuration for Graft persistence, diagnostics, and DI.
   ///
@@ -32,9 +41,9 @@ class Graft<S extends GraftState> extends ChangeNotifier {
   }) {
     if (persistence != null) configurePersistence(persistence);
     if (observer != null) {
-      Graft.observer = observer;
+      _observer = observer;
     } else if (debugLogging ?? kDebugMode) {
-      Graft.observer ??= GraftDevObserver();
+      _observer ??= GraftDevObserver();
     }
     di?.call();
   }

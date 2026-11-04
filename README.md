@@ -219,11 +219,13 @@ Without `GraftBoundary`, updating `userGraft` or `themeGraft` inside a complex s
 ---
 
 ### 3. Route-Stack Lifecycle & Zero-Setup Injection (`context.use`)
-Attach `GraftRouteTracker.observer` to your `MaterialApp` in `main.dart`, and borrow controllers on-demand anywhere in your widget tree:
+Attach `graftRouteObserver` to your `MaterialApp` in `main.dart`, and borrow controllers on-demand anywhere in your widget tree:
 
 ```dart
 void main() {
-  Graft.observer = GraftDevObserver(logRebuilds: true); // Colorized terminal logs
+  Graft.config(
+    observer: GraftDebugObserver(logRebuilds: true), // Colorized terminal logs
+  );
   runApp(const MyApp());
 }
 
@@ -590,13 +592,13 @@ class EditProfileScreen extends StatelessWidget {
 
 ### D. Observability & DevTools
 
-#### 1. `GraftDevObserver` & `GraftObserver`
+#### 1. `GraftDebugObserver` & `GraftObserver`
 `Graft` features a centralized observability engine for monitoring state transitions, DI scope lifecycles, Frame-0 Dry persistence, slot rebuilds, and Flutter DevTools Timeline profiling:
 
 ```dart
 void main() {
-  if (kDebugMode) {
-    Graft.observer = GraftDevObserver(
+  Graft.config(
+    observer: GraftDebugObserver(
       logDI: true,          // 📦 DI scope creation & member teardown (default: true)
       logDry: true,         // 💾 Dry state badges, hydration & invalidation (default: true)
       logState: false,      // 🌱 State creation & disposal (default: false)
@@ -606,8 +608,8 @@ void main() {
       logErrors: true,      // 💥 Unhandled errors and stack traces (default: true)
       asyncLog: true,       // ⚡ Non-blocking async queue (zero frame budget impact) (default: true)
       enableTimeline: false // ⏱️ Flutter DevTools Performance Timeline slices (default: false)
-    );
-  }
+    ),
+  );
 
   runApp(const MyApp());
 }
@@ -804,19 +806,16 @@ graft.invalidateDry();
 AppScope.checkout.invalidateDry();
 ```
 
-#### 7. Permanent Storage Configuration & Abstraction (`configurePersistence`)
-By default, Graft operates in RAM via an internal `MemoryStateConfig()`. To persist state permanently across app restarts, configure a storage driver in `main()`:
+#### 7. Permanent Storage Configuration & Abstraction (`Graft.config`)
+By default, Graft operates in RAM via an internal `MemoryStateConfig()`. To persist state permanently across app restarts, configure your custom storage driver in `main()` via `Graft.config()`:
 ```dart
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Option A: Built-in binary file driver (.bin)
-  final dir = await getApplicationDocumentsDirectory();
-  configurePersistence(FileStateConfig(dir));
-
-  // Option B: Or implement a custom GraftStateConfig (e.g. SharedPreferences):
-  // final prefs = await SharedPreferences.getInstance();
-  // configurePersistence(SharedPrefsStateConfig(prefs));
+  // Configure custom persistent storage via Graft.config:
+  Graft.config(
+    persistence: MyStorageConfig(), // Any implementation of GraftStateConfig
+  );
 
   runApp(const MyApp());
 }
@@ -972,14 +971,8 @@ AppScope.checkout.invalidateDry();
 // 35. ValueGraft.dry(): Persistent micro-state on Frame 0
 final count = ValueGraft<int>.dry(0, key: 'counter');
 
-// 36. FileStateConfig: High-performance binary file driver (.bin) for production
-configurePersistence(FileStateConfig(Directory('path/to/storage')));
-
-// 37. MemoryStateConfig: In-memory binary driver for unit tests
-configurePersistence(MemoryStateConfig());
-
-// 38. GraftLifecycleObserver: Automatic debounced write flushing on app background/pause
-GraftLifecycleObserver.instance.attach();
+// 36. MemoryStateConfig: In-memory binary driver for unit tests
+Graft.config(persistence: MemoryStateConfig());
 ```
 
 ---

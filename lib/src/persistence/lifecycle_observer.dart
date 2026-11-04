@@ -1,10 +1,12 @@
 /// Observer for automatic debounced write flushing on Flutter application lifecycle events.
 library;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'ambient_locator.dart';
 
 /// Flushes pending persistence debounces to disk upon app backgrounding, suspension, or pause.
+@internal
 final class GraftLifecycleObserver with WidgetsBindingObserver {
   static final GraftLifecycleObserver instance = GraftLifecycleObserver._();
   GraftLifecycleObserver._();

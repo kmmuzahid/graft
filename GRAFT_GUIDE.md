@@ -26,7 +26,7 @@
 7. [Zero-Controller Forms on Frame 0](#zero-controller-forms-on-frame-0)
 8. [Micro-State Persistence (`ValueGraft.dry`)](#micro-state-persistence-valuegraftdry)
 9. [Flow-Wide Scope Invalidation (`invalidateDry`)](#flow-wide-scope-invalidation-invalidatedry)
-10. [Storage Drivers & Custom Storage Abstraction (`configurePersistence`)](#storage-drivers--custom-storage-abstraction-configurepersistence)
+10. [Storage Drivers & Custom Storage Abstraction (`Graft.config`)](#storage-drivers--custom-storage-abstraction-graftconfig)
 11. [Linter & Architectural Best Practices](#linter--architectural-best-practices)
 12. [Related Technical Guides & Reports](#related-technical-guides--reports)
 
@@ -553,35 +553,15 @@ When using `GraftDevObserver`, Frame-0 dry state creation, updates, hydrations, 
 
 ---
 
-## Storage Drivers & Custom Storage Abstraction (`configurePersistence`)
+## Storage Drivers & Custom Storage Abstraction (`Graft.config`)
 
 > [!IMPORTANT]
 > ### ⚠️ Permanent Disk Persistence Requires Storage Configuration
 > By default, if unconfigured, Graft operates purely in RAM using an internal `MemoryStateConfig()`. While state changes remain reactive during the current session, **state will NOT survive app restarts unless a permanent storage abstraction is configured**.
 >
-> To persist state permanently to disk or a database across app restarts, you must configure a storage driver in your `main()` function via `configurePersistence()`.
+> To persist state permanently to disk or a database across app restarts, configure your custom storage driver in your `main()` function via `Graft.config(persistence: ...)`.
 
-Graft provides zero-dependency binary persistence drivers out-of-the-box, as well as an extensible storage contract (`GraftStateConfig`) allowing teams to connect any storage engine (SharedPreferences, Encrypted Storage, SQLite, or Cloud Sync).
-
----
-
-### 1. Production Binary File Driver (`FileStateConfig`)
-The easiest zero-dependency solution for Flutter Mobile, Desktop, and Embedded targets. Saves binary blobs directly into `.bin` files:
-
-```dart
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-
-  // 1. Point to application documents directory (e.g. path_provider):
-  final docsDir = await getApplicationDocumentsDirectory();
-
-  // 2. Configure permanent binary file driver:
-  configurePersistence(FileStateConfig(docsDir));
-
-  runApp(const MyApp());
-}
-```
-All persistent states are pre-read synchronously into L1 RAM cache on Frame 0 and written back to disk asynchronously using a coalesced 300ms debounce queue during user typing.
+Graft provides an extensible storage contract (`GraftStateConfig`) allowing teams to connect any storage engine (SharedPreferences, Encrypted Storage, SQLite, or Cloud Sync) directly through `Graft.config()`.
 
 ---
 
@@ -643,9 +623,9 @@ class SharedPrefsStateConfig implements GraftStateConfig {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Load SharedPreferences before mounting UI:
+  // Configure SharedPreferences persistence via Graft.config:
   final prefs = await SharedPreferences.getInstance();
-  configurePersistence(SharedPrefsStateConfig(prefs));
+  Graft.config(persistence: SharedPrefsStateConfig(prefs));
 
   runApp(const MyApp());
 }
@@ -653,12 +633,12 @@ void main() async {
 
 ---
 
-### 3. In-Memory Driver for Testing (`MemoryStateConfig`)
+### 2. In-Memory Driver for Testing (`MemoryStateConfig`)
 For unit tests, widget tests, and CI pipelines, use `MemoryStateConfig` for 100% in-memory isolation without disk I/O:
 ```dart
 void main() {
   setUp(() {
-    configurePersistence(MemoryStateConfig());
+    Graft.config(persistence: MemoryStateConfig());
   });
 
   tearDown(() {

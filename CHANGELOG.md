@@ -15,6 +15,9 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
   - Encapsulated `GraftRegistry` as an `@internal` bridge class and unexported it from `lib/graft.dart`. UI relies on `context.use(MyGraft.new)` and services rely on `bind<T>()`.
   - Encapsulated `GraftRouteTracker` as `@internal`. Exported `graftRouteObserver` and `GraftRouteObserver` for clean 1-line setup in `MaterialApp(navigatorObservers: [graftRouteObserver])`.
   - Unexported low-level 64-bit hardware bitset diff classes (`GraftMask`) and widget state machines (`GraftMultiChildDiffEngine`) from the public API.
+  - Unexported redundant top-level `configurePersistence` in favor of centralized `Graft.config(persistence: ...)`.
+  - Unexported `FileStateConfig` from public entry point to guarantee 100% web compilation purity (zero `dart:io` leakage).
+  - Encapsulated `GraftLifecycleObserver` and `GraftStateProps` as `@internal` and unexported them from `lib/graft.dart`.
   - Unexported test teardown utility `resetAmbientPersistence` from the main public library.
   - Encapsulated `GraftValue<T>` as `@internal`, keeping public focus strictly on `ValueGraft<T>`.
   - Marked low-level listener hooks (`addMaskListener`, `removeMaskListener`) and `notify(change)` as `@internal`.

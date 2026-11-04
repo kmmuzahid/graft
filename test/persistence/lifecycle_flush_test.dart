@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graft/graft.dart';
 import 'package:graft/src/persistence/ambient_locator.dart';
+import 'package:graft/src/persistence/file_state_config.dart';
 import 'package:graft/src/persistence/lifecycle_observer.dart';
 
 class FormState extends GraftState {

@@ -14,6 +14,7 @@ StorageCoordinator get ambientStorageCoordinator =>
     _ambientCoordinator ??= StorageCoordinator(MemoryStateConfig());
 
 /// Configures global persistence storage with a custom [GraftStateConfig].
+@internal
 void configurePersistence(GraftStateConfig config) {
   _ambientCoordinator?.close();
   _ambientCoordinator = StorageCoordinator(config);

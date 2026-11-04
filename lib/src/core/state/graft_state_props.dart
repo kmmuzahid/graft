@@ -1,5 +1,6 @@
 part of '../graft_state.dart';
 
+@internal
 mixin GraftStateProps on GraftStateStorage {
   @pragma('vm:prefer-inline')
   GraftProps propsOf([
