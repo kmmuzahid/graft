@@ -477,7 +477,7 @@ class ScenarioDCompositeRunner {
       final warmCtrl = GraftSingleController();
       await tester.pumpWidget(
         MaterialApp(
-          navigatorObservers: [GraftRouteObserver()],
+          navigatorObservers: [graftRouteObserver],
           home: Scaffold(
             body: warmCtrl((s) => Text('W: ${s.count}')),
           ),
@@ -509,7 +509,7 @@ class ScenarioDCompositeRunner {
         final ctrl = GraftSingleController();
         await tester.pumpWidget(
           MaterialApp(
-            navigatorObservers: [GraftRouteObserver()],
+            navigatorObservers: [graftRouteObserver],
             home: Scaffold(
               body: ctrl((s) => Text('Count: ${s.count}')),
             ),

@@ -2,13 +2,13 @@
 library;
 
 import 'dart:typed_data';
-import 'state_config.dart';
+import 'dry_config.dart';
 
 /// Pure in-memory implementation of [GraftStateConfig].
 ///
 /// Ideal for headless unit tests, fast benchmarks, and environments
 /// where disk file I/O is disabled or unnecessary.
-final class MemoryStateConfig implements GraftStateConfig {
+final class MemoryStateConfig implements GraftDryConfig {
   final Map<String, Uint8List> _storage = {};
 
   @override

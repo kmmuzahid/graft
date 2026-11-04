@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graft/graft.dart';
 import 'package:graft/src/persistence/ambient_locator.dart';
@@ -131,6 +132,24 @@ void main() {
       final files = tempDir.listSync().map((e) => e.uri.pathSegments.last).toList();
       expect(files.any((f) => f.endsWith('.tmp')), isFalse);
       expect(files.any((f) => f.endsWith('.bin')), isTrue);
+    });
+
+    test('super.dry without custom dryConfig outputs actionable warning in debug mode', () {
+      resetAmbientPersistence();
+      final capturedLogs = <String>[];
+      final originalDebugPrint = debugPrint;
+      debugPrint = (String? message, {int? wrapWidth}) {
+        if (message != null) capturedLogs.add(message);
+      };
+
+      try {
+        final graft = Graft<HierarchicalKeyState>.dry(HierarchicalKeyState.new);
+        expect(capturedLogs.any((l) => l.contains('[⚠️ GRAFT DRY WARNING]')), isTrue);
+        expect(capturedLogs.any((l) => l.contains('Graft.config(dryConfig: ...)')), isTrue);
+        graft.dispose();
+      } finally {
+        debugPrint = originalDebugPrint;
+      }
     });
   });
 }

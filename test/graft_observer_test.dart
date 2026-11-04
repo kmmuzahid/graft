@@ -89,8 +89,8 @@ void main() {
       expect(observer.logs, contains('dispose: CounterGraft'));
     });
 
-    test('GraftDevObserver formats and logs lifecycle events and slot rebuilds', () {
-      final devObserver = GraftDevObserver(logRebuilds: true, enableTimeline: true);
+    test('GraftDebugObserver formats and logs lifecycle events and slot rebuilds', () {
+      final devObserver = GraftDebugObserver(logRebuilds: true, enableTimeline: true);
       Graft.observer = devObserver;
 
       final graft = CounterGraft();
@@ -236,8 +236,8 @@ void main() {
       resetAmbientPersistence();
     });
 
-    test('GraftDevObserver handles all DI and Dry persistence callbacks with selective flags', () {
-      final devObserver = GraftDevObserver(
+    test('GraftDebugObserver handles all DI and Dry persistence callbacks with selective flags', () {
+      final devObserver = GraftDebugObserver(
         logDI: true,
         logDry: true,
         logState: true,
@@ -246,7 +246,7 @@ void main() {
       );
       Graft.observer = devObserver;
 
-      // Exercise all methods on GraftDevObserver
+      // Exercise all methods on GraftDebugObserver
       devObserver.onScopeCreated(TestScope.auth, preserved: false);
       devObserver.onDependencyBound(CounterGraft, scopeId: TestScope.auth);
       devObserver.onScopeDropped(TestScope.auth, members: [CounterGraft], registeredTypes: [CounterGraft]);
@@ -260,7 +260,7 @@ void main() {
       devObserver.onDryInvalidated('auth', key: 'auth', isScopePurge: true);
 
       // Test with all flags disabled (0 output)
-      final silentObserver = GraftDevObserver(
+      final silentObserver = GraftDebugObserver(
         logDI: false,
         logDry: false,
         logState: false,
@@ -275,30 +275,49 @@ void main() {
       silentObserver.onDryInvalidated(authState, key: 'k');
 
       // Test default flags (state and changes disabled by default, DI and Dry enabled)
-      final defaultDevObserver = GraftDevObserver();
+      final defaultDevObserver = GraftDebugObserver();
+      expect(defaultDevObserver, isA<GraftObserver>());
       expect(defaultDevObserver.logState, isFalse);
       expect(defaultDevObserver.logChanges, isFalse);
       expect(defaultDevObserver.logDI, isTrue);
       expect(defaultDevObserver.logDry, isTrue);
 
-      final changesObserver = GraftDevObserver(logChanges: true);
+      final changesObserver = GraftDebugObserver(logChanges: true);
       expect(changesObserver.logChanges, isTrue);
 
-      final stateObserver = GraftDevObserver(logState: true);
+      final stateObserver = GraftDebugObserver(logState: true);
       expect(stateObserver.logState, isTrue);
-      expect(stateObserver.logChanges, isTrue);
+      expect(stateObserver.logChanges, isFalse);
 
-      final stateOnlyObserver = GraftDevObserver(logState: true, logChanges: false);
-      expect(stateOnlyObserver.logState, isTrue);
-      expect(stateOnlyObserver.logChanges, isFalse);
+      final stateAndChangesObserver = GraftDebugObserver(logState: true, logChanges: true);
+      expect(stateAndChangesObserver.logState, isTrue);
+      expect(stateAndChangesObserver.logChanges, isTrue);
 
       // Test async vs sync logging modes
-      final asyncObserver = GraftDevObserver(asyncLog: true);
+      final asyncObserver = GraftDebugObserver(asyncLog: true);
       asyncObserver.onScopeCreated('async_scope');
       asyncObserver.flushLogs();
 
-      final syncObserver = GraftDevObserver(asyncLog: false);
+      final syncObserver = GraftDebugObserver(asyncLog: false);
       syncObserver.onScopeCreated('sync_scope');
+    });
+
+    test('Graft.config parameters configure logging and support composite observers', () {
+      final customObs = TestObserver();
+
+      Graft.config(
+        observer: customObs,
+        logRebuilds: true,
+        enableTimeline: true,
+      );
+
+      final graft = CounterGraft();
+      graft.increment();
+
+      // Custom observer received event
+      expect(customObs.logs.any((l) => l.startsWith('change:')), isTrue);
+      graft.dispose();
+      Graft.observer = null;
     });
   });
 }

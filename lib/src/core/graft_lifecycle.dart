@@ -165,7 +165,27 @@ void _graftBindInitial(Graft graft, GraftState initialState) {
   Graft.observer?.onCreate(graft);
 }
 
+final Set<Type> _warnedMissingDryTypes = {};
+
+void _warnMissingDryConfig(Graft graft, String dryKey) {
+  if (suppressDryWarning) return;
+  if (!_warnedMissingDryTypes.add(graft.runtimeType)) return;
+  debugPrint(
+    '\x1B[33m\x1B[1m[⚠️ GRAFT DRY WARNING]\x1B[0m | \x1B[36m${graft.runtimeType}\x1B[0m (dryKey: \x1B[33m\'$dryKey\'\x1B[0m)\n'
+    '  \'super.dry()\' was called, but no custom "dryConfig" was provided via Graft.config(dryConfig: ...).\n'
+    '  State will only persist in memory for the current app session and will NOT be saved permanently across app restarts.\n'
+    '  💡 How to solve:\n'
+    '     Provide a storage engine in main.dart:\n'
+    '       Graft.config(\n'
+    '         dryConfig: FileDryConfig(storageDirectory), // or your custom GraftDryConfig\n'
+    '       );',
+  );
+}
+
 void _graftBindDry(Graft graft, String dryKey, bool fromCache, String? customKey) {
+  if (kDebugMode && !isCustomDryConfigured) {
+    _warnMissingDryConfig(graft, dryKey);
+  }
   GraftStateEngine.setCustomDryKey(graft._state, customKey);
   GraftStateEngine.bind(graft._state, graft);
   DryStateHook.enableDryForState(graft._state, dryKey);

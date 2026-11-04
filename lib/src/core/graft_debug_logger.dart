@@ -1,6 +1,6 @@
 part of 'graft_observer.dart';
 
-void _logScopeCreated(GraftDevObserver observer, Object scopeId, {bool preserved = false}) {
+void _logScopeCreated(GraftDebugObserver observer, Object scopeId, {bool preserved = false}) {
   if (observer.enableTimeline && !kReleaseMode) {
     developer.Timeline.instantSync(
       'Graft DI: Scope Created [$scopeId]',
@@ -13,15 +13,15 @@ void _logScopeCreated(GraftDevObserver observer, Object scopeId, {bool preserved
   if (kDebugMode && observer.logDI) {
     final mode = preserved ? 'preserved' : 'transient';
     observer._output(
-      '${GraftDevObserver._bold}${GraftDevObserver._blue}[📦 GRAFT DI SCOPE CREATED]${GraftDevObserver._reset} | '
-      '${GraftDevObserver._cyan}$scopeId${GraftDevObserver._reset} '
-      '(${GraftDevObserver._yellow}$mode${GraftDevObserver._reset})',
+      '${GraftDebugObserver._bold}${GraftDebugObserver._blue}[📦 GRAFT DI SCOPE CREATED]${GraftDebugObserver._reset} | '
+      '${GraftDebugObserver._cyan}$scopeId${GraftDebugObserver._reset} '
+      '(${GraftDebugObserver._yellow}$mode${GraftDebugObserver._reset})',
     );
   }
 }
 
 void _logScopeDropped(
-  GraftDevObserver observer,
+  GraftDebugObserver observer,
   Object scopeId, {
   List<Type> members = const [],
   List<Type> registeredTypes = const [],
@@ -38,22 +38,22 @@ void _logScopeDropped(
   if (kDebugMode && observer.logDI) {
     final buffer = StringBuffer();
     buffer.write(
-      '${GraftDevObserver._bold}${GraftDevObserver._magenta}[💥 GRAFT DI SCOPE DESTROYED]${GraftDevObserver._reset} | '
-      '${GraftDevObserver._cyan}$scopeId${GraftDevObserver._reset}\n',
+      '${GraftDebugObserver._bold}${GraftDebugObserver._magenta}[💥 GRAFT DI SCOPE DESTROYED]${GraftDebugObserver._reset} | '
+      '${GraftDebugObserver._cyan}$scopeId${GraftDebugObserver._reset}\n',
     );
     if (members.isNotEmpty) {
       buffer.write(
-        '  ${GraftDevObserver._bold} Disposed Members (${members.length}):${GraftDevObserver._reset}\n',
+        '  ${GraftDebugObserver._bold} Disposed Members (${members.length}):${GraftDebugObserver._reset}\n',
       );
       for (final m in members) {
-        buffer.write('  • ${GraftDevObserver._yellow}$m${GraftDevObserver._reset}\n');
+        buffer.write('  • ${GraftDebugObserver._yellow}$m${GraftDebugObserver._reset}\n');
       }
     } else if (registeredTypes.isNotEmpty) {
       buffer.write(
-        '  ${GraftDevObserver._bold} Registered Bindings Cleared (${registeredTypes.length}):${GraftDevObserver._reset}\n',
+        '  ${GraftDebugObserver._bold} Registered Bindings Cleared (${registeredTypes.length}):${GraftDebugObserver._reset}\n',
       );
       for (final t in registeredTypes) {
-        buffer.write('  • ${GraftDevObserver._yellow}$t${GraftDevObserver._reset}\n');
+        buffer.write('  • ${GraftDebugObserver._yellow}$t${GraftDebugObserver._reset}\n');
       }
     } else {
       buffer.write('  (no members active)\n');
@@ -63,7 +63,7 @@ void _logScopeDropped(
 }
 
 void _logDependencyBound(
-  GraftDevObserver observer,
+  GraftDebugObserver observer,
   Type type, {
   Object? scopeId,
   bool singleton = true,
@@ -74,14 +74,14 @@ void _logDependencyBound(
     final scopeName = scopeId ?? 'root';
     final asyncFlag = isAsync ? ' async' : '';
     observer._output(
-      '${GraftDevObserver._bold}${GraftDevObserver._blue}[🔗 GRAFT DI BIND]${GraftDevObserver._reset} | '
-      '${GraftDevObserver._cyan}$type${GraftDevObserver._reset} in ${GraftDevObserver._yellow}$scopeName${GraftDevObserver._reset}$asyncFlag',
+      '${GraftDebugObserver._bold}${GraftDebugObserver._blue}[🔗 GRAFT DI BIND]${GraftDebugObserver._reset} | '
+      '${GraftDebugObserver._cyan}$type${GraftDebugObserver._reset} in ${GraftDebugObserver._yellow}$scopeName${GraftDebugObserver._reset}$asyncFlag',
     );
   }
 }
 
 void _logDryHydrated(
-  GraftDevObserver observer,
+  GraftDebugObserver observer,
   GraftState state, {
   required String key,
   required bool fromCache,
@@ -98,18 +98,18 @@ void _logDryHydrated(
   }
   if (kDebugMode && observer.logDry) {
     final source = fromCache
-        ? '${GraftDevObserver._green} restored from L1 RAM in <50ns${GraftDevObserver._reset}'
-        : '${GraftDevObserver._yellow} initial defaults loaded${GraftDevObserver._reset}';
+        ? '${GraftDebugObserver._green} restored from L1 RAM in <50ns${GraftDebugObserver._reset}'
+        : '${GraftDebugObserver._yellow} initial defaults loaded${GraftDebugObserver._reset}';
     observer._output(
-      '${GraftDevObserver._bold}${GraftDevObserver._cyan}[❄️ GRAFT DRY HYDRATED]${GraftDevObserver._reset} | '
-      '${GraftDevObserver._magenta}${state.runtimeType}${GraftDevObserver._reset} '
-      '💾 [key: ${GraftDevObserver._yellow}$key${GraftDevObserver._reset}] | $source',
+      '${GraftDebugObserver._bold}${GraftDebugObserver._cyan}[❄️ GRAFT DRY HYDRATED]${GraftDebugObserver._reset} | '
+      '${GraftDebugObserver._magenta}${state.runtimeType}${GraftDebugObserver._reset} '
+      '💾 [key: ${GraftDebugObserver._yellow}$key${GraftDebugObserver._reset}] | $source',
     );
   }
 }
 
 void _logDryInvalidated(
-  GraftDevObserver observer,
+  GraftDebugObserver observer,
   Object target, {
   required String key,
   bool isScopePurge = false,
@@ -126,16 +126,16 @@ void _logDryInvalidated(
   if (kDebugMode && observer.logDry) {
     if (isScopePurge) {
       observer._output(
-        '${GraftDevObserver._bold}${GraftDevObserver._red}[🧹 GRAFT DRY SCOPE PURGED]${GraftDevObserver._reset} | '
-        '${GraftDevObserver._cyan}$target${GraftDevObserver._reset} '
-        '💾 [prefix: ${GraftDevObserver._yellow}$key${GraftDevObserver._reset}] | L1 RAM & disk cache cleared',
+        '${GraftDebugObserver._bold}${GraftDebugObserver._red}[🧹 GRAFT DRY SCOPE PURGED]${GraftDebugObserver._reset} | '
+        '${GraftDebugObserver._cyan}$target${GraftDebugObserver._reset} '
+        '💾 [prefix: ${GraftDebugObserver._yellow}$key${GraftDebugObserver._reset}] | L1 RAM & disk cache cleared',
       );
     } else {
       final typeName = target is GraftState ? target.runtimeType : target;
       observer._output(
-        '${GraftDevObserver._bold}${GraftDevObserver._red}[🧹 GRAFT DRY INVALIDATED]${GraftDevObserver._reset} | '
-        '${GraftDevObserver._magenta}$typeName${GraftDevObserver._reset} '
-        '💾 [key: ${GraftDevObserver._yellow}$key${GraftDevObserver._reset}] | persistence cleared for session',
+        '${GraftDebugObserver._bold}${GraftDebugObserver._red}[🧹 GRAFT DRY INVALIDATED]${GraftDebugObserver._reset} | '
+        '${GraftDebugObserver._magenta}$typeName${GraftDebugObserver._reset} '
+        '💾 [key: ${GraftDebugObserver._yellow}$key${GraftDebugObserver._reset}] | persistence cleared for session',
       );
     }
   }

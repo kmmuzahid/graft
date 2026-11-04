@@ -6,7 +6,7 @@ This example demonstrates how to use the **Graft** state management library in a
 
 1. **Clean Domain State**: Defined with `GraftState` and `propsOf(...)` (zero `copyWith`, zero code-gen).
 2. **Graft Creation**: Pure business logic with direct cascade mutations (`state..name = '...'..update()`).
-3. **Global Observability**: Using `GraftDevObserver` for colorized terminal lifecycle logs and DevTools timeline events.
+3. **Global Observability**: Using `GraftDebugObserver` for colorized terminal lifecycle logs and DevTools timeline events.
 4. **DI Registration**: Registering factories with `bind()` or `GraftRegistry.register`.
 5. **Route-Stack Lifecycle**:
    - `context.use<UserGraft>()`: Reuses active instance across navigation stack.

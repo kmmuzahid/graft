@@ -3,6 +3,7 @@ import 'package:analyzer/error/error.dart' show ErrorSeverity;
 import 'package:graft_lint/graft_lint.dart';
 import 'package:graft_lint/src/rules/avoid_nested_graft_slot.dart';
 import 'package:graft_lint/src/rules/prefer_props_in_graft_state.dart';
+import 'package:graft_lint/src/rules/require_dry_config_rule.dart';
 import 'package:graft_lint/src/rules/require_dry_contracts_rule.dart';
 import 'package:graft_lint/src/rules/require_graft_route_observer.dart';
 import 'package:test/test.dart';
@@ -26,8 +27,8 @@ void main() {
     test('RequireGraftRouteObserverRule has correct code and name', () {
       const rule = RequireGraftRouteObserverRule();
       expect(rule.code.name, 'require_graft_route_observer');
-      expect(rule.code.problemMessage, contains('GraftRouteTracker.observer'));
-      expect(rule.code.correctionMessage, contains('Add GraftRouteTracker.observer'));
+      expect(rule.code.problemMessage, contains('graftRouteObserver'));
+      expect(rule.code.correctionMessage, contains('Add graftRouteObserver'));
     });
 
     test('PreferPropsInGraftStateRule has correct code, name, and info severity', () {
@@ -35,6 +36,14 @@ void main() {
       expect(rule.code.name, 'prefer_props_in_graft_state');
       expect(rule.code.problemMessage, contains('does not override "props"'));
       expect(rule.code.correctionMessage, contains('hardware bitmask'));
+      // ignore: deprecated_member_use
+      expect(rule.code.errorSeverity, ErrorSeverity.INFO);
+    });
+
+    test('RequireDryConfigRule has correct code, name, and info severity', () {
+      const rule = RequireDryConfigRule();
+      expect(rule.code.name, 'require_dry_config');
+      expect(rule.code.problemMessage, contains('dryConfig'));
       // ignore: deprecated_member_use
       expect(rule.code.errorSeverity, ErrorSeverity.INFO);
     });

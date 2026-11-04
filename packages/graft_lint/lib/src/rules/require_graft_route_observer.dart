@@ -10,9 +10,9 @@ class RequireGraftRouteObserverRule extends DartLintRule {
   static const _code = LintCode(
     name: 'require_graft_route_observer',
     problemMessage:
-        'MaterialApp is missing GraftRouteTracker.observer in navigatorObservers.',
+        'MaterialApp is missing graftRouteObserver in navigatorObservers.',
     correctionMessage:
-        'Add GraftRouteTracker.observer to navigatorObservers: [GraftRouteTracker.observer] to enable automatic route-scoped lifecycle disposal.',
+        'Add graftRouteObserver to navigatorObservers: [graftRouteObserver] to enable automatic route-scoped lifecycle disposal.',
   );
 
   @override

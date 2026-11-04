@@ -497,7 +497,7 @@ When `AppScope.checkout.drop()` is called or `CheckoutScreen` is popped from the
 [DI Teardown 3] DatabaseService closed safely. ➔ Root connection closed last!
 ```
 
-When using `GraftDevObserver`, scope creation and active member disposal are tracked automatically in real time:
+When using `GraftDebugObserver`, scope creation and active member disposal are tracked automatically in real time:
 
 ```text
 [📦 GRAFT DI SCOPE CREATED] | AppScope.checkout (transient)

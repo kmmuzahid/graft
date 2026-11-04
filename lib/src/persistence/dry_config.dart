@@ -3,8 +3,8 @@ library;
 
 import 'dart:typed_data';
 
-/// Abstract contract defining storage I/O operations for persisted state.
-abstract interface class GraftStateConfig {
+/// Abstract contract defining storage I/O operations for Frame-0 Dry persisted state.
+abstract interface class GraftDryConfig {
   /// Reads stored binary data by [key] asynchronously.
   Future<Uint8List?> read(String key);
 

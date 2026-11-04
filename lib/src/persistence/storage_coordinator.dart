@@ -5,11 +5,11 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'debounce_queue.dart';
 import 'l1_cache.dart';
-import 'state_config.dart';
+import 'dry_config.dart';
 
 /// Central coordinator managing Frame-0 cache and background disk synchronization.
 final class StorageCoordinator {
-  final GraftStateConfig config;
+  final GraftDryConfig config;
   final L1Cache l1Cache = L1Cache();
   late final DebounceQueue debounceQueue;
 

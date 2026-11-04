@@ -1,6 +1,6 @@
 part of 'graft_observer.dart';
 
-void _logSlotRebuild(GraftDevObserver observer, dynamic graft, int slotIndex, Widget widget) {
+void _logSlotRebuild(GraftDebugObserver observer, dynamic graft, int slotIndex, Widget widget) {
   if (observer.enableTimeline && !kReleaseMode) {
     developer.Timeline.instantSync(
       'Graft: ${graft.runtimeType} Slot #$slotIndex rebuild',
@@ -13,14 +13,14 @@ void _logSlotRebuild(GraftDevObserver observer, dynamic graft, int slotIndex, Wi
   }
   if (kDebugMode && observer.logRebuilds) {
     observer._output(
-      '${GraftDevObserver._bold}${GraftDevObserver._cyan}[🔄 GRAFT SLOT REBUILD]${GraftDevObserver._reset} | '
-      '${GraftDevObserver._magenta}${graft.runtimeType}${GraftDevObserver._reset} | '
+      '${GraftDebugObserver._bold}${GraftDebugObserver._cyan}[🔄 GRAFT SLOT REBUILD]${GraftDebugObserver._reset} | '
+      '${GraftDebugObserver._magenta}${graft.runtimeType}${GraftDebugObserver._reset} | '
       'Slot #$slotIndex (${widget.runtimeType})',
     );
   }
 }
 
-void _logCreate(GraftDevObserver observer, dynamic graft) {
+void _logCreate(GraftDebugObserver observer, dynamic graft) {
   if (observer.enableTimeline && !kReleaseMode) {
     developer.Timeline.instantSync(
       'Graft: ${graft.runtimeType}.onCreate()',
@@ -31,14 +31,14 @@ void _logCreate(GraftDevObserver observer, dynamic graft) {
     final isDry =
         graft is Graft && GraftStateEngine.isDryEnabled(graft.state);
     final dryBadge =
-        isDry ? ' 💾 ${GraftDevObserver._yellow}[DRY: ${graft.state.dryKey}]${GraftDevObserver._reset}' : '';
+        isDry ? ' 💾 ${GraftDebugObserver._yellow}[DRY: ${graft.state.dryKey}]${GraftDebugObserver._reset}' : '';
     observer._output(
-      '${GraftDevObserver._bold}${GraftDevObserver._green}[🌱 GRAFT CREATED]${GraftDevObserver._reset} | ${GraftDevObserver._cyan}${graft.runtimeType}${GraftDevObserver._reset}$dryBadge',
+      '${GraftDebugObserver._bold}${GraftDebugObserver._green}[🌱 GRAFT CREATED]${GraftDebugObserver._reset} | ${GraftDebugObserver._cyan}${graft.runtimeType}${GraftDebugObserver._reset}$dryBadge',
     );
   }
 }
 
-void _logChange(GraftDevObserver observer, dynamic graft, GraftChange change) {
+void _logChange(GraftDebugObserver observer, dynamic graft, GraftChange change) {
   if (observer.enableTimeline && !kReleaseMode) {
     developer.Timeline.instantSync(
       'Graft: ${graft.runtimeType}.update()',
@@ -53,17 +53,17 @@ void _logChange(GraftDevObserver observer, dynamic graft, GraftChange change) {
     final isDry =
         graft is Graft && GraftStateEngine.isDryEnabled(graft.state);
     final dryBadge =
-        isDry ? ' 💾 ${GraftDevObserver._yellow}[DRY: ${graft.state.dryKey}]${GraftDevObserver._reset}' : '';
+        isDry ? ' 💾 ${GraftDebugObserver._yellow}[DRY: ${graft.state.dryKey}]${GraftDebugObserver._reset}' : '';
     observer._output(
-      '${GraftDevObserver._bold}${GraftDevObserver._yellow}[⚡ GRAFT CHANGE]${GraftDevObserver._reset} | '
-      '${GraftDevObserver._cyan}${graft.runtimeType}${GraftDevObserver._reset}$dryBadge\n'
-      '  ${GraftDevObserver._magenta}${change.currentState}${GraftDevObserver._reset}\n'
-      '  ➡️ ${GraftDevObserver._green}${change.nextState}${GraftDevObserver._reset}',
+      '${GraftDebugObserver._bold}${GraftDebugObserver._yellow}[⚡ GRAFT CHANGE]${GraftDebugObserver._reset} | '
+      '${GraftDebugObserver._cyan}${graft.runtimeType}${GraftDebugObserver._reset}$dryBadge\n'
+      '  ${GraftDebugObserver._magenta}${change.currentState}${GraftDebugObserver._reset}\n'
+      '  ➡️ ${GraftDebugObserver._green}${change.nextState}${GraftDebugObserver._reset}',
     );
   }
 }
 
-void _logError(GraftDevObserver observer, dynamic graft, Object error, StackTrace stackTrace) {
+void _logError(GraftDebugObserver observer, dynamic graft, Object error, StackTrace stackTrace) {
   if (observer.enableTimeline && !kReleaseMode) {
     developer.Timeline.instantSync(
       'Graft: ${graft.runtimeType}.onError()',
@@ -75,13 +75,13 @@ void _logError(GraftDevObserver observer, dynamic graft, Object error, StackTrac
   }
   if (kDebugMode && observer.logErrors) {
     observer._output(
-      '${GraftDevObserver._bold}${GraftDevObserver._red}[💥 GRAFT ERROR]${GraftDevObserver._reset} | '
-      '${GraftDevObserver._cyan}${graft.runtimeType}${GraftDevObserver._reset}: $error\n$stackTrace',
+      '${GraftDebugObserver._bold}${GraftDebugObserver._red}[💥 GRAFT ERROR]${GraftDebugObserver._reset} | '
+      '${GraftDebugObserver._cyan}${graft.runtimeType}${GraftDebugObserver._reset}: $error\n$stackTrace',
     );
   }
 }
 
-void _logDispose(GraftDevObserver observer, dynamic graft) {
+void _logDispose(GraftDebugObserver observer, dynamic graft) {
   if (observer.enableTimeline && !kReleaseMode) {
     developer.Timeline.instantSync(
       'Graft: ${graft.runtimeType}.onDispose()',
@@ -92,9 +92,9 @@ void _logDispose(GraftDevObserver observer, dynamic graft) {
     final isDry =
         graft is Graft && GraftStateEngine.isDryEnabled(graft.state);
     final dryBadge =
-        isDry ? ' 💾 ${GraftDevObserver._yellow}[DRY: ${graft.state.dryKey}]${GraftDevObserver._reset}' : '';
+        isDry ? ' 💾 ${GraftDebugObserver._yellow}[DRY: ${graft.state.dryKey}]${GraftDebugObserver._reset}' : '';
     observer._output(
-      '${GraftDevObserver._bold}${GraftDevObserver._red}[🗑️ GRAFT DISPOSED]${GraftDevObserver._reset} | ${GraftDevObserver._cyan}${graft.runtimeType}${GraftDevObserver._reset}$dryBadge',
+      '${GraftDebugObserver._bold}${GraftDebugObserver._red}[🗑️ GRAFT DISPOSED]${GraftDebugObserver._reset} | ${GraftDebugObserver._cyan}${graft.runtimeType}${GraftDebugObserver._reset}$dryBadge',
     );
   }
 }

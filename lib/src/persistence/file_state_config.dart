@@ -3,10 +3,10 @@ library;
 
 import 'dart:io';
 import 'dart:typed_data';
-import 'state_config.dart';
+import 'dry_config.dart';
 
 /// File-based implementation of [GraftStateConfig] writing binary files to a directory.
-final class FileStateConfig implements GraftStateConfig {
+final class FileStateConfig implements GraftDryConfig {
   final Directory directory;
 
   FileStateConfig(this.directory) {

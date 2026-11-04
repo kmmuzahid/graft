@@ -531,7 +531,7 @@ void submitOrder() {
 graft.invalidateDry();
 ```
 
-When using `GraftDevObserver`, Frame-0 dry state creation, updates, hydrations, and invalidations are logged automatically with distinct emoji badges:
+When using `GraftDebugObserver`, Frame-0 dry state creation, updates, hydrations, and invalidations are logged automatically with distinct emoji badges:
 
 ```text
 [🌱 GRAFT CREATED] | SignupGraft 💾 [DRY: signup_draft]

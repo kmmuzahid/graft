@@ -43,7 +43,7 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 
 - **Unified Startup Configuration (`Graft.config`) & Default `GraftDebugObserver`**:
   - Introduced `Graft.config({persistence, observer, debugLogging, di})` as the single, optional centralized entry point for app configuration.
-  - Automatically enables `GraftDebugObserver` (alias for `GraftDevObserver`) when running in `kDebugMode` with zero setup and 0% release overhead.
+  - Automatically enables `GraftDebugObserver` when running in `kDebugMode` with zero setup and 0% release overhead.
   - Streamlines DI bindings via the optional `di: () { bind<...>(); }` block.
 - **Surface Area Pruning & Encapsulation**:
   - Encapsulated `GraftRegistry` as an `@internal` bridge class and unexported it from `lib/graft.dart`. UI relies on `context.use(MyGraft.new)` and services rely on `bind<T>()`.

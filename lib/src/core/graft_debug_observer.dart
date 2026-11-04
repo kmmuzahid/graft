@@ -1,11 +1,9 @@
 part of 'graft_observer.dart';
 
-/// Out-of-the-box development observer featuring high-visibility ANSI colorized terminal logs.
-class GraftDevObserver extends GraftObserver {
+/// Out-of-the-box debug observer featuring high-visibility ANSI colorized terminal logs.
+class GraftDebugObserver extends GraftObserver {
   final bool logState;
-  final bool? _logChanges;
-
-  bool get logChanges => _logChanges ?? logState;
+  final bool logChanges;
   final bool logDI;
   final bool logDry;
   final bool logBindings;
@@ -14,9 +12,9 @@ class GraftDevObserver extends GraftObserver {
   final bool enableTimeline;
   final bool asyncLog;
 
-  GraftDevObserver({
+  GraftDebugObserver({
     this.logState = false,
-    bool? logChanges,
+    this.logChanges = false,
     this.logDI = true,
     this.logDry = true,
     this.logBindings = false,
@@ -24,7 +22,7 @@ class GraftDevObserver extends GraftObserver {
     this.logErrors = true,
     this.enableTimeline = false,
     this.asyncLog = true,
-  }) : _logChanges = logChanges;
+  });
 
   List<String> _logQueue = [];
   bool _flushScheduled = false;
